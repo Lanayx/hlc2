@@ -9,22 +9,22 @@ type Action =
     | AddVisit
     | RemoveVisit
 
-type VisitActor () = 
+type VisitActor () =
 
-    static let addVisitSorted (collection: VisitsCollectionSorted) (visitId: int) (visitedAt: uint32) = 
+    static let addVisitSorted (collection: VisitsCollectionSorted) (visitId: int) (visitedAt: uint32) =
         collection.Add(visitedAt, visitId) |> ignore
 
-    static let removeVisitSorted (collection: VisitsCollectionSorted) (visitedAt: uint32) = 
+    static let removeVisitSorted (collection: VisitsCollectionSorted) (visitedAt: uint32) =
         collection.Remove(visitedAt) |> ignore
 
-    static let addVisitRegular (collection: VisitsCollection) (visitId: int) = 
+    static let addVisitRegular (collection: VisitsCollection) (visitId: int) =
         collection.Add(visitId) |> ignore
 
-    static let removeVisitRegular (collection: VisitsCollection) (visitId: int) = 
+    static let removeVisitRegular (collection: VisitsCollection) (visitId: int) =
         collection.Remove(visitId) |> ignore
 
-    static let getLocationActor() = 
-        MailboxProcessor.Start(fun inbox -> 
+    static let getLocationActor() =
+        MailboxProcessor.Start(fun inbox ->
             // the message processing function
             let rec messageLoop() = async {
 
@@ -37,15 +37,15 @@ type VisitActor () =
                 | RemoveVisit -> removeVisitRegular collection id
 
                 // loop to top
-                return! messageLoop () 
+                return! messageLoop ()
                 }
 
-            // start the loop 
+            // start the loop
             messageLoop ()
         )
 
-    static let getUserActor() = 
-        MailboxProcessor.Start(fun inbox -> 
+    static let getUserActor() =
+        MailboxProcessor.Start(fun inbox ->
             // the message processing function
             let rec messageLoop() = async {
 
@@ -58,10 +58,10 @@ type VisitActor () =
                 | RemoveVisit -> removeVisitSorted collection visitedAt
 
                 // loop to top
-                return! messageLoop () 
+                return! messageLoop ()
                 }
 
-            // start the loop 
+            // start the loop
             messageLoop ()
         )
 
@@ -70,14 +70,14 @@ type VisitActor () =
     static let locationAgent = getLocationActor()
 
     // public interface to hide the implementation
-    static member AddUserVisit userId (collection: VisitsCollectionSorted) (visitId: int) (visitedAt: uint32) = 
+    static member AddUserVisit userId (collection: VisitsCollectionSorted) (visitId: int) (visitedAt: uint32) =
         userAgent.Post (Action.AddVisit, collection, visitId, visitedAt)
 
-    static member RemoveUserVisit userId (collection: VisitsCollectionSorted) (visitId: int) (visitedAt: uint32) = 
+    static member RemoveUserVisit userId (collection: VisitsCollectionSorted) (visitId: int) (visitedAt: uint32) =
         userAgent.Post (Action.RemoveVisit, collection, visitId, visitedAt)
-    
+
     static member AddLocationVisit locactionId (collection: VisitsCollection) (visitId: int) =
         locationAgent.Post (Action.AddVisit, collection, visitId)
 
-    static member RemoveLocationVisit locactionId (collection: VisitsCollection) (visitId: int) = 
+    static member RemoveLocationVisit locactionId (collection: VisitsCollection) (visitId: int) =
         locationAgent.Post (Action.RemoveVisit, collection, visitId)

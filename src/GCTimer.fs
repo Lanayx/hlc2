@@ -15,8 +15,8 @@ syncTimer.Elapsed.Add(fun arg ->
     then
         if not GCRun
         then
-            Console.WriteLine("Running GC {0} {1} gu:{2} gv:{3} gl:{4} ga:{5} gvs:{6}", 
-                lastRequestCount, 
+            Console.WriteLine("Running GC {0} {1} gu:{2} gv:{3} gl:{4} ga:{5} gvs:{6}",
+                lastRequestCount,
                 DateTime.Now.ToString("HH:mm:ss.ffff"),
                 getUserCount.Value,
                 getLocationCount.Value,
@@ -25,7 +25,7 @@ syncTimer.Elapsed.Add(fun arg ->
                 getVisitsCount.Value)
             GCRun <- true
             GC.Collect(1)
-        client.GetAsync("http://127.0.0.1/visits/8").Result |> ignore            
+        client.GetAsync("http://127.0.0.1/visits/8").Result |> ignore
     else
         GCRun <- false
     lastRequestCount <- outstandingRequestCount.Value

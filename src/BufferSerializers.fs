@@ -104,7 +104,7 @@ let private writeInt32x (output : MemoryStream) (number: int32) =
         let loopMax = numbersCount - 1
         for i = loopMax downto 0 do
             NativePtr.set buffer i (byte (num % 10 + 48))
-            num <- num / 10        
+            num <- num / 10
         output.WriteByte(byte '-')
         for i = 0 to loopMax do
             output.WriteByte (NativePtr.get buffer i)
