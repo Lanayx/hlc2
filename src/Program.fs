@@ -40,12 +40,7 @@ let VisitsSize = 10050000
 let mutable currentDate = DateTime.Now
 let timestampBase = DateTime(1970, 1, 1, 0, 0, 0, 0)
 
-let locations = Array.zeroCreate<Location> LocationsSize
-let users = Array.zeroCreate<User> UsersSize
-let visits = Array.zeroCreate<Visit> VisitsSize
-
-let locationVisits = Array.zeroCreate<VisitsCollection> LocationsSize
-let userVisits = Array.zeroCreate<VisitsCollectionSorted> UsersSize
+let accounts = Array.zeroCreate<Account> UsersSize
 
 let jsonStringValues = StringValues "application/json"
 
@@ -66,15 +61,6 @@ let inline deserializeObject<'a> (str: string) =
         None
 
 
-let copyUser (user: UserOld) =
-    let us = User()
-    us.id <- user.id
-    us.birth_date <- user.birth_date
-    us.email <- utf8 user.email
-    us.first_name <- utf8 user.first_name
-    us.last_name <- utf8 user.last_name
-    us.gender <- user.gender
-    us
 
 let inline jsonBuffer (response : MemoryStream) =
     fun (next : HttpFunc) (ctx: HttpContext) ->
@@ -97,10 +83,10 @@ let getUser(id, next, ctx) =
     if (id > UsersSize)
     then setStatusCode 404 next ctx
         else
-            let user = users.[id]
+            let user = accounts.[id]
             match box user with
             | null -> setStatusCode 404 next ctx
-            | _ -> jsonBuffer (serializeUser user) next ctx
+            | _ -> setStatusCode 404 next ctx  //jsonBuffer (serializeUser user) next ctx
 
 
 
@@ -129,6 +115,7 @@ let webApp =
 // ---------------------------------
 
 let errorHandler (ex : Exception) (logger : ILogger)=
+    Console.WriteLine(ex.ToString())
     setStatusCode 400
 
 // ---------------------------------
@@ -138,6 +125,7 @@ let errorHandler (ex : Exception) (logger : ILogger)=
 let configureApp (app : IApplicationBuilder) =
     app.UseRequestCounter webApp
     app.UseGiraffe webApp
+    app.UseGiraffeErrorHandler errorHandler |> ignore
 
 let configureKestrel (options : KestrelServerOptions) =
     options.ApplicationSchedulingMode <- Abstractions.Internal.SchedulingMode.Inline
@@ -147,14 +135,14 @@ let loadData folder =
 
 
 
-    let users = Directory.EnumerateFiles(folder, "users_*.json")
-                |> Seq.map (File.ReadAllText >> deserializeObjectUnsafe<Users>)
-                |> Seq.collect (fun usersObj -> usersObj.users)
-                |> Seq.map (fun user ->
-                    users.[user.id] <- copyUser(user)
-                    userVisits.[user.id] <- VisitsCollectionSorted())
+    let accs = Directory.EnumerateFiles(folder, "accounts_*.json")
+                |> Seq.map (File.ReadAllText >> deserializeObjectUnsafe<Accounts>)
+                |> Seq.collect (fun accountsObj -> accountsObj.accounts)
+                |> Seq.map (fun account ->
+                    accounts.[account.id] <- account
+                    )
                 |> Seq.toList
-    Console.Write("Users {0} ", users.Length)
+    Console.Write("Accounts {0} ", accs.Length)
 
 
     let str = Path.Combine(folder,"options.txt")
