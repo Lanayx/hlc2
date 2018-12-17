@@ -21,10 +21,12 @@ open HCup.Parser
 open HCup.BufferSerializers
 open HCup.MethodCounter
 open Giraffe
-open FSharp.Control.Tasks.V2
+open FSharp.Control.Tasks.V2.ContextInsensitive
 open Microsoft.AspNetCore.Server.Kestrel.Core
 open Microsoft.AspNetCore.Server.Kestrel.Transport
 open Utf8Json
+open System
+open Filters
 
 // ---------------------------------
 // Web app
@@ -75,33 +77,31 @@ let inline jsonBuffer (response : MemoryStream) =
             return! next ctx
         }
 
-let inline checkStringFromRequest (stringValue: string) =
-    stringValue.Contains(": null") |> not
+let getExpression (key_pred: string) (value: string) =
+    let [|key; predicate|] = key_pred.Split('_')
+    filters.[key](predicate, value)
 
-let getUser(id, next, ctx) =
-    Interlocked.Increment(getUserCount) |> ignore
-    if (id > UsersSize)
-    then setStatusCode 404 next ctx
-        else
-            let user = accounts.[id]
-            match box user with
-            | null -> setStatusCode 404 next ctx
-            | _ -> setStatusCode 404 next ctx  //jsonBuffer (serializeUser user) next ctx
+let getUser (next, ctx : HttpContext) =
+    Interlocked.Increment(accountFilterCount) |> ignore
+    let keys = ctx.Request.Query.Keys
+    let filters =
+        keys
+        |> Seq.map (fun key -> getExpression key ctx.Request.Query.[key].[0])
+    let accs =
+        filters
+        |> Seq.fold (fun acc f -> acc |> Array.filter f) accounts
+    json accs next ctx
 
 
 
-let private usersPathString = "/users"
-let private usersPathStringX = PathString("/users")
+let private accountsFilterString = "/accounts/filter/"
 
 
 let customGetRoutef : HttpHandler =
     fun (next : HttpFunc) (ctx : HttpContext) ->
-        let id = ref 0
         match ctx.Request.Path.Value with
-        | userPath when (userPath.StartsWith(usersPathString, StringComparison.Ordinal)) ->
-                if Int32.TryParse(userPath.Substring(7), id)
-                then getUser(id.Value, next, ctx)
-                else setStatusCode 404 next ctx
+        | filterPath when (String.Equals(filterPath, accountsFilterString, StringComparison.Ordinal)) ->
+             getUser (next, ctx)
         | _-> setStatusCode 404 next ctx
 
 

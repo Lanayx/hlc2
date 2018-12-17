@@ -64,6 +64,7 @@ type Like() =
 type Account() =
         [<DefaultValue>]val mutable id: int32
         [<DefaultValue>]val mutable fname : string
+        [<DefaultValue>]val mutable sname : string
         [<DefaultValue>]val mutable email: string
         [<DefaultValue>]val mutable interests: string[]
         [<DefaultValue>]val mutable status: string

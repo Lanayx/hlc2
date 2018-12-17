@@ -12,6 +12,7 @@
     <Compile Include="Actors.fs" />
     <Compile Include="Parser.fs" />
     <Compile Include="BufferSerializers.fs" />
+    <Compile Include="Filters.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>

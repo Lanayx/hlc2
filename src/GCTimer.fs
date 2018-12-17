@@ -18,7 +18,7 @@ syncTimer.Elapsed.Add(fun arg ->
             Console.WriteLine("Running GC {0} {1} gu:{2} gv:{3} gl:{4} ga:{5} gvs:{6}",
                 lastRequestCount,
                 DateTime.Now.ToString("HH:mm:ss.ffff"),
-                getUserCount.Value,
+                accountFilterCount.Value,
                 getLocationCount.Value,
                 getVisitCount.Value,
                 getAvgCount.Value,
