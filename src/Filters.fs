@@ -63,7 +63,11 @@ let surnameFilter (predicate: string, value: string) =
             acc.sname =~ value
     | "starts" ->
         fun (acc: Account) ->
-             acc.sname.StartsWith(value)
+            if acc.sname |> isNull
+            then
+                false
+            else
+                acc.sname.StartsWith(value)
     | "null" ->
         fun (acc: Account) ->
              if value.[0] = '1'
