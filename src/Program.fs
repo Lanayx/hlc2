@@ -78,8 +78,7 @@ let inline jsonBuffer (response : MemoryStream) =
         }
 
 let getExpression (key_pred: string) (value: string) =
-    let [|key; predicate|] = key_pred.Split('_')
-    filters.[key](predicate, value)
+    filters.[key_pred] value
 
 let getUser (next, ctx : HttpContext) =
     Interlocked.Increment(accountFilterCount) |> ignore
