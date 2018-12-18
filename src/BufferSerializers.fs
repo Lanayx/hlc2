@@ -13,6 +13,8 @@ open HCup
 
 #nowarn "9"
 
+open System.Collections
+
 let private smallBuffer() = ArrayPool.Shared.Rent 400
 let private bigBuffer() = ArrayPool.Shared.Rent 6000
 
@@ -263,4 +265,76 @@ let serializeAvg (avg: float) : MemoryStream =
     write ``{"avg":``
     writeFloat output avg
     write ``}``
+    output
+
+
+let fieldsMap =
+    dict [
+        "sex_ex", AccountField.Sex
+        "email_domain", AccountField.Email
+        "email_lt", AccountField.Email
+        "email_gt", AccountField.Email
+        "status_eq", AccountField.Status
+        "status_neq", AccountField.Status
+        "fname_eq", AccountField.Firstname
+        "fname_any", AccountField.Firstname
+        "fname_null", AccountField.Firstname
+        "sname_eq", AccountField.Surname
+        "sname_starts", AccountField.Surname
+        "sname_null", AccountField.Surname
+        "phone_code", AccountField.Phone
+        "phone_null", AccountField.Phone
+        "country_eq", AccountField.Country
+        "country_null", AccountField.Country
+        "city_eq", AccountField.City
+        "city_any", AccountField.City
+        "city_null", AccountField.City
+        "birth_lt", AccountField.Birth
+        "birth_gt", AccountField.Birth
+        "birth_year", AccountField.Birth
+        "interests_contains", AccountField.Interests
+        "interests_any", AccountField.Interests
+        "likes_contains", AccountField.Likes
+        "premium_now", AccountField.Premium
+        "premium_null", AccountField.Premium
+    ]
+
+let private ``{"accounts":[`` = utf8 "{\"accounts\":["
+let private ``},{`` = utf8 "},{"
+
+let private ``"email":"`` = utf8 "\"email\":\""
+let private ``","id":`` = utf8 "\",\"id\":"
+
+let writeField (field_predicate: string, acc: Account) =
+    let fieldType = fieldsMap.[field_predicate]
+    match fieldType with
+    | AccountField.Sex -> ()
+    | _ -> ()
+    
+
+let serializeAccounts (accs: Account[], field_predicates: string[]): MemoryStream =
+    let array = ArrayPool.Shared.Rent (accs.Length * field_predicates.Length * 50)
+    let output = stream array
+    let write = writeArray output
+    write ``{"accounts":[``
+    let mutable start = true
+    for acc in accs do
+        if start
+        then
+            start <- false
+            writeChar output '{'
+        else
+            write ``},{``
+
+        write ``"email":"``
+        writeString output acc.email
+        write ``","id":``
+        writeInt32 output acc.id
+
+        for field_predicate in field_predicates do
+            writeChar output ','
+            writeField(field_predicate, acc)
+    if start |> not
+    then writeChar output '}'
+    write ``]}``
     output

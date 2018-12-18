@@ -27,6 +27,7 @@ open Microsoft.AspNetCore.Server.Kestrel.Transport
 open Utf8Json
 open System
 open Filters
+open Microsoft.Extensions.DependencyInjection
 
 // ---------------------------------
 // Web app
@@ -39,10 +40,9 @@ let UsersSize = 1050000
 [<Literal>]
 let VisitsSize = 10050000
 
-let mutable currentDate = DateTime.Now
-let timestampBase = DateTime(1970, 1, 1, 0, 0, 0, 0)
 
-let accounts = Array.zeroCreate<Account> UsersSize
+
+let mutable accounts = [||]
 
 let jsonStringValues = StringValues "application/json"
 
@@ -51,9 +51,6 @@ type IdHandler = int*HttpFunc*HttpContext -> HttpFuncResult
 
 let inline deserializeObjectUnsafe<'a> (str: string) =
     JsonSerializer.Deserialize<'a>(str)
-
-let inline convertToDate timestamp =
-    timestampBase.AddSeconds((float)timestamp)
 
 let inline deserializeObject<'a> (str: string) =
     try
@@ -82,16 +79,16 @@ let getExpression (key_pred: string) (value: string) =
 
 let getUser (next, ctx : HttpContext) =
     Interlocked.Increment(accountFilterCount) |> ignore
-    let keys = ctx.Request.Query.Keys
+    let keys = ctx.Request.Query.Keys |> Seq.toArray
     let filters =
         keys
-        |> Seq.map (fun key -> getExpression key ctx.Request.Query.[key].[0])
+        |> Array.filter(fun key -> (key =~ "limit" || key =~ "query_id") |> not )
+        |> Array.map (fun key -> getExpression key ctx.Request.Query.[key].[0])
     let accs =
         filters
-        |> Seq.fold (fun acc f -> acc |> Array.filter f) accounts
+        |> Array.fold (fun acc f -> acc |> Array.filter f) accounts
+        |> Array.take (Int32.Parse(ctx.Request.Query.["limit"].[0]))
     json accs next ctx
-
-
 
 let private accountsFilterString = "/accounts/filter/"
 
@@ -123,8 +120,11 @@ let errorHandler (ex : Exception) (logger : ILogger)=
 
 let configureApp (app : IApplicationBuilder) =
     app.UseRequestCounter webApp
-    app.UseGiraffe webApp
     app.UseGiraffeErrorHandler errorHandler |> ignore
+    app.UseGiraffe webApp
+
+let configureServices (services : IServiceCollection) =
+    services.AddGiraffe() |> ignore
 
 let configureKestrel (options : KestrelServerOptions) =
     options.ApplicationSchedulingMode <- Abstractions.Internal.SchedulingMode.Inline
@@ -134,22 +134,18 @@ let loadData folder =
 
 
 
-    let accs = Directory.EnumerateFiles(folder, "accounts_*.json")
+    accounts <- Directory.EnumerateFiles(folder, "accounts_*.json")
                 |> Seq.map (File.ReadAllText >> deserializeObjectUnsafe<Accounts>)
                 |> Seq.collect (fun accountsObj -> accountsObj.accounts)
-                |> Seq.map (fun account ->
-                    accounts.[account.id] <- account
-                    )
-                |> Seq.toList
-    Console.Write("Accounts {0} ", accs.Length)
+                |> Seq.toArray
+
+    Console.Write("Accounts {0} ", accounts.Length)
 
 
     let str = Path.Combine(folder,"options.txt")
                    |> File.ReadAllLines
-    currentDate <- str.[0]
-                   |> Int64.Parse
-                   |> float
-                   |> convertToDate
+    currentTs <- str.[0]
+                   |> Int32.Parse
 
 
 [<EntryPoint>]
@@ -167,6 +163,7 @@ let main argv =
     WebHostBuilder()
         .UseKestrel(Action<KestrelServerOptions> configureKestrel)
         .Configure(Action<IApplicationBuilder> configureApp)
+        .ConfigureServices(Action<IServiceCollection> configureServices)
         .Build()
         .Run()
     0

@@ -58,8 +58,23 @@ type Premium() =
         [<DefaultValue>]val mutable finish : int32
 
 type Like() =
-        [<DefaultValue>]val mutable dt: int32
+        [<DefaultValue>]val mutable ts: int32
         [<DefaultValue>]val mutable id : int32
+
+type AccountField =
+    | Firstname = 0
+    | Surname = 1
+    | Email = 2
+    | Interests = 3
+    | Status = 4
+    | Premium = 5
+    | Sex = 6
+    | Phone = 7
+    | Likes = 8
+    | Birth = 9
+    | City = 10
+    | Country = 11
+
 
 type Account() =
         [<DefaultValue>]val mutable id: int32
@@ -75,7 +90,6 @@ type Account() =
         [<DefaultValue>]val mutable birth: int32
         [<DefaultValue>]val mutable city: string
         [<DefaultValue>]val mutable country: string
-        [<DefaultValue>]val mutable joined: int32
 
 
 [<CLIMutable>]
