@@ -162,7 +162,7 @@ let premiumNullFilter (value: string) =
        
 let filters: IDictionary<string, Filter> =
     dict [
-        "sex_ex", sexEqFilter
+        "sex_eq", sexEqFilter
         "email_domain", emailDomainFilter
         "email_lt", emailLtFilter
         "email_gt", emailGtFilter

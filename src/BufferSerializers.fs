@@ -14,16 +14,16 @@ open HCup
 #nowarn "9"
 
 open System.Collections
-
-let private smallBuffer() = ArrayPool.Shared.Rent 400
-let private bigBuffer() = ArrayPool.Shared.Rent 6000
+open Giraffe
 
 let private utf8Encoding = Encoding.UTF8
 let utf8 : string -> byte[] = utf8Encoding.GetBytes
-let private writeArray (output : MemoryStream) array = output.Write(array, 0, array.Length)
-let private stream buffer = new MemoryStream(buffer, 0, buffer.Length, true, true)
+let inline private writeArray (output : MemoryStream) array = 
+    output.Write(array, 0, array.Length)
+let inline private stream buffer = 
+    new MemoryStream(buffer, 0, buffer.Length, true, true)
 
-let private writeInt32 (output : MemoryStream) (number: int) =
+let inline private writeInt32 (output : MemoryStream) (number: int) =
     let numbersCount =
         if number >= 1_000_000_000 then 10
         elif number >= 100_000_000 then 9
@@ -43,29 +43,8 @@ let private writeInt32 (output : MemoryStream) (number: int) =
         num <- num / 10
     for i = 0 to loopMax do
         output.WriteByte (NativePtr.get buffer i)
-
-let private writeUInt32 (output : MemoryStream) (number: uint32) =
-    let numbersCount =
-        if number >= 1_000_000_000u then 10
-        elif number >= 100_000_000u then 9
-        elif number >= 10_000_000u then 8
-        elif number >= 1_000_000u then 7
-        elif number >= 100_000u then 6
-        elif number >= 10_000u then 5
-        elif number >= 1_000u then 4
-        elif number >= 100u then 3
-        elif number >= 10u then 2
-        else 1
-    let buffer = NativePtr.stackalloc<byte> numbersCount
-    let mutable num = number
-    let loopMax = numbersCount - 1
-    for i = loopMax downto 0 do
-        NativePtr.set buffer i (byte (num % 10u + 48u))
-        num <- num / 10u
-    for i = 0 to loopMax do
-        output.WriteByte (NativePtr.get buffer i)
-
-let private writeInt32x (output : MemoryStream) (number: int32) =
+  
+let inline private writeInt32x (output : MemoryStream) (number: int32) =
     if number > 0
     then
         let numbersCount =
@@ -111,27 +90,13 @@ let private writeInt32x (output : MemoryStream) (number: int32) =
         for i = 0 to loopMax do
             output.WriteByte (NativePtr.get buffer i)
 
-let private writeUint8 (output : MemoryStream) (number: uint8) =
-    let numbersCount =
-        if number < 10uy then 1
-        else if number < 100uy then 2
-        else 3
-    let buffer = NativePtr.stackalloc<byte> numbersCount
-    let mutable num = number
-    for i = 1 to numbersCount do
-        NativePtr.set buffer (numbersCount - i) (byte (num % 10uy + 48uy))
-        num <- num /10uy
-    for i = 1 to numbersCount do
-        output.WriteByte (NativePtr.get buffer (i - 1))
-
-let private writeString (output : MemoryStream) (str: string) =
-    let stringLength = str.Length - 1
+let inline private writeString (output : MemoryStream) (str: string) =
     let buffer = ArrayPool.Shared.Rent (str.Length*2)
     let written = utf8Encoding.GetBytes(str,0,str.Length, buffer,0)
     output.Write(buffer, 0, written)
     ArrayPool.Shared.Return buffer
 
-let private writeChar (output : MemoryStream) (chr: char) =
+let inline private writeChar (output : MemoryStream) (chr: char) =
     output.WriteByte((byte)chr)
 
 let private writeFloat (output : MemoryStream) (value: float) =
@@ -155,122 +120,9 @@ let private writeFloat (output : MemoryStream) (value: float) =
                  decimalValue <- decimalValue / 10
              writeInt32 output decimalValue
 
-
-let private ``{"id":`` = utf8 "{\"id\":"
-let private ``,"distance":`` = utf8 ",\"distance\":"
-let private ``,"place":"`` = utf8 ",\"place\":\""
-let private ``","city":"`` = utf8 "\",\"city\":\""
-let private ``","country":"`` = utf8 "\",\"country\":\""
-let private ``"}`` = utf8 "\"}"
-
-let serializeLocation (loc: Location) : MemoryStream =
-    let array = smallBuffer()
-    let output = stream array
-    let write = writeArray output
-    write ``{"id":``
-    writeInt32 output loc.id
-    write ``,"distance":``
-    writeUint8 output loc.distance
-    write ``,"place":"``
-    write loc.place
-    write ``","city":"``
-    write loc.city
-    write ``","country":"``
-    writeString output loc.country
-    write ``"}``
-    output
-
-let private ``,"birth_date":`` = utf8 ",\"birth_date\":"
-let private ``,"first_name":"`` = utf8 ",\"first_name\":\""
-let private ``","last_name":"`` = utf8 "\",\"last_name\":\""
-let private ``","gender":"`` = utf8 "\",\"gender\":\""
-let private ``","email":"`` = utf8 "\",\"email\":\""
-
-let serializeUser (user: User) : MemoryStream =
-    let array = smallBuffer()
-    let output = stream array
-    let write = writeArray output
-    write ``{"id":``
-    writeInt32 output user.id
-    write ``,"birth_date":``
-    writeInt32x output user.birth_date
-    write ``,"first_name":"``
-    write user.first_name
-    write ``","last_name":"``
-    write user.last_name
-    write ``","gender":"``
-    writeChar output user.gender
-    write ``","email":"``
-    write user.email
-    write ``"}``
-    output
-
-let private ``,"location":`` = utf8 ",\"location\":"
-let private ``,"mark":`` = utf8 ",\"mark\":"
-let private ``,"user":`` = utf8 ",\"user\":"
-let private ``,"visited_at":`` = utf8 ",\"visited_at\":"
-let private ``}`` = utf8 "}"
-
-let serializeVisit (visit: Visit) : MemoryStream =
-    let array = smallBuffer()
-    let output = stream array
-    let write = writeArray output
-    let writeInt = writeInt32 output
-    write ``{"id":``
-    writeInt visit.id
-    write ``,"location":``
-    writeInt visit.location
-    write ``,"mark":``
-    writeUint8 output visit.mark
-    write ``,"user":``
-    writeInt visit.user
-    write ``,"visited_at":``
-    writeUInt32 output visit.visited_at
-    write ``}``
-    output
-
-let private ``{"visits":[`` = utf8 "{\"visits\":["
-let private ``{"mark":`` = utf8 "{\"mark\":"
-let private ``,{"mark":`` = utf8 ",{\"mark\":"
-let private ``]}`` = utf8 "]}"
-
-let serializeVisits (visits: UserVisit seq) : MemoryStream =
-    let array = bigBuffer()
-    let output = stream array
-    let write = writeArray output
-    write ``{"visits":[``
-    let mutable start = true
-    for visit in visits do
-        if start
-        then
-            start <- false
-            write ``{"mark":``
-        else
-            write ``,{"mark":``
-        writeUint8 output visit.mark
-        write ``,"visited_at":``
-        writeUInt32 output visit.visited_at
-        write ``,"place":"``
-        write visit.place
-        write ``"}``
-    write ``]}``
-    output
-
-let private ``{"avg":`` = utf8 "{\"avg\":"
-
-let serializeAvg (avg: float) : MemoryStream =
-    let array = smallBuffer()
-    let output = stream array
-    let write = writeArray output
-    write ``{"avg":``
-    writeFloat output avg
-    write ``}``
-    output
-
-
 let fieldsMap =
     dict [
-        "sex_ex", AccountField.Sex
+        "sex_eq", AccountField.Sex
         "email_domain", AccountField.Email
         "email_lt", AccountField.Email
         "email_gt", AccountField.Email
@@ -301,22 +153,120 @@ let fieldsMap =
 
 let private ``{"accounts":[`` = utf8 "{\"accounts\":["
 let private ``},{`` = utf8 "},{"
+let private ``]}`` = utf8 "]}"
 
 let private ``"email":"`` = utf8 "\"email\":\""
 let private ``","id":`` = utf8 "\",\"id\":"
 
-let writeField (field_predicate: string, acc: Account) =
+
+let private ``,"fname":"`` = utf8 ",\"fname\":\""
+let private ``,"sname":"`` = utf8 ",\"sname\":\""
+let private ``,"interests":[`` = utf8 ",\"interests\":["
+let private ``,"status":"`` = utf8 ",\"status\":\""
+let private ``,"premium":{`` = utf8 ",\"premium\":{"
+let private ``"start":`` = utf8 "\"start\":"
+let private ``,"finish":`` = utf8 ",\"finish\":"
+let private ``,"sex":"`` = utf8 ",\"sex\":\""
+let private ``,"phone":"`` = utf8 ",\"phone\":\""
+let private ``,"likes":[`` = utf8 ",\"likes\":["
+let private ``{"ts":`` = utf8 "{\"ts\":"
+let private ``,"id":`` = utf8 ",\"id\":"
+let private ``,"birth":`` = utf8 ",\"birth\":"
+let private ``,"city":"`` = utf8 ",\"city\":\""
+let private ``,"country":"`` = utf8 ",\"country\":\""
+
+
+let writeField (field_predicate: string, acc: Account, output: MemoryStream) =
     let fieldType = fieldsMap.[field_predicate]
     match fieldType with
-    | AccountField.Sex -> ()
+    | AccountField.Email -> ()
+    | AccountField.Firstname -> 
+        if acc.fname |> isNotNull
+        then
+            writeArray output ``,"fname":"`` 
+            writeString output acc.fname
+            writeChar output '"'
+    | AccountField.Surname -> 
+        if acc.sname |> isNotNull
+        then
+            writeArray output ``,"sname":"`` 
+            writeString output acc.sname
+            writeChar output '"'
+    | AccountField.Interests -> 
+        if acc.interests |> isNotNull
+        then
+            writeArray output ``,"interests":[``
+            let mutable interestCounter = 0
+            for interest in acc.interests do            
+                writeChar output '"'            
+                writeString output interest          
+                writeChar output '"'
+                interestCounter <- interestCounter + 1
+                if (interestCounter < acc.interests.Length)
+                then writeChar output ','                   
+            writeChar output ']'
+    | AccountField.Status -> 
+        if acc.status |> isNotNull
+        then
+            writeArray output ``,"status":"``
+            writeString output acc.status
+            writeChar output '"'
+    | AccountField.Premium -> 
+        if (box acc.premium) |> isNotNull
+        then
+            writeArray output ``,"premium":{``
+            writeArray output ``"start":``
+            writeInt32 output acc.premium.start     
+            writeArray output ``,"finish":``
+            writeInt32 output acc.premium.finish
+            writeChar output '}'
+    | AccountField.Sex ->
+        writeArray output ``,"sex":"`` 
+        writeChar output acc.sex
+        writeChar output '"'
+    | AccountField.Phone -> 
+        if acc.phone |> isNotNull
+        then
+            writeArray output ``,"phone":"``
+            writeString output acc.phone
+            writeChar output '"'
+    | AccountField.Likes -> 
+        if acc.likes |> isNotNull
+        then
+            writeArray output ``,"likes":[``
+            let mutable likesCounter = 0
+            for like in acc.likes do   
+                writeArray output ``{"ts":``        
+                writeInt32 output like.ts    
+                writeArray output ``,"id":``        
+                writeInt32 output like.id         
+                writeChar output '}'
+                likesCounter <- likesCounter + 1
+                if (likesCounter < acc.interests.Length)
+                then writeChar output ','        
+            writeChar output ']'
+    | AccountField.Birth -> 
+        writeArray output ``,"birth":``
+        writeInt32x output acc.birth
+    | AccountField.City -> 
+        if acc.city |> isNotNull
+        then
+            writeArray output ``,"city":"``
+            writeString output acc.city
+            writeChar output '"'
+    | AccountField.Country -> 
+        if acc.country |> isNotNull
+        then
+            writeArray output ``,"country":"``
+            writeString output acc.country
+            writeChar output '"'    
     | _ -> ()
     
 
 let serializeAccounts (accs: Account[], field_predicates: string[]): MemoryStream =
-    let array = ArrayPool.Shared.Rent (accs.Length * field_predicates.Length * 50)
+    let array = ArrayPool.Shared.Rent (50 + accs.Length * field_predicates.Length * 50)
     let output = stream array
-    let write = writeArray output
-    write ``{"accounts":[``
+    writeArray output ``{"accounts":[``
     let mutable start = true
     for acc in accs do
         if start
@@ -324,17 +274,16 @@ let serializeAccounts (accs: Account[], field_predicates: string[]): MemoryStrea
             start <- false
             writeChar output '{'
         else
-            write ``},{``
+            writeArray output ``},{``
 
-        write ``"email":"``
+        writeArray output ``"email":"``
         writeString output acc.email
-        write ``","id":``
+        writeArray output ``","id":``
         writeInt32 output acc.id
 
         for field_predicate in field_predicates do
-            writeChar output ','
-            writeField(field_predicate, acc)
+            writeField(field_predicate, acc, output)
     if start |> not
     then writeChar output '}'
-    write ``]}``
+    writeArray output ``]}``
     output
