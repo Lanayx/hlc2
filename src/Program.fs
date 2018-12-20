@@ -18,6 +18,7 @@ open HCup.Models
 open HCup.RequestCounter
 open HCup.Actors
 open HCup.Parser
+open HCup.Helpers
 open HCup.BufferSerializers
 open HCup.MethodCounter
 open Giraffe
@@ -97,7 +98,7 @@ let getFilteredAccounts (next, ctx : HttpContext) =
     | :? KeyNotFoundException -> setStatusCode 400 next ctx
     | :? FormatException -> setStatusCode 400 next ctx
     | :? NotSupportedException ->
-        Console.WriteLine("Path: " + ctx.Request.Path + ctx.Request.QueryString.Value)
+        Console.WriteLine("NotSupportedException: " + ctx.Request.Path + ctx.Request.QueryString.Value)
         setStatusCode 400 next ctx
 
 let private accountsFilterString = "/accounts/filter/"

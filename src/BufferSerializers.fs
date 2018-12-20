@@ -9,6 +9,7 @@ open System.Text
 open FSharp.NativeInterop
 
 open HCup.Models
+open HCup.Helpers
 open HCup
 
 #nowarn "9"
@@ -242,7 +243,7 @@ let writeField (field_predicate: string, acc: Account, output: MemoryStream) =
                 writeInt32 output like.id
                 writeChar output '}'
                 likesCounter <- likesCounter + 1
-                if (likesCounter < acc.interests.Length)
+                if (likesCounter < acc.likes.Length)
                 then writeChar output ','
             writeChar output ']'
     | AccountField.Birth ->
@@ -262,9 +263,23 @@ let writeField (field_predicate: string, acc: Account, output: MemoryStream) =
             writeChar output '"'
     | _ -> ()
 
+let getAccsSize (accs: Account[], field_predicates: string[]) =
+    let mutable baseSize = 30 * accs.Length * (2+field_predicates.Length)
+    for field in field_predicates do       
+        if field =~ "likes_contains"
+        then
+            let likesCount = accs
+                            |> Array.fold (fun sum acc -> sum + acc.likes.Length ) 0
+            baseSize <- baseSize + likesCount * 30
+        if field =~ "interests_contains" || field =~ "interests_any"
+        then
+            let likesCount = accs
+                            |> Array.fold (fun sum acc -> sum + acc.interests.Length ) 0
+            baseSize <- baseSize + likesCount * 20
+    baseSize
 
 let serializeAccounts (accs: Account[], field_predicates: string[]): MemoryStream =
-    let array = ArrayPool.Shared.Rent (50 + accs.Length * (2+field_predicates.Length) * 50)
+    let array = ArrayPool.Shared.Rent (50 + getAccsSize(accs, field_predicates))
     let output = stream array
     writeArray output ``{"accounts":[``
     let mutable start = true
