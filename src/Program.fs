@@ -165,7 +165,9 @@ let main argv =
     then
         File.Copy("/tmp/data/options.txt","./data/options.txt")
         ZipFile.ExtractToDirectory("/tmp/data/data.zip","./data")
-    else ZipFile.ExtractToDirectory("data.zip","./data")
+    else 
+        File.Copy("options.txt","./data/options.txt")
+        ZipFile.ExtractToDirectory("data.zip","./data")
     loadData "./data"
     GC.Collect(2)
     WebHostBuilder()

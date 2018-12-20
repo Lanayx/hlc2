@@ -264,7 +264,7 @@ let writeField (field_predicate: string, acc: Account, output: MemoryStream) =
     | _ -> ()
 
 let getAccsSize (accs: Account[], field_predicates: string[]) =
-    let mutable baseSize = 30 * accs.Length * (2+field_predicates.Length)
+    let mutable baseSize = 40 * accs.Length * (2+field_predicates.Length)
     for field in field_predicates do       
         if field =~ "likes_contains"
         then
