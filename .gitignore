@@ -11,3 +11,4 @@ src/data_small.zip
 src/.vs/
 src/Benchmarks/.vs/
 *.user
+src/options.txt
