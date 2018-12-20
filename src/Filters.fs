@@ -113,7 +113,7 @@ let cityEqFilter (value: string) =
 let cityAnyFilter (value: string) =
     fun (acc: Account) ->
         value.Split(',') |> Array.exists (fun el -> el =~ acc.city)
-   
+
 let cityNullFilter (value: string) =
     fun (acc: Account) ->
         if value.[0] = '1'
@@ -127,10 +127,10 @@ let birthLtFilter (value: string) =
 let birthGtFilter (value: string) =
     fun (acc: Account) ->
         acc.birth > Int32.Parse(value)
-   
+
 let birthYearFilter (value: string) =
     fun (acc: Account) ->
-        let yearStartSeconds = (int)(DateTime(Int32.Parse(value), 0, 0) - timestampBase).TotalSeconds
+        let yearStartSeconds = (int)(DateTime(Int32.Parse(value), 1, 1) - timestampBase).TotalSeconds
         acc.birth > yearStartSeconds && acc.birth < (yearStartSeconds + secondsInYear)
 
 let interestsContainsFilter (value: string) =
@@ -142,7 +142,7 @@ let interestsAnyFilter (value: string) =
     fun (acc: Account) ->
         acc.interests |> isNotNull
             && value.Split(',') |> Array.exists (fun interest -> acc.interests |> Array.exists (fun el -> el =~ interest))
-   
+
 let likesContainsFilter (value: string) =
     fun (acc: Account) ->
         acc.likes |> isNotNull
@@ -150,16 +150,16 @@ let likesContainsFilter (value: string) =
 
 let premiumNowFilter (value: string) =
     fun (acc: Account) ->
-        (box acc.premium |> isNotNull) 
-            && acc.premium.finish > Int32.Parse(value) 
-            && acc.premium.start <= Int32.Parse(value) 
-        
+        (box acc.premium |> isNotNull)
+            && acc.premium.finish > currentTs
+            && acc.premium.start <= currentTs
+
 let premiumNullFilter (value: string) =
     fun (acc: Account) ->
         if value.[0] = '1'
         then box acc.premium |> isNull
         else box acc.premium |> isNotNull
-       
+
 let filters: IDictionary<string, Filter> =
     dict [
         "sex_eq", sexEqFilter

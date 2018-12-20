@@ -18,9 +18,9 @@ open Giraffe
 
 let private utf8Encoding = Encoding.UTF8
 let utf8 : string -> byte[] = utf8Encoding.GetBytes
-let inline private writeArray (output : MemoryStream) array = 
+let inline private writeArray (output : MemoryStream) array =
     output.Write(array, 0, array.Length)
-let inline private stream buffer = 
+let inline private stream buffer =
     new MemoryStream(buffer, 0, buffer.Length, true, true)
 
 let inline private writeInt32 (output : MemoryStream) (number: int) =
@@ -43,7 +43,7 @@ let inline private writeInt32 (output : MemoryStream) (number: int) =
         num <- num / 10
     for i = 0 to loopMax do
         output.WriteByte (NativePtr.get buffer i)
-  
+
 let inline private writeInt32x (output : MemoryStream) (number: int32) =
     if number > 0
     then
@@ -180,91 +180,91 @@ let writeField (field_predicate: string, acc: Account, output: MemoryStream) =
     let fieldType = fieldsMap.[field_predicate]
     match fieldType with
     | AccountField.Email -> ()
-    | AccountField.Firstname -> 
+    | AccountField.Firstname ->
         if acc.fname |> isNotNull
         then
-            writeArray output ``,"fname":"`` 
+            writeArray output ``,"fname":"``
             writeString output acc.fname
             writeChar output '"'
-    | AccountField.Surname -> 
+    | AccountField.Surname ->
         if acc.sname |> isNotNull
         then
-            writeArray output ``,"sname":"`` 
+            writeArray output ``,"sname":"``
             writeString output acc.sname
             writeChar output '"'
-    | AccountField.Interests -> 
+    | AccountField.Interests ->
         if acc.interests |> isNotNull
         then
             writeArray output ``,"interests":[``
             let mutable interestCounter = 0
-            for interest in acc.interests do            
-                writeChar output '"'            
-                writeString output interest          
+            for interest in acc.interests do
+                writeChar output '"'
+                writeString output interest
                 writeChar output '"'
                 interestCounter <- interestCounter + 1
                 if (interestCounter < acc.interests.Length)
-                then writeChar output ','                   
+                then writeChar output ','
             writeChar output ']'
-    | AccountField.Status -> 
+    | AccountField.Status ->
         if acc.status |> isNotNull
         then
             writeArray output ``,"status":"``
             writeString output acc.status
             writeChar output '"'
-    | AccountField.Premium -> 
+    | AccountField.Premium ->
         if (box acc.premium) |> isNotNull
         then
             writeArray output ``,"premium":{``
             writeArray output ``"start":``
-            writeInt32 output acc.premium.start     
+            writeInt32 output acc.premium.start
             writeArray output ``,"finish":``
             writeInt32 output acc.premium.finish
             writeChar output '}'
     | AccountField.Sex ->
-        writeArray output ``,"sex":"`` 
+        writeArray output ``,"sex":"``
         writeChar output acc.sex
         writeChar output '"'
-    | AccountField.Phone -> 
+    | AccountField.Phone ->
         if acc.phone |> isNotNull
         then
             writeArray output ``,"phone":"``
             writeString output acc.phone
             writeChar output '"'
-    | AccountField.Likes -> 
+    | AccountField.Likes ->
         if acc.likes |> isNotNull
         then
             writeArray output ``,"likes":[``
             let mutable likesCounter = 0
-            for like in acc.likes do   
-                writeArray output ``{"ts":``        
-                writeInt32 output like.ts    
-                writeArray output ``,"id":``        
-                writeInt32 output like.id         
+            for like in acc.likes do
+                writeArray output ``{"ts":``
+                writeInt32 output like.ts
+                writeArray output ``,"id":``
+                writeInt32 output like.id
                 writeChar output '}'
                 likesCounter <- likesCounter + 1
                 if (likesCounter < acc.interests.Length)
-                then writeChar output ','        
+                then writeChar output ','
             writeChar output ']'
-    | AccountField.Birth -> 
+    | AccountField.Birth ->
         writeArray output ``,"birth":``
         writeInt32x output acc.birth
-    | AccountField.City -> 
+    | AccountField.City ->
         if acc.city |> isNotNull
         then
             writeArray output ``,"city":"``
             writeString output acc.city
             writeChar output '"'
-    | AccountField.Country -> 
+    | AccountField.Country ->
         if acc.country |> isNotNull
         then
             writeArray output ``,"country":"``
             writeString output acc.country
-            writeChar output '"'    
+            writeChar output '"'
     | _ -> ()
-    
+
 
 let serializeAccounts (accs: Account[], field_predicates: string[]): MemoryStream =
-    let array = ArrayPool.Shared.Rent (50 + accs.Length * field_predicates.Length * 50)
+    let array = ArrayPool.Shared.Rent (50 + accs.Length * (2+field_predicates.Length) * 50)
     let output = stream array
     writeArray output ``{"accounts":[``
     let mutable start = true

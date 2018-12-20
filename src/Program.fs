@@ -78,16 +78,17 @@ let inline getExpression (key_pred: string) (value: string) =
 
 let getUser (next, ctx : HttpContext) =
     Interlocked.Increment(accountFilterCount) |> ignore
-    let keys = 
-        ctx.Request.Query.Keys 
+    let keys =
+        ctx.Request.Query.Keys
         |> Seq.toArray
         |> Array.filter(fun key -> (key =~ "limit" || key =~ "query_id") |> not )
     let filters =
-        keys        
+        keys
         |> Array.map (fun key -> getExpression key ctx.Request.Query.[key].[0])
     let accs =
         filters
         |> Array.fold (fun acc f -> acc |> Array.filter f) accounts
+        |> Array.sortByDescending (fun acc -> acc.id)
         |> Array.truncate (Int32.Parse(ctx.Request.Query.["limit"].[0]))
     let memoryStream = serializeAccounts (accs, keys)
     jsonBuffer memoryStream next ctx
