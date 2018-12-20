@@ -61,7 +61,7 @@ let inline deserializeObject<'a> (str: string) =
 
 
 
-let inline jsonBuffer (response : MemoryStream) (next : HttpFunc) (ctx: HttpContext) =
+let inline writeResponse (response : MemoryStream) (next : HttpFunc) (ctx: HttpContext) =
     let length = response.Position
     ctx.Response.Headers.["Content-Type"] <- jsonStringValues
     ctx.Response.Headers.ContentLength <- Nullable(length)
@@ -76,22 +76,29 @@ let inline jsonBuffer (response : MemoryStream) (next : HttpFunc) (ctx: HttpCont
 let inline getExpression (key_pred: string) (value: string) =
     filters.[key_pred] value
 
-let getUser (next, ctx : HttpContext) =
+let getFilteredAccounts (next, ctx : HttpContext) =
     Interlocked.Increment(accountFilterCount) |> ignore
-    let keys =
-        ctx.Request.Query.Keys
-        |> Seq.toArray
-        |> Array.filter(fun key -> (key =~ "limit" || key =~ "query_id") |> not )
-    let filters =
-        keys
-        |> Array.map (fun key -> getExpression key ctx.Request.Query.[key].[0])
-    let accs =
-        filters
-        |> Array.fold (fun acc f -> acc |> Array.filter f) accounts
-        |> Array.sortByDescending (fun acc -> acc.id)
-        |> Array.truncate (Int32.Parse(ctx.Request.Query.["limit"].[0]))
-    let memoryStream = serializeAccounts (accs, keys)
-    jsonBuffer memoryStream next ctx
+    try
+        let keys =
+            ctx.Request.Query.Keys
+            |> Seq.toArray
+            |> Array.filter(fun key -> (key =~ "limit" || key =~ "query_id") |> not )
+        let filters =
+            keys
+            |> Array.map (fun key -> getExpression key ctx.Request.Query.[key].[0])
+        let accs =
+            filters
+            |> Array.fold (fun acc f -> acc |> Array.filter f) accounts
+            |> Array.sortByDescending (fun acc -> acc.id)
+            |> Array.truncate (Int32.Parse(ctx.Request.Query.["limit"].[0]))
+        let memoryStream = serializeAccounts (accs, keys)
+        writeResponse memoryStream next ctx
+    with
+    | :? KeyNotFoundException -> setStatusCode 400 next ctx
+    | :? FormatException -> setStatusCode 400 next ctx
+    | :? NotSupportedException ->
+        Console.WriteLine("Path: " + ctx.Request.Path + ctx.Request.QueryString.Value)
+        setStatusCode 400 next ctx
 
 let private accountsFilterString = "/accounts/filter/"
 
@@ -100,7 +107,7 @@ let customGetRoutef : HttpHandler =
     fun (next : HttpFunc) (ctx : HttpContext) ->
         match ctx.Request.Path.Value with
         | filterPath when (String.Equals(filterPath, accountsFilterString, StringComparison.Ordinal)) ->
-             getUser (next, ctx)
+             getFilteredAccounts (next, ctx)
         | _-> setStatusCode 404 next ctx
 
 
@@ -134,9 +141,6 @@ let configureKestrel (options : KestrelServerOptions) =
     options.AllowSynchronousIO <- false
 
 let loadData folder =
-
-
-
     accounts <- Directory.EnumerateFiles(folder, "accounts_*.json")
                 |> Seq.map (File.ReadAllText >> deserializeObjectUnsafe<Accounts>)
                 |> Seq.collect (fun accountsObj -> accountsObj.accounts)
