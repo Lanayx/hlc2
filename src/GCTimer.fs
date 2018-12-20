@@ -15,11 +15,11 @@ syncTimer.Elapsed.Add(fun arg ->
     then
         if not GCRun
         then
-            Console.WriteLine("Running GC {0} {1} af:{2} gv:{3} gl:{4} ga:{5} gvs:{6}",
+            Console.WriteLine("Running GC {0} {1} accf:{2} accgr:{3} gl:{4} ga:{5} gvs:{6}",
                 lastRequestCount,
                 DateTime.Now.ToString("HH:mm:ss.ffff"),
                 accountFilterCount.Value,
-                getLocationCount.Value,
+                accountsGroupCount.Value,
                 getVisitCount.Value,
                 getAvgCount.Value,
                 getVisitsCount.Value)

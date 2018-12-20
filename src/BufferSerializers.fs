@@ -153,8 +153,10 @@ let fieldsMap =
     ]
 
 let private ``{"accounts":[`` = utf8 "{\"accounts\":["
+let private ``{"groups":[`` = utf8 "{\"groups\":["
 let private ``},{`` = utf8 "},{"
 let private ``]}`` = utf8 "]}"
+let private ``":"`` = utf8 "\":\""
 
 let private ``"email":"`` = utf8 "\"email\":\""
 let private ``","id":`` = utf8 "\",\"id\":"
@@ -175,6 +177,7 @@ let private ``,"id":`` = utf8 ",\"id\":"
 let private ``,"birth":`` = utf8 ",\"birth\":"
 let private ``,"city":"`` = utf8 ",\"city\":\""
 let private ``,"country":"`` = utf8 ",\"country\":\""
+let private ``,"count":`` = utf8 ",\"count\":"
 
 
 let writeField (field_predicate: string, acc: Account, output: MemoryStream) =
@@ -194,18 +197,7 @@ let writeField (field_predicate: string, acc: Account, output: MemoryStream) =
             writeString output acc.sname
             writeChar output '"'
     | AccountField.Interests ->
-        if acc.interests |> isNotNull
-        then
-            writeArray output ``,"interests":[``
-            let mutable interestCounter = 0
-            for interest in acc.interests do
-                writeChar output '"'
-                writeString output interest
-                writeChar output '"'
-                interestCounter <- interestCounter + 1
-                if (interestCounter < acc.interests.Length)
-                then writeChar output ','
-            writeChar output ']'
+        ()
     | AccountField.Status ->
         if acc.status |> isNotNull
         then
@@ -232,20 +224,7 @@ let writeField (field_predicate: string, acc: Account, output: MemoryStream) =
             writeString output acc.phone
             writeChar output '"'
     | AccountField.Likes ->
-        if acc.likes |> isNotNull
-        then
-            writeArray output ``,"likes":[``
-            let mutable likesCounter = 0
-            for like in acc.likes do
-                writeArray output ``{"ts":``
-                writeInt32 output like.ts
-                writeArray output ``,"id":``
-                writeInt32 output like.id
-                writeChar output '}'
-                likesCounter <- likesCounter + 1
-                if (likesCounter < acc.likes.Length)
-                then writeChar output ','
-            writeChar output ']'
+        ()
     | AccountField.Birth ->
         writeArray output ``,"birth":``
         writeInt32x output acc.birth
@@ -265,17 +244,6 @@ let writeField (field_predicate: string, acc: Account, output: MemoryStream) =
 
 let getAccsSize (accs: Account[], field_predicates: string[]) =
     let mutable baseSize = 40 * accs.Length * (2+field_predicates.Length)
-    for field in field_predicates do       
-        if field =~ "likes_contains"
-        then
-            let likesCount = accs
-                            |> Array.fold (fun sum acc -> sum + acc.likes.Length ) 0
-            baseSize <- baseSize + likesCount * 30
-        if field =~ "interests_contains" || field =~ "interests_any"
-        then
-            let likesCount = accs
-                            |> Array.fold (fun sum acc -> sum + acc.interests.Length ) 0
-            baseSize <- baseSize + likesCount * 20
     baseSize
 
 let serializeAccounts (accs: Account[], field_predicates: string[]): MemoryStream =
@@ -298,6 +266,30 @@ let serializeAccounts (accs: Account[], field_predicates: string[]): MemoryStrea
 
         for field_predicate in field_predicates do
             writeField(field_predicate, acc, output)
+    if start |> not
+    then writeChar output '}'
+    writeArray output ``]}``
+    output
+
+let serializeGroups (groups: struct(string*int)[], groupName: string): MemoryStream =
+    let array = ArrayPool.Shared.Rent (50 + 60 * groups.Length)
+    let output = stream array
+    writeArray output ``{"groups":[``
+    let mutable start = true
+    for struct(value, count) in groups do
+        if start
+        then
+            start <- false
+            writeChar output '{'
+        else
+            writeArray output ``},{``
+        writeChar output '"'
+        writeString output groupName
+        writeArray output ``":"``
+        writeString output value
+        writeChar output '"'
+        writeArray output ``,"count":``
+        writeInt32 output count
     if start |> not
     then writeChar output '}'
     writeArray output ``]}``

@@ -118,6 +118,11 @@ let birthYearFilter (value: string) =
     fun (acc: Account) ->
         let yearStartSeconds = (int)(DateTime(Int32.Parse(value), 1, 1) - timestampBase).TotalSeconds
         acc.birth > yearStartSeconds && acc.birth < (yearStartSeconds + secondsInYear)
+    
+let joinedYearFilter (value: string) =
+    fun (acc: Account) ->
+        let yearStartSeconds = (int)(DateTime(Int32.Parse(value), 1, 1) - timestampBase).TotalSeconds
+        acc.joined > yearStartSeconds && acc.joined < (yearStartSeconds + secondsInYear)
 
 let interestsContainsFilter (value: string) =
     fun (acc: Account) ->
@@ -175,4 +180,18 @@ let filters: IDictionary<string, Filter> =
         "likes_contains", likesContainsFilter
         "premium_now", premiumNowFilter
         "premium_null", premiumNullFilter
+    ]
+
+let groupFilters: IDictionary<string, Filter> =
+    dict [
+        "sex", sexEqFilter
+        "status", statusEqFilter
+        "fname", firstNameEqFilter
+        "sname", surnameEqFilter
+        "country", countryEqFilter
+        "city", cityEqFilter
+        "birth", birthYearFilter
+        "interests", interestsContainsFilter
+        "likes", likesContainsFilter
+        "joined", joinedYearFilter
     ]

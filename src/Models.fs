@@ -88,6 +88,7 @@ type Account() =
         [<DefaultValue>]val mutable phone: string
         [<DefaultValue>]val mutable likes: Like[]
         [<DefaultValue>]val mutable birth: int32
+        [<DefaultValue>]val mutable joined: int32
         [<DefaultValue>]val mutable city: string
         [<DefaultValue>]val mutable country: string
 

@@ -29,6 +29,7 @@ open Utf8Json
 open System
 open Filters
 open Microsoft.Extensions.DependencyInjection
+open System.Text.RegularExpressions
 
 // ---------------------------------
 // Web app
@@ -61,7 +62,6 @@ let inline deserializeObject<'a> (str: string) =
         None
 
 
-
 let inline writeResponse (response : MemoryStream) (next : HttpFunc) (ctx: HttpContext) =
     let length = response.Position
     ctx.Response.Headers.["Content-Type"] <- jsonStringValues
@@ -73,10 +73,7 @@ let inline writeResponse (response : MemoryStream) (next : HttpFunc) (ctx: HttpC
         ArrayPool.Shared.Return bytes
         return! next ctx
     }
-
-let inline getExpression (key_pred: string) (value: string) =
-    filters.[key_pred] value
-
+       
 let getFilteredAccounts (next, ctx : HttpContext) =
     Interlocked.Increment(accountFilterCount) |> ignore
     try
@@ -86,7 +83,7 @@ let getFilteredAccounts (next, ctx : HttpContext) =
             |> Array.filter(fun key -> (key =~ "limit" || key =~ "query_id") |> not )
         let filters =
             keys
-            |> Array.map (fun key -> getExpression key ctx.Request.Query.[key].[0])
+            |> Array.map (fun key -> filters.[key] ctx.Request.Query.[key].[0])
         let accs =
             filters
             |> Array.fold (fun acc f -> acc |> Array.filter f) accounts
@@ -101,14 +98,102 @@ let getFilteredAccounts (next, ctx : HttpContext) =
         Console.WriteLine("NotSupportedException: " + ctx.Request.Path + ctx.Request.QueryString.Value)
         setStatusCode 400 next ctx
 
-let private accountsFilterString = "/accounts/filter/"
+let array_sort value =
+    if value = -1
+    then Array.sortByDescending
+    else Array.sortBy
 
+let applyGrouping (memoryStream: byref<MemoryStream>, groupKey, order, accs: Account[], limit) =
+    match groupKey with
+    | "sex" -> 
+        let groups =
+            accs 
+            |> Array.groupBy (fun acc -> acc.sex)
+            |> Array.map (fun (key, group) -> struct(string key, group.Length))
+            |> array_sort order (fun struct(group,length) -> length, group)
+            |> Array.truncate limit
+        memoryStream <- serializeGroups(groups, "sex")
+    | "status" -> 
+        let groups =
+            accs 
+            |> Array.filter (fun acc -> acc.status |> isNotNull)
+            |> Array.groupBy (fun acc -> acc.status)
+            |> Array.map (fun (key, group) -> struct(key, group.Length))
+            |> array_sort order (fun struct(group,length) -> length, group)
+            |> Array.truncate limit
+        memoryStream <- serializeGroups(groups, "status")
+    | "country" -> 
+        let groups =
+            accs 
+            |> Array.filter (fun acc -> acc.country |> isNotNull)
+            |> Array.groupBy (fun acc -> acc.country)
+            |> Array.map (fun (key, group) -> struct(key, group.Length))
+            |> array_sort order (fun struct(group,length) -> length, group)
+            |> Array.truncate limit
+        memoryStream <- serializeGroups(groups, "country")
+    | "city" -> 
+        let groups =
+            accs 
+            |> Array.filter (fun acc -> acc.city |> isNotNull)
+            |> Array.groupBy (fun acc -> acc.city)
+            |> Array.map (fun (key, group) -> struct(key, group.Length))
+            |> array_sort order (fun struct(group,length) -> length, group)
+            |> Array.truncate limit
+        memoryStream <- serializeGroups(groups, "city")
+    | "interests" -> 
+        let interests =
+            accs
+            |> Array.filter (fun acc -> acc.interests |> isNotNull)
+            |> Array.collect (fun acc -> acc.interests)
+            |> Array.groupBy id  
+            |> Array.map (fun (key, group) -> struct(key, group.Length))
+            |> array_sort order (fun struct(group,length) -> length, group)
+            |> Array.truncate limit
+        memoryStream <- serializeGroups(interests , "interests")
+    | _ ->
+        ()
+       
+
+let getGroupedAccounts (next, ctx : HttpContext) =
+    Interlocked.Increment(accountsGroupCount) |> ignore
+    try
+        let keys =
+            ctx.Request.Query.Keys
+            |> Seq.toArray
+            |> Array.filter(fun key -> (key =~ "limit" || key =~ "query_id" || key =~ "order" || key=~"keys") |> not )
+        let filters =
+            keys
+            |> Array.map (fun key -> groupFilters.[key] ctx.Request.Query.[key].[0])
+        let groupKey = 
+            ctx.Request.Query.["keys"].[0].Split(',').[0]
+        let order = 
+            Int32.Parse(ctx.Request.Query.["order"].[0])
+        let accs =
+            filters
+            |> Array.fold (fun acc f -> acc |> Array.filter f) accounts
+        let mutable memoryStream: MemoryStream = null
+        let limit = Int32.Parse(ctx.Request.Query.["limit"].[0])
+        applyGrouping(&memoryStream, groupKey, order, accs, limit)
+        if (memoryStream |> isNotNull)
+        then writeResponse memoryStream next ctx
+        else setStatusCode 400 next ctx
+    with
+    | :? KeyNotFoundException -> setStatusCode 400 next ctx
+    | :? FormatException -> setStatusCode 400 next ctx
+    | :? NotSupportedException as ex ->
+        Console.WriteLine("NotSupportedException:" + ex.Message + " " + ctx.Request.Path + ctx.Request.QueryString.Value)
+        setStatusCode 400 next ctx
+
+let private accountsFilterString = "/accounts/filter/"
+let private accountsGroupString = "/accounts/group/"
 
 let customGetRoutef : HttpHandler =
     fun (next : HttpFunc) (ctx : HttpContext) ->
         match ctx.Request.Path.Value with
         | filterPath when (String.Equals(filterPath, accountsFilterString, StringComparison.Ordinal)) ->
              getFilteredAccounts (next, ctx)
+        | filterPath when (String.Equals(filterPath, accountsGroupString, StringComparison.Ordinal)) ->
+             getGroupedAccounts (next, ctx)
         | _-> setStatusCode 404 next ctx
 
 
