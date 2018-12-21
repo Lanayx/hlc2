@@ -156,7 +156,9 @@ let private ``{"accounts":[`` = utf8 "{\"accounts\":["
 let private ``{"groups":[`` = utf8 "{\"groups\":["
 let private ``},{`` = utf8 "},{"
 let private ``]}`` = utf8 "]}"
-let private ``":"`` = utf8 "\":\""
+let private ``":`` = utf8 "\":"
+let private ``",`` = utf8 "\","
+let private ``null`` = utf8 "null"
 
 let private ``"email":"`` = utf8 "\"email\":\""
 let private ``","id":`` = utf8 "\",\"id\":"
@@ -177,7 +179,7 @@ let private ``,"id":`` = utf8 ",\"id\":"
 let private ``,"birth":`` = utf8 ",\"birth\":"
 let private ``,"city":"`` = utf8 ",\"city\":\""
 let private ``,"country":"`` = utf8 ",\"country\":\""
-let private ``,"count":`` = utf8 ",\"count\":"
+let private ``"count":`` = utf8 "\"count\":"
 
 
 let writeField (field_predicate: string, acc: Account, output: MemoryStream) =
@@ -271,12 +273,12 @@ let serializeAccounts (accs: Account[], field_predicates: string[]): MemoryStrea
     writeArray output ``]}``
     output
 
-let serializeGroups (groups: struct(string*int)[], groupName: string): MemoryStream =
+let serializeGroups (groups: (string*int)[], groupName: string): MemoryStream =
     let array = ArrayPool.Shared.Rent (50 + 60 * groups.Length)
     let output = stream array
     writeArray output ``{"groups":[``
     let mutable start = true
-    for struct(value, count) in groups do
+    for (value, count) in groups do
         if start
         then
             start <- false
@@ -285,10 +287,51 @@ let serializeGroups (groups: struct(string*int)[], groupName: string): MemoryStr
             writeArray output ``},{``
         writeChar output '"'
         writeString output groupName
-        writeArray output ``":"``
-        writeString output value
-        writeChar output '"'
-        writeArray output ``,"count":``
+        writeArray output ``":``
+        if value |> isNotNull
+        then
+            writeChar output '"'
+            writeString output value            
+            writeChar output '"'
+        else
+            writeArray output ``null``
+        writeChar output ','
+        writeArray output ``"count":``
+        writeInt32 output count
+    if start |> not
+    then writeChar output '}'
+    writeArray output ``]}``
+    output
+
+let serializeGroups2 (groups: ((string*string)*int)[], groupName1: string, groupName2: string): MemoryStream =
+    let array = ArrayPool.Shared.Rent (50 + 80 * groups.Length)
+    let output = stream array
+    writeArray output ``{"groups":[``
+    let mutable start = true
+    for ((value1,value2), count) in groups do
+        if start
+        then
+            start <- false
+            writeChar output '{'
+        else
+            writeArray output ``},{``
+        if value1 |> isNotNull
+        then
+            writeChar output '"'
+            writeString output groupName1
+            writeArray output ``":``
+            writeChar output '"'
+            writeString output value1
+            writeArray output ``",``
+        if value2 |> isNotNull
+        then
+            writeChar output '"'
+            writeString output groupName2
+            writeArray output ``":``
+            writeChar output '"'
+            writeString output value2
+            writeArray output ``",``
+        writeArray output ``"count":``
         writeInt32 output count
     if start |> not
     then writeChar output '}'

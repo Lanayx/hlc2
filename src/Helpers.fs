@@ -2,7 +2,7 @@
 
 open System
 
-let timestampBase = DateTime(1970, 1, 1, 0, 0, 0, 0)
+let timestampBase = DateTime(1970, 1, 1)
 [<Literal>]
 let secondsInYear = 31556926
 

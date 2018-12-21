@@ -109,35 +109,32 @@ let applyGrouping (memoryStream: byref<MemoryStream>, groupKey, order, accs: Acc
         let groups =
             accs 
             |> Array.groupBy (fun acc -> acc.sex)
-            |> Array.map (fun (key, group) -> struct(string key, group.Length))
-            |> array_sort order (fun struct(group,length) -> length, group)
+            |> Array.map (fun (key, group) -> (string key, group.Length))
+            |> array_sort order (fun (group,length) -> length, group)
             |> Array.truncate limit
         memoryStream <- serializeGroups(groups, "sex")
     | "status" -> 
         let groups =
             accs 
-            |> Array.filter (fun acc -> acc.status |> isNotNull)
             |> Array.groupBy (fun acc -> acc.status)
-            |> Array.map (fun (key, group) -> struct(key, group.Length))
-            |> array_sort order (fun struct(group,length) -> length, group)
+            |> Array.map (fun (key, group) -> key, group.Length)
+            |> array_sort order (fun (group,length) -> length, group)
             |> Array.truncate limit
         memoryStream <- serializeGroups(groups, "status")
     | "country" -> 
         let groups =
             accs 
-            |> Array.filter (fun acc -> acc.country |> isNotNull)
             |> Array.groupBy (fun acc -> acc.country)
-            |> Array.map (fun (key, group) -> struct(key, group.Length))
-            |> array_sort order (fun struct(group,length) -> length, group)
+            |> Array.map (fun (key, group) -> key, group.Length)
+            |> array_sort order (fun (group,length) -> length, group)
             |> Array.truncate limit
         memoryStream <- serializeGroups(groups, "country")
     | "city" -> 
         let groups =
             accs 
-            |> Array.filter (fun acc -> acc.city |> isNotNull)
             |> Array.groupBy (fun acc -> acc.city)
-            |> Array.map (fun (key, group) -> struct(key, group.Length))
-            |> array_sort order (fun struct(group,length) -> length, group)
+            |> Array.map (fun (key, group) -> key, group.Length)
+            |> array_sort order (fun (group,length) -> length, group)
             |> Array.truncate limit
         memoryStream <- serializeGroups(groups, "city")
     | "interests" -> 
@@ -146,10 +143,42 @@ let applyGrouping (memoryStream: byref<MemoryStream>, groupKey, order, accs: Acc
             |> Array.filter (fun acc -> acc.interests |> isNotNull)
             |> Array.collect (fun acc -> acc.interests)
             |> Array.groupBy id  
-            |> Array.map (fun (key, group) -> struct(key, group.Length))
-            |> array_sort order (fun struct(group,length) -> length, group)
+            |> Array.map (fun (key, group) -> key, group.Length)
+            |> array_sort order (fun (group,length) -> length, group)
             |> Array.truncate limit
         memoryStream <- serializeGroups(interests , "interests")
+    | "city,status" -> 
+        let groups =
+            accs 
+            |> Array.groupBy (fun acc -> acc.city, acc.status)
+            |> Array.map (fun (key, group) -> key, group.Length)
+            |> array_sort order (fun (group,length) -> length, group)
+            |> Array.truncate limit
+        memoryStream <- serializeGroups2(groups, "city", "status")
+    | "city,sex" -> 
+        let groups =
+            accs 
+            |> Array.groupBy (fun acc -> acc.city, string acc.sex)
+            |> Array.map (fun (key, group) -> key, group.Length)
+            |> array_sort order (fun (group,length) -> length, group)
+            |> Array.truncate limit
+        memoryStream <- serializeGroups2(groups, "city", "sex")
+    | "country,sex" -> 
+        let groups =
+            accs 
+            |> Array.groupBy (fun acc -> acc.country, string acc.sex)
+            |> Array.map (fun (key, group) -> key, group.Length)
+            |> array_sort order (fun (group,length) -> length, group)
+            |> Array.truncate limit
+        memoryStream <- serializeGroups2(groups, "country", "sex")
+    | "country,status" -> 
+        let groups =
+            accs 
+            |> Array.groupBy (fun acc -> acc.country, acc.status)
+            |> Array.map (fun (key, group) -> key, group.Length)
+            |> array_sort order (fun (group,length) -> length, group)
+            |> Array.truncate limit
+        memoryStream <- serializeGroups2(groups, "country", "status")
     | _ ->
         ()
        
@@ -165,7 +194,7 @@ let getGroupedAccounts (next, ctx : HttpContext) =
             keys
             |> Array.map (fun key -> groupFilters.[key] ctx.Request.Query.[key].[0])
         let groupKey = 
-            ctx.Request.Query.["keys"].[0].Split(',').[0]
+            ctx.Request.Query.["keys"].[0]
         let order = 
             Int32.Parse(ctx.Request.Query.["order"].[0])
         let accs =

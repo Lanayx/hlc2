@@ -117,12 +117,12 @@ let birthGtFilter (value: string) =
 let birthYearFilter (value: string) =
     fun (acc: Account) ->
         let yearStartSeconds = (int)(DateTime(Int32.Parse(value), 1, 1) - timestampBase).TotalSeconds
-        acc.birth > yearStartSeconds && acc.birth < (yearStartSeconds + secondsInYear)
+        acc.birth >= yearStartSeconds && acc.birth < (yearStartSeconds + secondsInYear)
     
 let joinedYearFilter (value: string) =
     fun (acc: Account) ->
         let yearStartSeconds = (int)(DateTime(Int32.Parse(value), 1, 1) - timestampBase).TotalSeconds
-        acc.joined > yearStartSeconds && acc.joined < (yearStartSeconds + secondsInYear)
+        acc.joined >= yearStartSeconds && acc.joined < (yearStartSeconds + secondsInYear)
 
 let interestsContainsFilter (value: string) =
     fun (acc: Account) ->
