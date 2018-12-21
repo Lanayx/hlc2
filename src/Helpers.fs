@@ -17,3 +17,7 @@ let mutable currentTs = 0
 let inline (=~) str1 str2 =
     String.Equals(str1, str2,StringComparison.Ordinal)
 
+let inline (==) (str1: string) str2 =
+    MemoryExtensions.Equals(str1.AsSpan(), str2, StringComparison.Ordinal)
+
+

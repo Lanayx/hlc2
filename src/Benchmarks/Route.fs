@@ -27,3 +27,16 @@ type RouteBenchmarks() =
         | m when m = this.accountsFilterStringZ -> false
         | z when z = this.accountsFilterString -> true
 
+    [<Benchmark>]
+    member this.StartsWithSegments() =
+        let x = PathString("/accounts/filter/")
+        match x with
+        | m when m.StartsWithSegments(this.accountsFilterStringXZ) -> false
+        | z when z.StartsWithSegments(this.accountsFilterStringX) -> true
+
+    [<Benchmark>]
+    member this.StartsWith() =
+        let x = PathString("/accounts/filter/")
+        match x.Value with
+        | m when m.StartsWith(this.accountsFilterStringZ) -> false
+        | z when z.StartsWith(this.accountsFilterString) -> true

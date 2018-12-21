@@ -213,19 +213,52 @@ let getGroupedAccounts (next, ctx : HttpContext) =
         Console.WriteLine("NotSupportedException:" + ex.Message + " " + ctx.Request.Path + ctx.Request.QueryString.Value)
         setStatusCode 400 next ctx
 
+let getRecommendedAccounts (id, next, ctx : HttpContext) =
+    Interlocked.Increment(accountsRecommendCount) |> ignore    
+    setStatusCode 401 next ctx
+  
+let getSuggestedAccounts (id, next, ctx : HttpContext) =
+    Interlocked.Increment(accountsSuggestCount) |> ignore    
+    setStatusCode 401 next ctx
+
 let private accountsFilterString = "/accounts/filter/"
 let private accountsGroupString = "/accounts/group/"
 
 let customGetRoutef : HttpHandler =
     fun (next : HttpFunc) (ctx : HttpContext) ->
         match ctx.Request.Path.Value with
-        | filterPath when (String.Equals(filterPath, accountsFilterString, StringComparison.Ordinal)) ->
+        | filterPath when filterPath =~ accountsFilterString ->
              getFilteredAccounts (next, ctx)
-        | filterPath when (String.Equals(filterPath, accountsGroupString, StringComparison.Ordinal)) ->
+        | filterPath when filterPath =~ accountsGroupString ->
              getGroupedAccounts (next, ctx)
-        | _-> setStatusCode 404 next ctx
-
-
+        | filterPath -> 
+            if filterPath.Length > 10
+            then
+                let sp = filterPath.AsSpan()
+                let mainPart = sp.Slice(10)
+                let indexOfSlash = mainPart.IndexOf('/')
+                if indexOfSlash > 0
+                then            
+                    let stringId = mainPart.Slice(0,indexOfSlash)
+                    let ending = mainPart.Slice(indexOfSlash + 1)
+                    let mutable id = 0
+                    if Int32.TryParse(stringId, &id)
+                    then
+                        if "recommend/" == ending
+                        then 
+                            getRecommendedAccounts (id, next, ctx)
+                        else 
+                            if "suggest/" == ending
+                            then 
+                                getSuggestedAccounts (id, next, ctx)
+                            else
+                                setStatusCode 404 next ctx
+                    else
+                        setStatusCode 404 next ctx
+                else 
+                    setStatusCode 404 next ctx
+            else 
+                setStatusCode 404 next ctx
 let webApp =
     choose [
         GET >=> customGetRoutef
