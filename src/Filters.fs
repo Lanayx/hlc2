@@ -8,6 +8,13 @@ open Giraffe
 
 type Filter = string -> Account -> bool
 
+let inline getStatus status =
+    match status with
+    | "свободны" -> freeStatus
+    | "всё сложно" -> complexStatus
+    | "заняты" -> occupiedStatus
+    | _ -> failwith "Invalid status"
+
 let sexEqFilter (value: string) =
     fun (acc: Account) -> acc.sex = value.[0]
 
@@ -30,11 +37,13 @@ let emailGtFilter (value: string) =
 
 let statusEqFilter (value: string) =
     fun (acc: Account) ->
-        acc.status =~ value
+        let intStatus = getStatus value
+        acc.status = intStatus
 
 let statusNeqFilter (value: string) =
     fun (acc: Account) ->
-        acc.status =~ value |> not
+        let intStatus = getStatus value
+        acc.status <> intStatus
 
 let firstNameEqFilter (value: string) =
     fun (acc: Account) ->
@@ -74,7 +83,8 @@ let phoneCodeFilter (value: string) =
         then
             false
         else
-            acc.phone.Substring(2,3) =~ value
+            let intCode = Int32.Parse(value)
+            acc.phoneCode = intCode
 
 let phoneNullFilter (value: string) =
     fun (acc: Account) ->
@@ -116,13 +126,11 @@ let birthGtFilter (value: string) =
 
 let birthYearFilter (value: string) =
     fun (acc: Account) ->
-        let yearStartSeconds = (int)(DateTime(Int32.Parse(value), 1, 1) - timestampBase).TotalSeconds
-        acc.birth >= yearStartSeconds && acc.birth < (yearStartSeconds + secondsInYear)
-    
+        acc.birthYear = Int32.Parse(value)
+
 let joinedYearFilter (value: string) =
     fun (acc: Account) ->
-        let yearStartSeconds = (int)(DateTime(Int32.Parse(value), 1, 1) - timestampBase).TotalSeconds
-        acc.joined >= yearStartSeconds && acc.joined < (yearStartSeconds + secondsInYear)
+        acc.joinedYear = Int32.Parse(value)
 
 let interestsContainsFilter (value: string) =
     fun (acc: Account) ->
@@ -141,9 +149,7 @@ let likesContainsFilter (value: string) =
 
 let premiumNowFilter (value: string) =
     fun (acc: Account) ->
-        (box acc.premium |> isNotNull)
-            && acc.premium.finish > currentTs
-            && acc.premium.start <= currentTs
+        acc.premiumNow
 
 let premiumNullFilter (value: string) =
     fun (acc: Account) ->

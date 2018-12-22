@@ -35,21 +35,9 @@ open System.Text.RegularExpressions
 // Web app
 // ---------------------------------
 
-[<Literal>]
-let LocationsSize = 800000
-[<Literal>]
-let UsersSize = 1050000
-[<Literal>]
-let VisitsSize = 10050000
-
-
-
-let mutable accounts = [||]
+let mutable accounts = Array.zeroCreate 10300
 
 let jsonStringValues = StringValues "application/json"
-
-type UpdateEntity<'a> = 'a -> string -> bool
-type IdHandler = int*HttpFunc*HttpContext -> HttpFuncResult
 
 let inline deserializeObjectUnsafe<'a> (str: string) =
     JsonSerializer.Deserialize<'a>(str)
@@ -60,6 +48,35 @@ let inline deserializeObject<'a> (str: string) =
     with
     | exn ->
         None
+
+let getAccount (accUpd: AccountUpd): Account =
+    let atIndex = accUpd.email.IndexOf('@', StringComparison.Ordinal)
+    let emailDomain = accUpd.email.Substring(atIndex+1)
+    let phoneCode =
+        if accUpd.phone |> isNull
+        then 0
+        else Int32.Parse(accUpd.phone.Substring(2,3))
+    let account = Account()
+    account.id <- accUpd.id
+    account.fname <- accUpd.fname
+    account.sname <- accUpd.sname
+    account.email <- accUpd.email
+    account.emailDomain <- emailDomain
+    account.interests <- accUpd.interests
+    account.status <- getStatus accUpd.status
+    account.premium <- accUpd.premium
+    account.premiumNow <- box accUpd.premium |> isNotNull && accUpd.premium.start <= currentTs && accUpd.premium.finish > currentTs
+    account.sex <- accUpd.sex
+    account.phone <- accUpd.phone
+    account.phoneCode <- phoneCode
+    account.likes <- accUpd.likes
+    account.birth <- accUpd.birth
+    account.birthYear <- (convertToDate accUpd.birth).Year
+    account.joined <- accUpd.joined
+    account.joinedYear <- (convertToDate accUpd.joined).Year
+    account.city <- accUpd.city
+    account.country <- accUpd.country
+    account
 
 
 let inline writeResponse (response : MemoryStream) (next : HttpFunc) (ctx: HttpContext) =
@@ -73,7 +90,7 @@ let inline writeResponse (response : MemoryStream) (next : HttpFunc) (ctx: HttpC
         ArrayPool.Shared.Return bytes
         return! next ctx
     }
-       
+
 let getFilteredAccounts (next, ctx : HttpContext) =
     Interlocked.Increment(accountFilterCount) |> ignore
     try
@@ -84,6 +101,7 @@ let getFilteredAccounts (next, ctx : HttpContext) =
         let filters =
             keys
             |> Array.map (fun key -> filters.[key] ctx.Request.Query.[key].[0])
+        let accounts = accounts |> Array.filter(fun acc -> (box acc) |> isNotNull)
         let accs =
             filters
             |> Array.fold (fun acc f -> acc |> Array.filter f) accounts
@@ -105,83 +123,83 @@ let array_sort value =
 
 let applyGrouping (memoryStream: byref<MemoryStream>, groupKey, order, accs: Account[], limit) =
     match groupKey with
-    | "sex" -> 
+    | "sex" ->
         let groups =
-            accs 
+            accs
             |> Array.groupBy (fun acc -> acc.sex)
-            |> Array.map (fun (key, group) -> (string key, group.Length))
+            |> Array.map (fun (key, group) -> (key, group.Length))
             |> array_sort order (fun (group,length) -> length, group)
             |> Array.truncate limit
-        memoryStream <- serializeGroups(groups, "sex")
-    | "status" -> 
+        memoryStream <- serializeGroupsSex(groups, "sex")
+    | "status" ->
         let groups =
-            accs 
+            accs
             |> Array.groupBy (fun acc -> acc.status)
             |> Array.map (fun (key, group) -> key, group.Length)
             |> array_sort order (fun (group,length) -> length, group)
             |> Array.truncate limit
-        memoryStream <- serializeGroups(groups, "status")
-    | "country" -> 
+        memoryStream <- serializeGroupsStatus(groups, "status")
+    | "country" ->
         let groups =
-            accs 
+            accs
             |> Array.groupBy (fun acc -> acc.country)
             |> Array.map (fun (key, group) -> key, group.Length)
             |> array_sort order (fun (group,length) -> length, group)
             |> Array.truncate limit
-        memoryStream <- serializeGroups(groups, "country")
-    | "city" -> 
+        memoryStream <- serializeGroupsString(groups, "country")
+    | "city" ->
         let groups =
-            accs 
+            accs
             |> Array.groupBy (fun acc -> acc.city)
             |> Array.map (fun (key, group) -> key, group.Length)
             |> array_sort order (fun (group,length) -> length, group)
             |> Array.truncate limit
-        memoryStream <- serializeGroups(groups, "city")
-    | "interests" -> 
+        memoryStream <- serializeGroupsString(groups, "city")
+    | "interests" ->
         let interests =
             accs
             |> Array.filter (fun acc -> acc.interests |> isNotNull)
             |> Array.collect (fun acc -> acc.interests)
-            |> Array.groupBy id  
+            |> Array.groupBy id
             |> Array.map (fun (key, group) -> key, group.Length)
             |> array_sort order (fun (group,length) -> length, group)
             |> Array.truncate limit
-        memoryStream <- serializeGroups(interests , "interests")
-    | "city,status" -> 
+        memoryStream <- serializeGroupsString(interests , "interests")
+    | "city,status" ->
         let groups =
-            accs 
+            accs
             |> Array.groupBy (fun acc -> acc.city, acc.status)
             |> Array.map (fun (key, group) -> key, group.Length)
             |> array_sort order (fun (group,length) -> length, group)
             |> Array.truncate limit
-        memoryStream <- serializeGroups2(groups, "city", "status")
-    | "city,sex" -> 
+        memoryStream <- serializeGroups2Status(groups, "city", "status")
+    | "city,sex" ->
         let groups =
-            accs 
-            |> Array.groupBy (fun acc -> acc.city, string acc.sex)
+            accs
+            |> Array.groupBy (fun acc -> acc.city, acc.sex)
             |> Array.map (fun (key, group) -> key, group.Length)
             |> array_sort order (fun (group,length) -> length, group)
             |> Array.truncate limit
-        memoryStream <- serializeGroups2(groups, "city", "sex")
-    | "country,sex" -> 
+        memoryStream <- serializeGroups2Sex(groups, "city", "sex")
+    | "country,sex" ->
         let groups =
-            accs 
-            |> Array.groupBy (fun acc -> acc.country, string acc.sex)
+            accs
+            |> Array.groupBy (fun acc -> acc.country, acc.sex)
             |> Array.map (fun (key, group) -> key, group.Length)
             |> array_sort order (fun (group,length) -> length, group)
             |> Array.truncate limit
-        memoryStream <- serializeGroups2(groups, "country", "sex")
-    | "country,status" -> 
+        memoryStream <- serializeGroups2Sex(groups, "country", "sex")
+    | "country,status" ->
         let groups =
-            accs 
+            accs
             |> Array.groupBy (fun acc -> acc.country, acc.status)
             |> Array.map (fun (key, group) -> key, group.Length)
             |> array_sort order (fun (group,length) -> length, group)
             |> Array.truncate limit
-        memoryStream <- serializeGroups2(groups, "country", "status")
+        memoryStream <- serializeGroups2Status(groups, "country", "status")
     | _ ->
         ()
-       
+
 
 let getGroupedAccounts (next, ctx : HttpContext) =
     Interlocked.Increment(accountsGroupCount) |> ignore
@@ -193,10 +211,11 @@ let getGroupedAccounts (next, ctx : HttpContext) =
         let filters =
             keys
             |> Array.map (fun key -> groupFilters.[key] ctx.Request.Query.[key].[0])
-        let groupKey = 
+        let groupKey =
             ctx.Request.Query.["keys"].[0]
-        let order = 
+        let order =
             Int32.Parse(ctx.Request.Query.["order"].[0])
+        let accounts = accounts |> Array.filter(fun acc -> (box acc) |> isNotNull)
         let accs =
             filters
             |> Array.fold (fun acc f -> acc |> Array.filter f) accounts
@@ -213,12 +232,25 @@ let getGroupedAccounts (next, ctx : HttpContext) =
         Console.WriteLine("NotSupportedException:" + ex.Message + " " + ctx.Request.Path + ctx.Request.QueryString.Value)
         setStatusCode 400 next ctx
 
+let sortAccount (acc: Account) =
+    let hasPremium =
+        box acc.premium |> isNotNull && acc.premium.start <= currentTs && acc.premium.finish > currentTs
+    hasPremium
+
 let getRecommendedAccounts (id, next, ctx : HttpContext) =
-    Interlocked.Increment(accountsRecommendCount) |> ignore    
-    setStatusCode 401 next ctx
-  
+    Interlocked.Increment(accountsRecommendCount) |> ignore
+    let target = accounts.[id]
+    //let accounts = accounts |> Array.filter(fun acc -> (box acc) |> isNotNull)
+    //let limit = Int32.Parse(ctx.Request.Query.["limit"].[0])
+    //let accs =
+    //    accounts
+    //    |> Array.sortBy sortAccount
+    //let memoryStream = serializeAccounts (accs, keys)
+    //writeResponse memoryStream next ctx
+    setStatusCode 400 next ctx
+
 let getSuggestedAccounts (id, next, ctx : HttpContext) =
-    Interlocked.Increment(accountsSuggestCount) |> ignore    
+    Interlocked.Increment(accountsSuggestCount) |> ignore
     setStatusCode 401 next ctx
 
 let private accountsFilterString = "/accounts/filter/"
@@ -231,33 +263,33 @@ let customGetRoutef : HttpHandler =
              getFilteredAccounts (next, ctx)
         | filterPath when filterPath =~ accountsGroupString ->
              getGroupedAccounts (next, ctx)
-        | filterPath -> 
+        | filterPath ->
             if filterPath.Length > 10
             then
                 let sp = filterPath.AsSpan()
                 let mainPart = sp.Slice(10)
                 let indexOfSlash = mainPart.IndexOf('/')
                 if indexOfSlash > 0
-                then            
+                then
                     let stringId = mainPart.Slice(0,indexOfSlash)
                     let ending = mainPart.Slice(indexOfSlash + 1)
                     let mutable id = 0
                     if Int32.TryParse(stringId, &id)
                     then
                         if "recommend/" == ending
-                        then 
+                        then
                             getRecommendedAccounts (id, next, ctx)
-                        else 
+                        else
                             if "suggest/" == ending
-                            then 
+                            then
                                 getSuggestedAccounts (id, next, ctx)
                             else
                                 setStatusCode 404 next ctx
                     else
                         setStatusCode 404 next ctx
-                else 
+                else
                     setStatusCode 404 next ctx
-            else 
+            else
                 setStatusCode 404 next ctx
 let webApp =
     choose [
@@ -289,18 +321,23 @@ let configureKestrel (options : KestrelServerOptions) =
     options.AllowSynchronousIO <- false
 
 let loadData folder =
-    accounts <- Directory.EnumerateFiles(folder, "accounts_*.json")
-                |> Seq.map (File.ReadAllText >> deserializeObjectUnsafe<Accounts>)
-                |> Seq.collect (fun accountsObj -> accountsObj.accounts)
-                |> Seq.toArray
-
-    Console.Write("Accounts {0} ", accounts.Length)
-
-
     let str = Path.Combine(folder,"options.txt")
                    |> File.ReadAllLines
     currentTs <- str.[0]
                    |> Int32.Parse
+
+    let mutable accsCount = 0;
+    Directory.EnumerateFiles(folder, "accounts_*.json")
+                |> Seq.map (File.ReadAllText >> deserializeObjectUnsafe<AccountsUpd>)
+                |> Seq.collect (fun accountsObj -> accountsObj.accounts)
+                |> Seq.iter (fun acc ->
+                    accounts.[acc.id] <- getAccount acc
+                    accsCount <- accsCount + 1
+                    )
+
+    Console.Write("Accounts {0} ", accsCount)
+
+
 
 
 [<EntryPoint>]
@@ -312,7 +349,7 @@ let main argv =
     then
         File.Copy("/tmp/data/options.txt","./data/options.txt")
         ZipFile.ExtractToDirectory("/tmp/data/data.zip","./data")
-    else 
+    else
         File.Copy("options.txt","./data/options.txt")
         ZipFile.ExtractToDirectory("data.zip","./data")
     loadData "./data"

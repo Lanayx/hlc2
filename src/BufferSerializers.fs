@@ -16,6 +16,7 @@ open HCup
 
 open System.Collections
 open Giraffe
+open System.Text.RegularExpressions
 
 let private utf8Encoding = Encoding.UTF8
 let utf8 : string -> byte[] = utf8Encoding.GetBytes
@@ -121,6 +122,8 @@ let private writeFloat (output : MemoryStream) (value: float) =
                  decimalValue <- decimalValue / 10
              writeInt32 output decimalValue
 
+
+
 let fieldsMap =
     dict [
         "sex_eq", AccountField.Sex
@@ -181,6 +184,19 @@ let private ``,"city":"`` = utf8 ",\"city\":\""
 let private ``,"country":"`` = utf8 ",\"country\":\""
 let private ``"count":`` = utf8 "\"count\":"
 
+let freeStringStatus = utf8 "\u0441\u0432\u043e\u0431\u043e\u0434\u043d\u044b"
+let complexStringStatus = utf8 "\u0432\u0441\u0451 \u0441\u043b\u043e\u0436\u043d\u043e"
+let occupiedStringStatus = utf8 "\u0437\u0430\u043d\u044f\u0442\u044b"
+
+
+let getStatusString status =
+    let x=
+        match status with
+        | Helpers.freeStatus -> freeStringStatus
+        | Helpers.complexStatus -> complexStringStatus
+        | Helpers.occupiedStatus -> occupiedStringStatus
+        | _ -> failwith "Invalid int status"
+    x
 
 let writeField (field_predicate: string, acc: Account, output: MemoryStream) =
     let fieldType = fieldsMap.[field_predicate]
@@ -201,11 +217,9 @@ let writeField (field_predicate: string, acc: Account, output: MemoryStream) =
     | AccountField.Interests ->
         ()
     | AccountField.Status ->
-        if acc.status |> isNotNull
-        then
-            writeArray output ``,"status":"``
-            writeString output acc.status
-            writeChar output '"'
+        writeArray output ``,"status":"``
+        writeArray output (getStatusString acc.status)
+        writeChar output '"'
     | AccountField.Premium ->
         if (box acc.premium) |> isNotNull
         then
@@ -273,7 +287,8 @@ let serializeAccounts (accs: Account[], field_predicates: string[]): MemoryStrea
     writeArray output ``]}``
     output
 
-let serializeGroups (groups: (string*int)[], groupName: string): MemoryStream =
+
+let serializeGroups<'T> (groups: ('T*int)[], groupName: string, writeValue): MemoryStream =
     let array = ArrayPool.Shared.Rent (50 + 60 * groups.Length)
     let output = stream array
     writeArray output ``{"groups":[``
@@ -288,13 +303,7 @@ let serializeGroups (groups: (string*int)[], groupName: string): MemoryStream =
         writeChar output '"'
         writeString output groupName
         writeArray output ``":``
-        if value |> isNotNull
-        then
-            writeChar output '"'
-            writeString output value            
-            writeChar output '"'
-        else
-            writeArray output ``null``
+        writeValue output value
         writeChar output ','
         writeArray output ``"count":``
         writeInt32 output count
@@ -303,7 +312,32 @@ let serializeGroups (groups: (string*int)[], groupName: string): MemoryStream =
     writeArray output ``]}``
     output
 
-let serializeGroups2 (groups: ((string*string)*int)[], groupName1: string, groupName2: string): MemoryStream =
+let serializeGroupsString (groups: (string*int)[], groupName: string): MemoryStream =
+    let writeValue output value =
+        if value |> isNotNull
+        then
+            writeChar output '"'
+            writeString output value
+            writeChar output '"'
+        else
+            writeArray output ``null``
+    serializeGroups (groups, groupName, writeValue)
+
+let serializeGroupsSex (groups: (char*int)[], groupName: string): MemoryStream =
+    let writeValue output value =
+        writeChar output '"'
+        writeChar output value
+        writeChar output '"'
+    serializeGroups (groups, groupName, writeValue)
+
+let serializeGroupsStatus (groups: (int*int)[], groupName: string): MemoryStream =
+    let writeValue output value =
+        writeChar output '"'
+        writeArray output (getStatusString value)
+        writeChar output '"'
+    serializeGroups (groups, groupName, writeValue)
+
+let serializeGroups2<'T> (groups: ((string*'T)*int)[], groupName1: string, groupName2: string, writeValue): MemoryStream =
     let array = ArrayPool.Shared.Rent (50 + 80 * groups.Length)
     let output = stream array
     writeArray output ``{"groups":[``
@@ -323,17 +357,25 @@ let serializeGroups2 (groups: ((string*string)*int)[], groupName1: string, group
             writeChar output '"'
             writeString output value1
             writeArray output ``",``
-        if value2 |> isNotNull
-        then
-            writeChar output '"'
-            writeString output groupName2
-            writeArray output ``":``
-            writeChar output '"'
-            writeString output value2
-            writeArray output ``",``
+        writeChar output '"'
+        writeString output groupName2
+        writeArray output ``":``
+        writeChar output '"'
+        writeValue output value2
+        writeArray output ``",``
         writeArray output ``"count":``
         writeInt32 output count
     if start |> not
     then writeChar output '}'
     writeArray output ``]}``
     output
+
+let serializeGroups2Sex (groups: ((string*char)*int)[], groupName1: string, groupName2: string): MemoryStream =
+    let writeValue output value =
+        writeChar output value
+    serializeGroups2 (groups, groupName1, groupName2, writeValue)
+
+let serializeGroups2Status (groups: ((string*int)*int)[], groupName1: string, groupName2: string): MemoryStream =
+    let writeValue output value =
+        writeArray output (getStatusString value)
+    serializeGroups2 (groups, groupName1, groupName2, writeValue)

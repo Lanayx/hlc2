@@ -21,3 +21,10 @@ let inline (==) (str1: string) str2 =
     MemoryExtensions.Equals(str1.AsSpan(), str2, StringComparison.Ordinal)
 
 
+[<Literal>]
+let freeStatus = 2
+[<Literal>]
+let complexStatus = 1
+[<Literal>]
+let occupiedStatus = 0
+

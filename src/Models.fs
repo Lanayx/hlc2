@@ -76,7 +76,7 @@ type AccountField =
     | Country = 11
 
 
-type Account() =
+type AccountUpd() =
         [<DefaultValue>]val mutable id: int32
         [<DefaultValue>]val mutable fname : string
         [<DefaultValue>]val mutable sname : string
@@ -92,11 +92,32 @@ type Account() =
         [<DefaultValue>]val mutable city: string
         [<DefaultValue>]val mutable country: string
 
+type Account() =
+        [<DefaultValue>]val mutable id: int32
+        [<DefaultValue>]val mutable fname : string
+        [<DefaultValue>]val mutable sname : string
+        [<DefaultValue>]val mutable email: string
+        [<DefaultValue>]val mutable emailDomain: string
+        [<DefaultValue>]val mutable interests: string[]
+        [<DefaultValue>]val mutable status: int32
+        [<DefaultValue>]val mutable premium: Premium
+        [<DefaultValue>]val mutable premiumNow: bool
+        [<DefaultValue>]val mutable sex: char
+        [<DefaultValue>]val mutable phone: string
+        [<DefaultValue>]val mutable phoneCode: int32
+        [<DefaultValue>]val mutable likes: Like[]
+        [<DefaultValue>]val mutable birth: int32
+        [<DefaultValue>]val mutable birthYear: int32
+        [<DefaultValue>]val mutable joined: int32
+        [<DefaultValue>]val mutable joinedYear: int32
+        [<DefaultValue>]val mutable city: string
+        [<DefaultValue>]val mutable country: string
+
 
 [<CLIMutable>]
-type Accounts =
+type AccountsUpd =
     {
-        accounts : Account[]
+        accounts : AccountUpd[]
     }
 
 [<CLIMutable>]
