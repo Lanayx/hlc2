@@ -24,7 +24,7 @@ let inline (==) (str1: string) str2 =
 [<Literal>]
 let freeStatus = 2
 [<Literal>]
-let complexStatus = 1
+let complexStatus = 0
 [<Literal>]
-let occupiedStatus = 0
+let occupiedStatus = 1
 

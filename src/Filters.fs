@@ -3,6 +3,7 @@
 open System
 open HCup.Models
 open HCup.Helpers
+open HCup.Dictionaries
 open System.Collections.Generic
 open Giraffe
 
@@ -20,12 +21,11 @@ let sexEqFilter (value: string) =
 
 let emailDomainFilter (value: string) =
     fun (acc: Account) ->
-        if acc.email |> isNull
+        if acc.emailDomain |> isNull
         then
             false
         else
-            let atIndex = acc.email.IndexOf('@', StringComparison.Ordinal)
-            acc.email.Substring(atIndex+1) =~ value
+            acc.emailDomain =~ value
 
 let emailLtFilter (value: string) =
     fun (acc: Account) ->
@@ -47,17 +47,18 @@ let statusNeqFilter (value: string) =
 
 let firstNameEqFilter (value: string) =
     fun (acc: Account) ->
-        acc.fname =~ value
+        let mutable name = 0L
+        namesDictionary.TryGetValue(value, &name) && acc.fname = name
 
 let firstNameAnyFilter (value: string) =
     fun (acc: Account) ->
-        value.Split(',') |> Array.exists (fun el -> el =~ acc.fname)
+        value.Split(',') |> Array.exists (fun el -> namesDictionary.[el] = acc.fname)
 
 let firstNameNullFilter (value: string) =
     fun (acc: Account) ->
         if value.[0] = '1'
-        then acc.fname |> isNull
-        else acc.fname |> isNotNull
+        then acc.fname = 0L
+        else acc.fname <> 0L
 
 let surnameEqFilter (value: string) =
     fun (acc: Account) ->
@@ -94,27 +95,29 @@ let phoneNullFilter (value: string) =
 
 let countryEqFilter (value: string) =
     fun (acc: Account) ->
-        acc.country =~ value
+        let mutable country = 0L
+        countriesDictionary.TryGetValue(value, &country) && acc.country = country
 
 let countryNullFilter (value: string) =
     fun (acc: Account) ->
         if value.[0] = '1'
-        then acc.country |> isNull
-        else acc.country |> isNotNull
+        then acc.country = 0L
+        else acc.country <> 0L
 
 let cityEqFilter (value: string) =
     fun (acc: Account) ->
-        acc.city =~ value
+        let mutable city = 0L
+        citiesDictionary.TryGetValue(value, &city) && acc.city = city
 
 let cityAnyFilter (value: string) =
     fun (acc: Account) ->
-        value.Split(',') |> Array.exists (fun el -> el =~ acc.city)
+        value.Split(',') |> Array.exists (fun el -> citiesDictionary.[el] = acc.city)
 
 let cityNullFilter (value: string) =
     fun (acc: Account) ->
         if value.[0] = '1'
-        then acc.city |> isNull
-        else acc.city |> isNotNull
+        then acc.city = 0L
+        else acc.city <> 0L
 
 let birthLtFilter (value: string) =
     fun (acc: Account) ->
@@ -135,12 +138,16 @@ let joinedYearFilter (value: string) =
 let interestsContainsFilter (value: string) =
     fun (acc: Account) ->
         acc.interests |> isNotNull
-            && value.Split(',') |> Array.forall (fun interest -> acc.interests |> Array.exists (fun el -> el =~ interest))
+            && value.Split(',')
+            |> Array.map(fun el -> interestsDictionary.[el])
+            |> Array.forall (fun interest -> acc.interests |> Array.exists (fun el -> el = interest))
 
 let interestsAnyFilter (value: string) =
     fun (acc: Account) ->
         acc.interests |> isNotNull
-            && value.Split(',') |> Array.exists (fun interest -> acc.interests |> Array.exists (fun el -> el =~ interest))
+            && value.Split(',')
+            |> Array.map(fun el -> interestsDictionary.[el])
+            |> Array.exists (fun interest -> acc.interests |> Array.exists (fun el -> el = interest))
 
 let likesContainsFilter (value: string) =
     fun (acc: Account) ->

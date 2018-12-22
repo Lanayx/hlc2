@@ -8,6 +8,7 @@ open System.Collections.Generic
 open System.Collections.Concurrent
 open System.Threading.Tasks
 open System.Text
+open System.Linq
 open System.Threading
 open Microsoft.AspNetCore.Builder
 open Microsoft.AspNetCore.Hosting
@@ -21,6 +22,7 @@ open HCup.Parser
 open HCup.Helpers
 open HCup.BufferSerializers
 open HCup.MethodCounter
+open HCup.Dictionaries
 open Giraffe
 open FSharp.Control.Tasks.V2.ContextInsensitive
 open Microsoft.AspNetCore.Server.Kestrel.Core
@@ -35,7 +37,8 @@ open System.Text.RegularExpressions
 // Web app
 // ---------------------------------
 
-let mutable accounts = Array.zeroCreate 10300
+let accounts = Array.zeroCreate 10300
+
 
 let jsonStringValues = StringValues "application/json"
 
@@ -49,6 +52,39 @@ let inline deserializeObject<'a> (str: string) =
     | exn ->
         None
 
+let getStringWeight (str: string) =
+    let strChars = str |> Seq.truncate 11
+    let mutable multiplier = 50542106513726817L //33^11
+    let mutable result = 0L
+    for chr in strChars do
+        let intChr = int chr
+        let diff =
+            match intChr with
+            | smallRussianLetter when smallRussianLetter >= 1072 -> intChr - 949
+            | bigRussianLetter when bigRussianLetter >= 1040 -> intChr - 949
+            | smallEnglishLetter when smallEnglishLetter >= 97 -> intChr - 32
+            | bigEnglishLetter when bigEnglishLetter >= 65 -> intChr - 32
+            | _ -> intChr - 32
+        result <- result + (int64 diff) * multiplier
+        multiplier <- multiplier / 33L
+    result
+
+let inline convertInterestToIndex (interests: string[]) =
+    if interests |> isNull
+    then null
+    else
+        interests
+        |> Array.map(fun interest ->
+                let mutable interestIndex = 0L
+                if interestsDictionary.TryGetValue(interest, &interestIndex)
+                then
+                    interestIndex
+                else
+                    interestIndex <- getStringWeight interest
+                    interestsDictionary.Add(interest, interestIndex)
+                    interestIndex
+            )
+
 let getAccount (accUpd: AccountUpd): Account =
     let atIndex = accUpd.email.IndexOf('@', StringComparison.Ordinal)
     let emailDomain = accUpd.email.Substring(atIndex+1)
@@ -58,11 +94,20 @@ let getAccount (accUpd: AccountUpd): Account =
         else Int32.Parse(accUpd.phone.Substring(2,3))
     let account = Account()
     account.id <- accUpd.id
-    account.fname <- accUpd.fname
+    if accUpd.fname |> isNotNull
+    then
+        let mutable nameIndex = 0L
+        if namesDictionary.TryGetValue(accUpd.fname, &nameIndex)
+        then
+            account.fname <- nameIndex
+        else
+            nameIndex <- getStringWeight accUpd.fname
+            namesDictionary.Add(accUpd.fname, nameIndex)
+            account.fname <- nameIndex
     account.sname <- accUpd.sname
     account.email <- accUpd.email
     account.emailDomain <- emailDomain
-    account.interests <- accUpd.interests
+    account.interests <- convertInterestToIndex accUpd.interests
     account.status <- getStatus accUpd.status
     account.premium <- accUpd.premium
     account.premiumNow <- box accUpd.premium |> isNotNull && accUpd.premium.start <= currentTs && accUpd.premium.finish > currentTs
@@ -74,8 +119,26 @@ let getAccount (accUpd: AccountUpd): Account =
     account.birthYear <- (convertToDate accUpd.birth).Year
     account.joined <- accUpd.joined
     account.joinedYear <- (convertToDate accUpd.joined).Year
-    account.city <- accUpd.city
-    account.country <- accUpd.country
+    if accUpd.city |> isNotNull
+    then
+        let mutable cityIndex = 0L
+        if citiesDictionary.TryGetValue(accUpd.city, &cityIndex)
+        then
+            account.city <- cityIndex
+        else
+            cityIndex <- getStringWeight accUpd.city
+            citiesDictionary.Add(accUpd.city, cityIndex)
+            account.city <- cityIndex
+    if accUpd.country |> isNotNull
+    then
+        let mutable countryIndex = 0L
+        if countriesDictionary.TryGetValue(accUpd.country, &countryIndex)
+        then
+            account.country <- countryIndex
+        else
+            countryIndex <-  getStringWeight accUpd.country
+            countriesDictionary.Add(accUpd.country, countryIndex)
+            account.country <- countryIndex
     account
 
 
@@ -146,7 +209,7 @@ let applyGrouping (memoryStream: byref<MemoryStream>, groupKey, order, accs: Acc
             |> Array.map (fun (key, group) -> key, group.Length)
             |> array_sort order (fun (group,length) -> length, group)
             |> Array.truncate limit
-        memoryStream <- serializeGroupsString(groups, "country")
+        memoryStream <- serializeGroupsCountry(groups, "country")
     | "city" ->
         let groups =
             accs
@@ -154,7 +217,7 @@ let applyGrouping (memoryStream: byref<MemoryStream>, groupKey, order, accs: Acc
             |> Array.map (fun (key, group) -> key, group.Length)
             |> array_sort order (fun (group,length) -> length, group)
             |> Array.truncate limit
-        memoryStream <- serializeGroupsString(groups, "city")
+        memoryStream <- serializeGroupsCity(groups, "city")
     | "interests" ->
         let interests =
             accs
@@ -164,7 +227,7 @@ let applyGrouping (memoryStream: byref<MemoryStream>, groupKey, order, accs: Acc
             |> Array.map (fun (key, group) -> key, group.Length)
             |> array_sort order (fun (group,length) -> length, group)
             |> Array.truncate limit
-        memoryStream <- serializeGroupsString(interests , "interests")
+        memoryStream <- serializeGroupsInterests(interests , "interests")
     | "city,status" ->
         let groups =
             accs
@@ -239,15 +302,23 @@ let sortAccount (acc: Account) =
 
 let getRecommendedAccounts (id, next, ctx : HttpContext) =
     Interlocked.Increment(accountsRecommendCount) |> ignore
-    let target = accounts.[id]
-    //let accounts = accounts |> Array.filter(fun acc -> (box acc) |> isNotNull)
-    //let limit = Int32.Parse(ctx.Request.Query.["limit"].[0])
-    //let accs =
-    //    accounts
-    //    |> Array.sortBy sortAccount
-    //let memoryStream = serializeAccounts (accs, keys)
-    //writeResponse memoryStream next ctx
-    setStatusCode 400 next ctx
+    if (id > accounts.Length)
+    then
+        setStatusCode 404 next ctx
+    else
+        let target = accounts.[id]
+        let accounts = accounts |> Array.filter(fun acc -> (box acc) |> isNotNull && acc.interests |> isNotNull)
+        //let limit = Int32.Parse(ctx.Request.Query.["limit"].[0])
+        //let accs =
+        //    accounts
+        //    |> Array.sortBy sortAccount
+        //let memoryStream = serializeAccounts (accs, keys)
+        //writeResponse memoryStream next ctx
+        // setStatusCode 400 next ctx
+
+
+
+        json 1 next ctx
 
 let getSuggestedAccounts (id, next, ctx : HttpContext) =
     Interlocked.Increment(accountsSuggestCount) |> ignore
@@ -334,6 +405,14 @@ let loadData folder =
                     accounts.[acc.id] <- getAccount acc
                     accsCount <- accsCount + 1
                     )
+
+    let names = citiesDictionary
+                |> Seq.sortBy (fun kv -> kv.Key)
+
+    namesSerializeDictionary <- namesDictionary.ToDictionary((fun kv -> kv.Value), (fun kv -> utf8 kv.Key))
+    citiesSerializeDictionary <- citiesDictionary.ToDictionary((fun kv -> kv.Value), (fun kv -> utf8 kv.Key))
+    countriesSerializeDictionary <- countriesDictionary.ToDictionary((fun kv -> kv.Value), (fun kv -> utf8 kv.Key))
+    interestsSerializeDictionary <- interestsDictionary.ToDictionary((fun kv -> kv.Value), (fun kv -> utf8 kv.Key))
 
     Console.Write("Accounts {0} ", accsCount)
 

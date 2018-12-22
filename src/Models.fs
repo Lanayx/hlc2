@@ -93,25 +93,25 @@ type AccountUpd() =
         [<DefaultValue>]val mutable country: string
 
 type Account() =
-        [<DefaultValue>]val mutable id: int32
-        [<DefaultValue>]val mutable fname : string
+        [<DefaultValue>]val mutable id: int
+        [<DefaultValue>]val mutable fname : int64
         [<DefaultValue>]val mutable sname : string
         [<DefaultValue>]val mutable email: string
         [<DefaultValue>]val mutable emailDomain: string
-        [<DefaultValue>]val mutable interests: string[]
-        [<DefaultValue>]val mutable status: int32
+        [<DefaultValue>]val mutable interests: int64[]
+        [<DefaultValue>]val mutable status: int
         [<DefaultValue>]val mutable premium: Premium
         [<DefaultValue>]val mutable premiumNow: bool
         [<DefaultValue>]val mutable sex: char
         [<DefaultValue>]val mutable phone: string
-        [<DefaultValue>]val mutable phoneCode: int32
+        [<DefaultValue>]val mutable phoneCode: int
         [<DefaultValue>]val mutable likes: Like[]
-        [<DefaultValue>]val mutable birth: int32
-        [<DefaultValue>]val mutable birthYear: int32
-        [<DefaultValue>]val mutable joined: int32
-        [<DefaultValue>]val mutable joinedYear: int32
-        [<DefaultValue>]val mutable city: string
-        [<DefaultValue>]val mutable country: string
+        [<DefaultValue>]val mutable birth: int
+        [<DefaultValue>]val mutable birthYear: int
+        [<DefaultValue>]val mutable joined: int
+        [<DefaultValue>]val mutable joinedYear: int
+        [<DefaultValue>]val mutable city: int64
+        [<DefaultValue>]val mutable country: int64
 
 
 [<CLIMutable>]
