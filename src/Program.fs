@@ -295,11 +295,25 @@ let getGroupedAccounts (next, ctx : HttpContext) =
         Console.WriteLine("NotSupportedException:" + ex.Message + " " + ctx.Request.Path + ctx.Request.QueryString.Value)
         setStatusCode 400 next ctx
 
-let sortAccount (acc: Account) =
-    let hasPremium =
-        box acc.premium |> isNotNull && acc.premium.start <= currentTs && acc.premium.finish > currentTs
-    hasPremium
+let sortAccount (target: Account) (acc: Account)  =
+    let commonInterestsCount =
+        if acc.interests |> isNull || target.interests |> isNull
+        then 0
+        else acc.interests.Intersect(target.interests).Count()
+    if commonInterestsCount = 0
+    then 
+        (acc.premiumNow, 0, 0, 0, -acc.id)
+    else 
+        let statusrank =
+            match acc.status with
+            | Helpers.freeStatus -> 2
+            | Helpers.complexStatus -> 1
+            | Helpers.occupiedStatus -> 0
+            | _ -> failwith "Invalid status"
+        let yearsDifference = 100 - (Math.Abs (acc.birthYear - target.birthYear))        
+        (acc.premiumNow, statusrank, commonInterestsCount, yearsDifference, -acc.id)
 
+let recommendationFields = [| "status_eq"; "fname_eq"; "sname_eq"; "birth_year"; "premium_now" |]
 let getRecommendedAccounts (id, next, ctx : HttpContext) =
     Interlocked.Increment(accountsRecommendCount) |> ignore
     if (id > accounts.Length)
@@ -307,18 +321,15 @@ let getRecommendedAccounts (id, next, ctx : HttpContext) =
         setStatusCode 404 next ctx
     else
         let target = accounts.[id]
-        let accounts = accounts |> Array.filter(fun acc -> (box acc) |> isNotNull && acc.interests |> isNotNull)
-        //let limit = Int32.Parse(ctx.Request.Query.["limit"].[0])
-        //let accs =
-        //    accounts
-        //    |> Array.sortBy sortAccount
-        //let memoryStream = serializeAccounts (accs, keys)
-        //writeResponse memoryStream next ctx
-        // setStatusCode 400 next ctx
-
-
-
-        json 1 next ctx
+        let accounts = accounts |> Array.filter(fun acc -> (box acc) |> isNotNull)
+        let limit = Int32.Parse(ctx.Request.Query.["limit"].[0])
+        let sortFunc = sortAccount target
+        let accs =
+            accounts
+            |> Array.sortBy sortFunc
+            |> Array.truncate limit
+        let memoryStream = serializeAccounts (accs, recommendationFields)
+        writeResponse memoryStream next ctx
 
 let getSuggestedAccounts (id, next, ctx : HttpContext) =
     Interlocked.Increment(accountsSuggestCount) |> ignore
