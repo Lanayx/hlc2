@@ -208,3 +208,9 @@ let groupFilters: IDictionary<string, Filter> =
         "likes", likesContainsFilter
         "joined", joinedYearFilter
     ]
+
+let recommendFilters: IDictionary<string, Filter> =
+    dict [
+        "country", countryEqFilter
+        "city", cityEqFilter
+    ]
