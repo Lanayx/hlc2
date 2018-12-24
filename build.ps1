@@ -1,6 +1,8 @@
 $container = 'hcup/odin'
 $tag = 'stor.highloadcup.ru/accounts/fox_flyer'
 
+minikube docker-env | Invoke-Expression
+
 Set-Location src
 .\build.cmd
 Set-Location ..
