@@ -159,8 +159,8 @@ let getFilteredAccounts (next, ctx : HttpContext) =
     try
         let keys =
             ctx.Request.Query.Keys
+            |> Seq.filter(fun key -> (key =~ "limit" || key =~ "query_id") |> not )
             |> Seq.toArray
-            |> Array.filter(fun key -> (key =~ "limit" || key =~ "query_id") |> not )
         let filters =
             keys
             |> Array.map (fun key -> filters.[key] ctx.Request.Query.[key].[0])
@@ -269,19 +269,20 @@ let getGroupedAccounts (next, ctx : HttpContext) =
     try
         let keys =
             ctx.Request.Query.Keys
-            |> Seq.toArray
-            |> Array.filter(fun key -> (key =~ "limit" || key =~ "query_id" || key =~ "order" || key=~"keys") |> not )
+            |> Seq.filter(fun key -> (key =~ "limit" || key =~ "query_id" || key =~ "order" || key=~"keys") |> not )
         let filters =
             keys
-            |> Array.map (fun key -> groupFilters.[key] ctx.Request.Query.[key].[0])
+            |> Seq.map (fun key -> groupFilters.[key] ctx.Request.Query.[key].[0])
         let groupKey =
             ctx.Request.Query.["keys"].[0]
         let order =
             Int32.Parse(ctx.Request.Query.["order"].[0])
-        let accounts = accounts |> Array.filter(fun acc -> (box acc) |> isNotNull)
+        let accounts =
+            accounts
+            |> Array.filter(fun acc -> (box acc) |> isNotNull)
         let accs =
             filters
-            |> Array.fold (fun acc f -> acc |> Array.filter f) accounts
+            |> Seq.fold (fun acc f -> acc |> Array.filter f) accounts
         let mutable memoryStream: MemoryStream = null
         let limit = Int32.Parse(ctx.Request.Query.["limit"].[0])
         applyGrouping(&memoryStream, groupKey, order, accs, limit)
@@ -324,29 +325,28 @@ let getRecommendedAccounts (id, next, ctx : HttpContext) =
             let target = accounts.[id]
             let keys =
                 ctx.Request.Query.Keys
-                |> Seq.toArray
-                |> Array.filter(fun key -> (key =~ "limit" || key =~ "query_id") |> not )
-                |> Array.map (fun key ->
+                |> Seq.filter(fun key -> (key =~ "limit" || key =~ "query_id") |> not )
+                |> Seq.map (fun key ->
                         let value = ctx.Request.Query.[key].[0]
                         if String.IsNullOrEmpty(value)
                         then raise (KeyNotFoundException("Unknown value of get parameter"))
                         (key, value)
                     )
-            let filters =
-                keys
-                |> Array.map (fun (key, value) -> recommendFilters.[key] value)
-            let accounts =
-                accounts
-                |> Array.filter(fun acc -> (box acc) |> isNotNull)
-                |> Array.filter(fun acc -> acc.sex <> target.sex)
             let limit = Int32.Parse(ctx.Request.Query.["limit"].[0])
             if limit < 0 || limit > 20
             then
                 setStatusCode 400 next ctx
             else
+                let filters =
+                    keys
+                    |> Seq.map (fun (key, value) -> recommendFilters.[key] value)
+                let accounts =
+                    accounts
+                    |> Array.filter(fun acc -> (box acc) |> isNotNull)
+                    |> Array.filter(fun acc -> acc.sex <> target.sex)
                 let accs =
                     filters
-                    |> Array.fold (fun acc f -> acc |> Array.filter f) accounts
+                    |> Seq.fold (fun acc f -> acc |> Array.filter f) accounts
                     |> Array.map (fun acc -> acc, getCompatibility target acc)
                     |> Array.filter (fun (acc, compat) -> compat.IsSome)
                     |> Array.sortByDescending (fun (acc, comp) -> comp.Value)
@@ -361,12 +361,110 @@ let getRecommendedAccounts (id, next, ctx : HttpContext) =
         Console.WriteLine("NotSupportedException:" + ex.Message + " " + ctx.Request.Path + ctx.Request.QueryString.Value)
         setStatusCode 400 next ctx
 
+type LikesComparer() =
+    interface IEqualityComparer<Like> with
+        member this.Equals(x,y) = x.id = y.id
+        member this.GetHashCode(obj) = obj.id
+let likesComparer = new LikesComparer()
+
+let getSimilarity (target: Account) (acc: Account)  =
+    let likesIntersection =
+        target.likes.Intersect(acc.likes, likesComparer)
+        |> Seq.map (fun like -> like.id)
+        |> Seq.toArray
+    let targetLikes =
+        target.likes
+        |> Array.filter (fun like -> likesIntersection.Contains(like.id))
+        |> Array.groupBy (fun like -> like.id)
+        |> Array.sortBy (fun (id, group) -> id)
+        |> Array.map (fun (id, group) ->
+            (group |> Array.sumBy (fun gr -> (float)gr.ts / (float)group.Length )) )
+    let accLikes =
+        acc.likes
+        |> Array.filter (fun like -> likesIntersection.Contains(like.id))
+        |> Array.groupBy (fun like -> like.id)
+        |> Array.sortBy (fun (id, group) -> id)
+        |> Array.map (fun (id, group) ->
+            (group |> Array.sumBy (fun gr -> (float)gr.ts / (float)group.Length )) )
+    let result =
+        Array.zip targetLikes accLikes
+        |> Array.fold (fun state (targTs, accTs) -> state +  1.0 / Math.Abs(targTs - accTs)) 0.0
+    result
+
+
+
+let suggestionFields = [| "status_eq"; "fname_eq"; "sname_eq"; |]
 let getSuggestedAccounts (id, next, ctx : HttpContext) =
     Interlocked.Increment(accountsSuggestCount) |> ignore
-    setStatusCode 401 next ctx
+    try
+    if (id > accounts.Length)
+    then
+        setStatusCode 404 next ctx
+    else
+        let target = accounts.[id]
+        let keys =
+            ctx.Request.Query.Keys
+            |> Seq.filter(fun key -> (key =~ "limit" || key =~ "query_id") |> not )
+            |> Seq.map (fun key ->
+                    let value = ctx.Request.Query.[key].[0]
+                    if String.IsNullOrEmpty(value)
+                    then raise (KeyNotFoundException("Unknown value of get parameter"))
+                    (key, value)
+                )
+        let limit = Int32.Parse(ctx.Request.Query.["limit"].[0])
+        if limit < 0 || limit > 20
+        then
+            setStatusCode 400 next ctx
+        else
+            if target.likes |> isNull
+            then
+                let memoryStream = serializeAccounts ([||], recommendationFields)
+                writeResponse memoryStream next ctx
+            else
+                let filters =
+                    keys
+                    |> Seq.map (fun (key, value) -> recommendFilters.[key] value)
+                let similarAccounts =
+                    accounts
+                    |> Array.filter(fun acc -> (box acc) |> isNotNull)
+                    |> Array.filter(fun acc -> acc.sex = target.sex)
+                    |> Array.filter(fun acc ->
+                        (acc.likes |> isNotNull)
+                        && acc.likes.Intersect(target.likes, likesComparer).Any())
+
+                let similarities =
+                    filters
+                    |> Seq.fold (fun acc f -> acc |> Array.filter f) similarAccounts
+                    |> Array.map (fun acc -> (acc, acc.id, getSimilarity target acc))
+                    |> Array.sortByDescending (fun (acc, id, similarity) -> id)
+                let accs =
+                    similarities
+                    |> Array.map (fun (acc, id, similarity) -> acc)
+                    |> Array.collect(fun acc -> acc.likes |> Array.sortByDescending (fun like -> like.id))
+                    |> Array.filter (fun like -> target.likes.Contains(like, likesComparer) |> not)
+                    |> Array.map (fun like -> accounts.[like.id])
+                    |> Array.truncate limit
+                let memoryStream = serializeAccounts (accs, suggestionFields)
+                writeResponse memoryStream next ctx
+    with
+    | :? KeyNotFoundException -> setStatusCode 400 next ctx
+    | :? FormatException -> setStatusCode 400 next ctx
+    | :? NotSupportedException as ex ->
+        Console.WriteLine("NotSupportedException:" + ex.Message + " " + ctx.Request.Path + ctx.Request.QueryString.Value)
+        setStatusCode 400 next ctx
+
+let findUser (next, ctx : HttpContext) =
+    let likeIds = ctx.Request.Query.["likes"].[0].Split(',') |> Array.map Int32.Parse
+    let users =
+        accounts
+        |> Array.filter(fun acc -> (box acc) |> isNotNull)
+        |> Array.filter(fun acc -> acc.likes |> isNotNull)
+        |> Array.filter(fun acc -> (acc.likes |> Array.map (fun like -> like.id)).Intersect(likeIds).Count() >= likeIds.Length)
+    json users next ctx
 
 let private accountsFilterString = "/accounts/filter/"
 let private accountsGroupString = "/accounts/group/"
+let private findUserString = "/findUser/"
 
 let customGetRoutef : HttpHandler =
     fun (next : HttpFunc) (ctx : HttpContext) ->
@@ -375,6 +473,8 @@ let customGetRoutef : HttpHandler =
              getFilteredAccounts (next, ctx)
         | filterPath when filterPath =~ accountsGroupString ->
              getGroupedAccounts (next, ctx)
+        | filterPath when filterPath =~ findUserString ->
+             findUser (next, ctx)
         | filterPath ->
             if filterPath.Length > 10
             then
