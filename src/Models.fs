@@ -77,18 +77,18 @@ type AccountField =
 
 
 type AccountUpd() =
-        [<DefaultValue>]val mutable id: int32
+        [<DefaultValue>]val mutable id: Nullable<int32>
         [<DefaultValue>]val mutable fname : string
         [<DefaultValue>]val mutable sname : string
         [<DefaultValue>]val mutable email: string
         [<DefaultValue>]val mutable interests: string[]
         [<DefaultValue>]val mutable status: string
         [<DefaultValue>]val mutable premium: Premium
-        [<DefaultValue>]val mutable sex: char
+        [<DefaultValue>]val mutable sex: Nullable<char>
         [<DefaultValue>]val mutable phone: string
         [<DefaultValue>]val mutable likes: Like[]
-        [<DefaultValue>]val mutable birth: int32
-        [<DefaultValue>]val mutable joined: int32
+        [<DefaultValue>]val mutable birth: Nullable<int32>
+        [<DefaultValue>]val mutable joined: Nullable<int32>
         [<DefaultValue>]val mutable city: string
         [<DefaultValue>]val mutable country: string
 

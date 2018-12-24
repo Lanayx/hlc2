@@ -52,6 +52,30 @@ let inline deserializeObject<'a> (str: string) =
     | exn ->
         None
 
+let inline writeResponse (response : MemoryStream) (next : HttpFunc) (ctx: HttpContext) =
+    let length = response.Position
+    ctx.Response.Headers.["Content-Type"] <- jsonStringValues
+    ctx.Response.Headers.ContentLength <- Nullable(length)
+    let bytes = response.GetBuffer()
+    task {
+        do! ctx.Response.Body.WriteAsync(bytes, 0, (int32)length)
+        do! ctx.Response.Body.FlushAsync()
+        ArrayPool.Shared.Return bytes
+        return! next ctx
+    }
+
+let postResponseBytes = utf8 "{}"
+let inline writePostResponse (code: int) (next : HttpFunc) (ctx: HttpContext) =
+    let length = postResponseBytes.Length
+    ctx.Response.Headers.["Content-Type"] <- jsonStringValues
+    ctx.Response.Headers.ContentLength <- Nullable(int64 length)
+    ctx.Response.StatusCode <- code
+    task {
+        do! ctx.Response.Body.WriteAsync(postResponseBytes, 0, length)
+        do! ctx.Response.Body.FlushAsync()
+        return! next ctx
+    }
+
 let getStringWeight (str: string) =
     let strChars = str |> Seq.truncate 11
     let mutable multiplier = 50542106513726817L //33^11
@@ -85,7 +109,7 @@ let inline convertInterestToIndex (interests: string[]) =
                     interestIndex
             )
 
-let getAccount (accUpd: AccountUpd): Account =
+let createAccount (accUpd: AccountUpd): Account =
     let atIndex = accUpd.email.IndexOf('@', StringComparison.Ordinal)
     let emailDomain = accUpd.email.Substring(atIndex+1)
     let phoneCode =
@@ -93,7 +117,7 @@ let getAccount (accUpd: AccountUpd): Account =
         then 0
         else Int32.Parse(accUpd.phone.Substring(2,3))
     let account = Account()
-    account.id <- accUpd.id
+    account.id <- accUpd.id.Value
     if accUpd.fname |> isNotNull
     then
         let mutable nameIndex = 0L
@@ -111,14 +135,14 @@ let getAccount (accUpd: AccountUpd): Account =
     account.status <- getStatus accUpd.status
     account.premium <- accUpd.premium
     account.premiumNow <- box accUpd.premium |> isNotNull && accUpd.premium.start <= currentTs && accUpd.premium.finish > currentTs
-    account.sex <- accUpd.sex
+    account.sex <- accUpd.sex.Value
     account.phone <- accUpd.phone
     account.phoneCode <- phoneCode
     account.likes <- accUpd.likes
-    account.birth <- accUpd.birth
-    account.birthYear <- (convertToDate accUpd.birth).Year
-    account.joined <- accUpd.joined
-    account.joinedYear <- (convertToDate accUpd.joined).Year
+    account.birth <- accUpd.birth.Value
+    account.birthYear <- (convertToDate accUpd.birth.Value).Year
+    account.joined <- accUpd.joined.Value
+    account.joinedYear <- (convertToDate accUpd.joined.Value).Year
     if accUpd.city |> isNotNull
     then
         let mutable cityIndex = 0L
@@ -141,18 +165,8 @@ let getAccount (accUpd: AccountUpd): Account =
             account.country <- countryIndex
     account
 
-
-let inline writeResponse (response : MemoryStream) (next : HttpFunc) (ctx: HttpContext) =
-    let length = response.Position
-    ctx.Response.Headers.["Content-Type"] <- jsonStringValues
-    ctx.Response.Headers.ContentLength <- Nullable(length)
-    let bytes = response.GetBuffer()
-    task {
-        do! ctx.Response.Body.WriteAsync(bytes, 0, (int32)length)
-        do! ctx.Response.Body.FlushAsync()
-        ArrayPool.Shared.Return bytes
-        return! next ctx
-    }
+let updateExistingAccount (existing: Account, accUpd: AccountUpd) =
+    ()
 
 let getFilteredAccounts (next, ctx : HttpContext) =
     Interlocked.Increment(accountFilterCount) |> ignore
@@ -397,7 +411,7 @@ let suggestionFields = [| "status_eq"; "fname_eq"; "sname_eq"; |]
 let getSuggestedAccounts (id, next, ctx : HttpContext) =
     Interlocked.Increment(accountsSuggestCount) |> ignore
     try
-    if (id > accounts.Length)
+    if (id > accounts.Length || (box accounts.[id] |> isNull) )
     then
         setStatusCode 404 next ctx
     else
@@ -509,11 +523,26 @@ let private newLikesString = "/accounts/likes/"
 
 let newAccount (next, ctx : HttpContext) =
     Interlocked.Increment(newAccountCount) |> ignore
-    setStatusCode 401 next ctx
+    task {
+        let! json = ctx.ReadBodyFromRequestAsync()
+        let account = deserializeObjectUnsafe<AccountUpd>(json)
+        accounts.[account.id.Value] <- createAccount account
+        return! writePostResponse 201 next ctx
+    }
 
 let updateAccount (id, next, ctx : HttpContext) =
     Interlocked.Increment(updateAccountCount) |> ignore
-    setStatusCode 401 next ctx
+    if (id > accounts.Length || (box accounts.[id] |> isNull) )
+    then
+        setStatusCode 404 next ctx
+    else
+        task {
+            let! json = ctx.ReadBodyFromRequestAsync()
+            let account = deserializeObjectUnsafe<AccountUpd>(json)
+            let target = accounts.[id]
+            updateExistingAccount(target, account)
+            return! writePostResponse 202 next ctx
+        }
 
 let addLikes (next, ctx : HttpContext) =
     Interlocked.Increment(addLikesCount) |> ignore
@@ -588,7 +617,7 @@ let loadData folder =
                 |> Seq.map (File.ReadAllText >> deserializeObjectUnsafe<AccountsUpd>)
                 |> Seq.collect (fun accountsObj -> accountsObj.accounts)
                 |> Seq.iter (fun acc ->
-                    accounts.[acc.id] <- getAccount acc
+                    accounts.[acc.id.Value] <- createAccount acc
                     accsCount <- accsCount + 1
                     )
 
