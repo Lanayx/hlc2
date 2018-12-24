@@ -15,14 +15,16 @@ syncTimer.Elapsed.Add(fun arg ->
     then
         if not GCRun
         then
-            Console.WriteLine("Running GC {0} {1} accf:{2} accgr:{3} accr:{4} accs:{5} gvs:{6}",
+            Console.WriteLine("Running GC {0} {1} accf:{2} accgr:{3} accr:{4} accs:{5} newacc:{6} updacc:{7} addl: {8}",
                 lastRequestCount,
                 DateTime.Now.ToString("HH:mm:ss.ffff"),
                 accountFilterCount.Value,
                 accountsGroupCount.Value,
                 accountsRecommendCount.Value,
                 accountsSuggestCount.Value,
-                getVisitsCount.Value)
+                newAccountCount.Value,
+                updateAccountCount.Value,
+                addLikesCount.Value)
             GCRun <- true
             GC.Collect(1)
         // client.GetAsync("http://127.0.0.1/visits/8").Result |> ignore

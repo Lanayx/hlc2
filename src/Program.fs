@@ -37,7 +37,7 @@ open System.Text.RegularExpressions
 // Web app
 // ---------------------------------
 
-let accounts = Array.zeroCreate 10300
+let accounts = Array.zeroCreate 1000000
 
 
 let jsonStringValues = StringValues "application/json"
@@ -503,9 +503,54 @@ let customGetRoutef : HttpHandler =
                     setStatusCode 404 next ctx
             else
                 setStatusCode 404 next ctx
+
+let private newUserString = "/accounts/new/"
+let private newLikesString = "/accounts/likes/"
+
+let newAccount (next, ctx : HttpContext) =
+    Interlocked.Increment(newAccountCount) |> ignore
+    setStatusCode 401 next ctx
+
+let updateAccount (id, next, ctx : HttpContext) =
+    Interlocked.Increment(updateAccountCount) |> ignore
+    setStatusCode 401 next ctx
+
+let addLikes (next, ctx : HttpContext) =
+    Interlocked.Increment(addLikesCount) |> ignore
+    setStatusCode 401 next ctx
+
+
+let customPostRoutef : HttpHandler =
+    fun (next : HttpFunc) (ctx : HttpContext) ->
+        match ctx.Request.Path.Value with
+        | filterPath when filterPath =~ newUserString ->
+             newAccount (next, ctx)
+        | filterPath when filterPath =~ newLikesString ->
+             addLikes (next, ctx)
+        | filterPath ->
+            if filterPath.Length > 10
+            then
+                let sp = filterPath.AsSpan()
+                let mainPart = sp.Slice(10)
+                let indexOfSlash = mainPart.IndexOf('/')
+                if indexOfSlash > 0
+                then
+                    let stringId = mainPart.Slice(0,indexOfSlash)
+                    let mutable id = 0
+                    if Int32.TryParse(stringId, &id)
+                    then
+                        updateAccount (id, next, ctx)
+                    else
+                        setStatusCode 404 next ctx
+                else
+                    setStatusCode 404 next ctx
+            else
+                setStatusCode 404 next ctx
+
 let webApp =
     choose [
         GET >=> customGetRoutef
+        POST >=> customPostRoutef
         setStatusCode 404 ]
 
 // ---------------------------------
@@ -546,9 +591,6 @@ let loadData folder =
                     accounts.[acc.id] <- getAccount acc
                     accsCount <- accsCount + 1
                     )
-
-    let names = citiesDictionary
-                |> Seq.sortBy (fun kv -> kv.Key)
 
     namesSerializeDictionary <- namesDictionary.ToDictionary((fun kv -> kv.Value), (fun kv -> utf8 kv.Key))
     citiesSerializeDictionary <- citiesDictionary.ToDictionary((fun kv -> kv.Value), (fun kv -> utf8 kv.Key))
