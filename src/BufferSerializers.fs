@@ -259,11 +259,11 @@ let writeField (field_predicate: string, acc: Account, output: MemoryStream) =
             writeChar output '"'
     | _ -> ()
 
-let getAccsSize (accs: Account[], field_predicates: string[]) =
-    let mutable baseSize = 40 * accs.Length * (2+field_predicates.Length)
+let getAccsSize (accs: Account seq, field_predicates: string seq) =
+    let mutable baseSize = 40 * (accs |> Seq.length) * (2+ (field_predicates |> Seq.length))
     baseSize
 
-let serializeAccounts (accs: Account[], field_predicates: string[]): MemoryStream =
+let serializeAccounts (accs: Account seq, field_predicates: string seq): MemoryStream =
     let array = ArrayPool.Shared.Rent (50 + getAccsSize(accs, field_predicates))
     let output = stream array
     writeArray output ``{"accounts":[``
@@ -289,8 +289,8 @@ let serializeAccounts (accs: Account[], field_predicates: string[]): MemoryStrea
     output
 
 
-let serializeGroups<'T> (groups: ('T*int)[], groupName: string, writeValue): MemoryStream =
-    let array = ArrayPool.Shared.Rent (50 + 60 * groups.Length)
+let serializeGroups<'T> (groups: ('T*int) seq, groupName: string, writeValue): MemoryStream =
+    let array = ArrayPool.Shared.Rent (50 + 60 * (groups |> Seq.length))
     let output = stream array
     writeArray output ``{"groups":[``
     let mutable start = true
@@ -313,7 +313,7 @@ let serializeGroups<'T> (groups: ('T*int)[], groupName: string, writeValue): Mem
     writeArray output ``]}``
     output
 
-let serializeGroupsCity (groups: (int64*int)[], groupName: string): MemoryStream =
+let serializeGroupsCity (groups: (int64*int) seq, groupName: string): MemoryStream =
     let writeValue output value =
         if value <> 0L
         then
@@ -324,14 +324,14 @@ let serializeGroupsCity (groups: (int64*int)[], groupName: string): MemoryStream
             writeArray output ``null``
     serializeGroups (groups, groupName, writeValue)
 
-let serializeGroupsInterests (groups: (int64*int)[], groupName: string): MemoryStream =
+let serializeGroupsInterests (groups: (int64*int) seq, groupName: string): MemoryStream =
     let writeValue output value =
         writeChar output '"'
         writeArray output (interestsSerializeDictionary.[value])
         writeChar output '"'
     serializeGroups (groups, groupName, writeValue)
 
-let serializeGroupsCountry (groups: (int64*int)[], groupName: string): MemoryStream =
+let serializeGroupsCountry (groups: (int64*int) seq, groupName: string): MemoryStream =
     let writeValue output value =
         if value <> 0L
         then
@@ -342,22 +342,22 @@ let serializeGroupsCountry (groups: (int64*int)[], groupName: string): MemoryStr
             writeArray output ``null``
     serializeGroups (groups, groupName, writeValue)
 
-let serializeGroupsSex (groups: (char*int)[], groupName: string): MemoryStream =
+let serializeGroupsSex (groups: (char*int) seq, groupName: string): MemoryStream =
     let writeValue output value =
         writeChar output '"'
         writeChar output value
         writeChar output '"'
     serializeGroups (groups, groupName, writeValue)
 
-let serializeGroupsStatus (groups: (int*int)[], groupName: string): MemoryStream =
+let serializeGroupsStatus (groups: (int*int) seq, groupName: string): MemoryStream =
     let writeValue output value =
         writeChar output '"'
         writeArray output (getStatusString value)
         writeChar output '"'
     serializeGroups (groups, groupName, writeValue)
 
-let serializeGroups2<'T> (groups: ((int64*'T)*int)[], writeValue1, writeValue2): MemoryStream =
-    let array = ArrayPool.Shared.Rent (50 + 80 * groups.Length)
+let serializeGroups2<'T> (groups: ((int64*'T)*int) seq, writeValue1, writeValue2): MemoryStream =
+    let array = ArrayPool.Shared.Rent (50 + 80 * (groups |> Seq.length))
     let output = stream array
     writeArray output ``{"groups":[``
     let mutable start = true
@@ -377,7 +377,7 @@ let serializeGroups2<'T> (groups: ((int64*'T)*int)[], writeValue1, writeValue2):
     writeArray output ``]}``
     output
 
-let serializeGroups2Sex (groups: ((int64*char)*int)[], groupName1: string, groupName2: string): MemoryStream =
+let serializeGroups2Sex (groups: ((int64*char)*int) seq, groupName1: string, groupName2: string): MemoryStream =
     let dictionary =
         if (groupName1 =~ "country")
         then countriesSerializeDictionary
@@ -400,7 +400,7 @@ let serializeGroups2Sex (groups: ((int64*char)*int)[], groupName1: string, group
         writeArray output ``",``
     serializeGroups2 (groups, writeValue1, writeValue2)
 
-let serializeGroups2Status (groups: ((int64*int)*int)[], groupName1: string, groupName2: string): MemoryStream =
+let serializeGroups2Status (groups: ((int64*int)*int) seq, groupName1: string, groupName2: string): MemoryStream =
     let dictionary =
         if (groupName1 =~ "country")
         then countriesSerializeDictionary

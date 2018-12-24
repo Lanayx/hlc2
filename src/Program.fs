@@ -37,7 +37,7 @@ open System.Text.RegularExpressions
 // Web app
 // ---------------------------------
 
-let accounts = Array.zeroCreate 1000000
+let accounts = Dictionary<int, Account>()
 
 
 let jsonStringValues = StringValues "application/json"
@@ -174,16 +174,17 @@ let getFilteredAccounts (next, ctx : HttpContext) =
         let keys =
             ctx.Request.Query.Keys
             |> Seq.filter(fun key -> (key =~ "limit" || key =~ "query_id") |> not )
-            |> Seq.toArray
         let filters =
             keys
-            |> Array.map (fun key -> filters.[key] ctx.Request.Query.[key].[0])
-        let accounts = accounts |> Array.filter(fun acc -> (box acc) |> isNotNull)
+            |> Seq.map (fun key -> filters.[key] ctx.Request.Query.[key].[0])
+        let accounts =
+            accounts.Values
+            |> Seq.filter(fun acc -> (box acc) |> isNotNull)
         let accs =
             filters
-            |> Array.fold (fun acc f -> acc |> Array.filter f) accounts
-            |> Array.sortByDescending (fun acc -> acc.id)
-            |> Array.truncate (Int32.Parse(ctx.Request.Query.["limit"].[0]))
+            |> Seq.fold (fun acc f -> acc |> Seq.filter f) accounts
+            |> Seq.sortByDescending (fun acc -> acc.id)
+            |> Seq.truncate (Int32.Parse(ctx.Request.Query.["limit"].[0]))
         let memoryStream = serializeAccounts (accs, keys)
         writeResponse memoryStream next ctx
     with
@@ -193,86 +194,86 @@ let getFilteredAccounts (next, ctx : HttpContext) =
         Console.WriteLine("NotSupportedException: " + ctx.Request.Path + ctx.Request.QueryString.Value)
         setStatusCode 400 next ctx
 
-let array_sort value =
+let seq_sort value =
     if value = -1
-    then Array.sortByDescending
-    else Array.sortBy
+    then Seq.sortByDescending
+    else Seq.sortBy
 
-let applyGrouping (memoryStream: byref<MemoryStream>, groupKey, order, accs: Account[], limit) =
+let applyGrouping (memoryStream: byref<MemoryStream>, groupKey, order, accs: Account seq, limit) =
     match groupKey with
     | "sex" ->
         let groups =
             accs
-            |> Array.groupBy (fun acc -> acc.sex)
-            |> Array.map (fun (key, group) -> (key, group.Length))
-            |> array_sort order (fun (group,length) -> length, group)
-            |> Array.truncate limit
+            |> Seq.groupBy (fun acc -> acc.sex)
+            |> Seq.map (fun (key, group) -> (key, group |> Seq.length))
+            |> seq_sort order (fun (group,length) -> length, group)
+            |> Seq.truncate limit
         memoryStream <- serializeGroupsSex(groups, "sex")
     | "status" ->
         let groups =
             accs
-            |> Array.groupBy (fun acc -> acc.status)
-            |> Array.map (fun (key, group) -> key, group.Length)
-            |> array_sort order (fun (group,length) -> length, group)
-            |> Array.truncate limit
+            |> Seq.groupBy (fun acc -> acc.status)
+            |> Seq.map (fun (key, group) -> key, group |> Seq.length)
+            |> seq_sort order (fun (group,length) -> length, group)
+            |> Seq.truncate limit
         memoryStream <- serializeGroupsStatus(groups, "status")
     | "country" ->
         let groups =
             accs
-            |> Array.groupBy (fun acc -> acc.country)
-            |> Array.map (fun (key, group) -> key, group.Length)
-            |> array_sort order (fun (group,length) -> length, group)
-            |> Array.truncate limit
+            |> Seq.groupBy (fun acc -> acc.country)
+            |> Seq.map (fun (key, group) -> key, group |> Seq.length)
+            |> seq_sort order (fun (group,length) -> length, group)
+            |> Seq.truncate limit
         memoryStream <- serializeGroupsCountry(groups, "country")
     | "city" ->
         let groups =
             accs
-            |> Array.groupBy (fun acc -> acc.city)
-            |> Array.map (fun (key, group) -> key, group.Length)
-            |> array_sort order (fun (group,length) -> length, group)
-            |> Array.truncate limit
+            |> Seq.groupBy (fun acc -> acc.city)
+            |> Seq.map (fun (key, group) -> key, group |> Seq.length)
+            |> seq_sort order (fun (group,length) -> length, group)
+            |> Seq.truncate limit
         memoryStream <- serializeGroupsCity(groups, "city")
     | "interests" ->
         let interests =
             accs
-            |> Array.filter (fun acc -> acc.interests |> isNotNull)
-            |> Array.collect (fun acc -> acc.interests)
-            |> Array.groupBy id
-            |> Array.map (fun (key, group) -> key, group.Length)
-            |> array_sort order (fun (group,length) -> length, group)
-            |> Array.truncate limit
+            |> Seq.filter (fun acc -> acc.interests |> isNotNull)
+            |> Seq.collect (fun acc -> acc.interests)
+            |> Seq.groupBy id
+            |> Seq.map (fun (key, group) -> key, group |> Seq.length)
+            |> seq_sort order (fun (group,length) -> length, group)
+            |> Seq.truncate limit
         memoryStream <- serializeGroupsInterests(interests , "interests")
     | "city,status" ->
         let groups =
             accs
-            |> Array.groupBy (fun acc -> acc.city, acc.status)
-            |> Array.map (fun (key, group) -> key, group.Length)
-            |> array_sort order (fun (group,length) -> length, group)
-            |> Array.truncate limit
+            |> Seq.groupBy (fun acc -> acc.city, acc.status)
+            |> Seq.map (fun (key, group) -> key, group |> Seq.length)
+            |> seq_sort order (fun (group,length) -> length, group)
+            |> Seq.truncate limit
         memoryStream <- serializeGroups2Status(groups, "city", "status")
     | "city,sex" ->
         let groups =
             accs
-            |> Array.groupBy (fun acc -> acc.city, acc.sex)
-            |> Array.map (fun (key, group) -> key, group.Length)
-            |> array_sort order (fun (group,length) -> length, group)
-            |> Array.truncate limit
+            |> Seq.groupBy (fun acc -> acc.city, acc.sex)
+            |> Seq.map (fun (key, group) -> key, group |> Seq.length)
+            |> seq_sort order (fun (group,length) -> length, group)
+            |> Seq.truncate limit
         memoryStream <- serializeGroups2Sex(groups, "city", "sex")
     | "country,sex" ->
         let groups =
             accs
-            |> Array.groupBy (fun acc -> acc.country, acc.sex)
-            |> Array.map (fun (key, group) -> key, group.Length)
-            |> array_sort order (fun (group,length) -> length, group)
-            |> Array.truncate limit
+            |> Seq.groupBy (fun acc -> acc.country, acc.sex)
+            |> Seq.map (fun (key, group) -> key, group |> Seq.length)
+            |> seq_sort order (fun (group,length) -> length, group)
+            |> Seq.truncate limit
         memoryStream <- serializeGroups2Sex(groups, "country", "sex")
     | "country,status" ->
         let groups =
             accs
-            |> Array.groupBy (fun acc -> acc.country, acc.status)
-            |> Array.map (fun (key, group) -> key, group.Length)
-            |> array_sort order (fun (group,length) -> length, group)
-            |> Array.truncate limit
+            |> Seq.groupBy (fun acc -> acc.country, acc.status)
+            |> Seq.map (fun (key, group) -> key, group |> Seq.length)
+            |> seq_sort order (fun (group,length) -> length, group)
+            |> Seq.truncate limit
         memoryStream <- serializeGroups2Status(groups, "country", "status")
     | _ ->
         ()
@@ -292,11 +293,11 @@ let getGroupedAccounts (next, ctx : HttpContext) =
         let order =
             Int32.Parse(ctx.Request.Query.["order"].[0])
         let accounts =
-            accounts
-            |> Array.filter(fun acc -> (box acc) |> isNotNull)
+            accounts.Values
+            |> Seq.filter(fun acc -> (box acc) |> isNotNull)
         let accs =
             filters
-            |> Seq.fold (fun acc f -> acc |> Array.filter f) accounts
+            |> Seq.fold (fun acc f -> acc |> Seq.filter f) accounts
         let mutable memoryStream: MemoryStream = null
         let limit = Int32.Parse(ctx.Request.Query.["limit"].[0])
         applyGrouping(&memoryStream, groupKey, order, accs, limit)
@@ -332,7 +333,7 @@ let recommendationFields = [| "status_eq"; "fname_eq"; "sname_eq"; "birth_year";
 let getRecommendedAccounts (id, next, ctx : HttpContext) =
     Interlocked.Increment(accountsRecommendCount) |> ignore
     try
-        if (id > accounts.Length)
+        if (id > accounts.Count)
         then
             setStatusCode 404 next ctx
         else
@@ -355,17 +356,17 @@ let getRecommendedAccounts (id, next, ctx : HttpContext) =
                     keys
                     |> Seq.map (fun (key, value) -> recommendFilters.[key] value)
                 let accounts =
-                    accounts
-                    |> Array.filter(fun acc -> (box acc) |> isNotNull)
-                    |> Array.filter(fun acc -> acc.sex <> target.sex)
+                    accounts.Values
+                    |> Seq.filter(fun acc -> (box acc) |> isNotNull)
+                    |> Seq.filter(fun acc -> acc.sex <> target.sex)
                 let accs =
                     filters
-                    |> Seq.fold (fun acc f -> acc |> Array.filter f) accounts
-                    |> Array.map (fun acc -> acc, getCompatibility target acc)
-                    |> Array.filter (fun (acc, compat) -> compat.IsSome)
-                    |> Array.sortByDescending (fun (acc, comp) -> comp.Value)
-                    |> Array.map (fun (acc, comp) -> acc)
-                    |> Array.truncate limit
+                    |> Seq.fold (fun acc f -> acc |> Seq.filter f) accounts
+                    |> Seq.map (fun acc -> acc, getCompatibility target acc)
+                    |> Seq.filter (fun (acc, compat) -> compat.IsSome)
+                    |> Seq.sortByDescending (fun (acc, comp) -> comp.Value)
+                    |> Seq.map (fun (acc, comp) -> acc)
+                    |> Seq.truncate limit
                 let memoryStream = serializeAccounts (accs, recommendationFields)
                 writeResponse memoryStream next ctx
     with
@@ -411,7 +412,7 @@ let suggestionFields = [| "status_eq"; "fname_eq"; "sname_eq"; |]
 let getSuggestedAccounts (id, next, ctx : HttpContext) =
     Interlocked.Increment(accountsSuggestCount) |> ignore
     try
-    if (id > accounts.Length || (box accounts.[id] |> isNull) )
+    if (id > accounts.Count || (box accounts.[id] |> isNull) )
     then
         setStatusCode 404 next ctx
     else
@@ -439,25 +440,25 @@ let getSuggestedAccounts (id, next, ctx : HttpContext) =
                     keys
                     |> Seq.map (fun (key, value) -> recommendFilters.[key] value)
                 let similarAccounts =
-                    accounts
-                    |> Array.filter(fun acc -> (box acc) |> isNotNull)
-                    |> Array.filter(fun acc -> acc.sex = target.sex)
-                    |> Array.filter(fun acc ->
+                    accounts.Values
+                    |> Seq.filter(fun acc -> (box acc) |> isNotNull)
+                    |> Seq.filter(fun acc -> acc.sex = target.sex)
+                    |> Seq.filter(fun acc ->
                         (acc.likes |> isNotNull)
                         && acc.likes.Intersect(target.likes, likesComparer).Any())
 
                 let similarities =
                     filters
-                    |> Seq.fold (fun acc f -> acc |> Array.filter f) similarAccounts
-                    |> Array.map (fun acc -> (acc, acc.id, getSimilarity target acc))
-                    |> Array.sortByDescending (fun (acc, id, similarity) -> id)
+                    |> Seq.fold (fun acc f -> acc |> Seq.filter f) similarAccounts
+                    |> Seq.map (fun acc -> (acc, acc.id, getSimilarity target acc))
+                    |> Seq.sortByDescending (fun (acc, id, similarity) -> id)
                 let accs =
                     similarities
-                    |> Array.map (fun (acc, id, similarity) -> acc)
-                    |> Array.collect(fun acc -> acc.likes |> Array.sortByDescending (fun like -> like.id))
-                    |> Array.filter (fun like -> target.likes.Contains(like, likesComparer) |> not)
-                    |> Array.map (fun like -> accounts.[like.id])
-                    |> Array.truncate limit
+                    |> Seq.map (fun (acc, id, similarity) -> acc)
+                    |> Seq.collect(fun acc -> acc.likes |> Array.sortByDescending (fun like -> like.id))
+                    |> Seq.filter (fun like -> target.likes.Contains(like, likesComparer) |> not)
+                    |> Seq.map (fun like -> accounts.[like.id])
+                    |> Seq.truncate limit
                 let memoryStream = serializeAccounts (accs, suggestionFields)
                 writeResponse memoryStream next ctx
     with
@@ -470,10 +471,10 @@ let getSuggestedAccounts (id, next, ctx : HttpContext) =
 let findUser (next, ctx : HttpContext) =
     let likeIds = ctx.Request.Query.["likes"].[0].Split(',') |> Array.map Int32.Parse
     let users =
-        accounts
-        |> Array.filter(fun acc -> (box acc) |> isNotNull)
-        |> Array.filter(fun acc -> acc.likes |> isNotNull)
-        |> Array.filter(fun acc -> (acc.likes |> Array.map (fun like -> like.id)).Intersect(likeIds).Count() >= likeIds.Length)
+        accounts.Values
+        |> Seq.filter(fun acc -> (box acc) |> isNotNull)
+        |> Seq.filter(fun acc -> acc.likes |> isNotNull)
+        |> Seq.filter(fun acc -> (acc.likes |> Array.map (fun like -> like.id)).Intersect(likeIds).Count() >= likeIds.Length)
     json users next ctx
 
 let private accountsFilterString = "/accounts/filter/"
@@ -532,7 +533,7 @@ let newAccount (next, ctx : HttpContext) =
 
 let updateAccount (id, next, ctx : HttpContext) =
     Interlocked.Increment(updateAccountCount) |> ignore
-    if (id > accounts.Length || (box accounts.[id] |> isNull) )
+    if (id > accounts.Count || (box accounts.[id] |> isNull) )
     then
         setStatusCode 404 next ctx
     else
