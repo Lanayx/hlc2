@@ -93,10 +93,8 @@ let getStringWeight (str: string) =
         multiplier <- multiplier / 33L
     result
 
-let inline convertInterestToIndex (interests: string[]) =
-    if interests |> isNull
-    then null
-    else
+let inline handleInterests (interests: string[]) (account: Account) =
+    account.interests <-
         interests
         |> Array.map(fun interest ->
                 let mutable interestIndex = 0L
@@ -109,35 +107,67 @@ let inline convertInterestToIndex (interests: string[]) =
                     interestIndex
             )
 
-let createAccount (accUpd: AccountUpd): Account =
-    let atIndex = accUpd.email.IndexOf('@', StringComparison.Ordinal)
-    let emailDomain = accUpd.email.Substring(atIndex+1)
+let inline handleCity city (account: Account) =
+    let mutable cityIndex = 0L
+    if citiesDictionary.TryGetValue(city, &cityIndex)
+    then
+        account.city <- cityIndex
+    else
+        cityIndex <- getStringWeight city
+        citiesDictionary.Add(city, cityIndex)
+        account.city <- cityIndex
+
+let inline handleCountry country (account: Account) =
+    let mutable countryIndex = 0L
+    if countriesDictionary.TryGetValue(country, &countryIndex)
+    then
+        account.country <- countryIndex
+    else
+        countryIndex <- getStringWeight country
+        countriesDictionary.Add(country, countryIndex)
+        account.country <- countryIndex
+
+let inline handleFirstName (fname: string) (account: Account) =
+    let mutable nameIndex = 0L
+    if namesDictionary.TryGetValue(fname, &nameIndex)
+    then
+        account.fname <- nameIndex
+    else
+        nameIndex <- getStringWeight fname
+        namesDictionary.Add(fname, nameIndex)
+        account.fname <- nameIndex
+
+let inline handleEmail (email: string) (account: Account) =
+    let atIndex = email.IndexOf('@', StringComparison.Ordinal)
+    let emailDomain = email.Substring(atIndex+1)
+    account.email <- email
+    account.emailDomain <- emailDomain
+
+let inline handlePhone (phone: string) (account: Account) =
     let phoneCode =
-        if accUpd.phone |> isNull
+        if phone |> isNull
         then 0
-        else Int32.Parse(accUpd.phone.Substring(2,3))
+        else Int32.Parse(phone.Substring(2,3))
+    account.phone <- phone
+    account.phoneCode <- phoneCode
+
+let createAccount (accUpd: AccountUpd): Account =
+
     let account = Account()
     account.id <- accUpd.id.Value
+    handleEmail accUpd.email account
+    handlePhone accUpd.phone account
     if accUpd.fname |> isNotNull
     then
-        let mutable nameIndex = 0L
-        if namesDictionary.TryGetValue(accUpd.fname, &nameIndex)
-        then
-            account.fname <- nameIndex
-        else
-            nameIndex <- getStringWeight accUpd.fname
-            namesDictionary.Add(accUpd.fname, nameIndex)
-            account.fname <- nameIndex
+        handleFirstName accUpd.fname account
     account.sname <- accUpd.sname
-    account.email <- accUpd.email
-    account.emailDomain <- emailDomain
-    account.interests <- convertInterestToIndex accUpd.interests
+    if accUpd.interests |> isNotNull
+    then
+        handleInterests accUpd.interests account
     account.status <- getStatus accUpd.status
     account.premium <- accUpd.premium
     account.premiumNow <- box accUpd.premium |> isNotNull && accUpd.premium.start <= currentTs && accUpd.premium.finish > currentTs
     account.sex <- accUpd.sex.Value
-    account.phone <- accUpd.phone
-    account.phoneCode <- phoneCode
     account.likes <- accUpd.likes
     account.birth <- accUpd.birth.Value
     account.birthYear <- (convertToDate accUpd.birth.Value).Year
@@ -145,27 +175,58 @@ let createAccount (accUpd: AccountUpd): Account =
     account.joinedYear <- (convertToDate accUpd.joined.Value).Year
     if accUpd.city |> isNotNull
     then
-        let mutable cityIndex = 0L
-        if citiesDictionary.TryGetValue(accUpd.city, &cityIndex)
-        then
-            account.city <- cityIndex
-        else
-            cityIndex <- getStringWeight accUpd.city
-            citiesDictionary.Add(accUpd.city, cityIndex)
-            account.city <- cityIndex
+        handleCity accUpd.city account
     if accUpd.country |> isNotNull
     then
-        let mutable countryIndex = 0L
-        if countriesDictionary.TryGetValue(accUpd.country, &countryIndex)
-        then
-            account.country <- countryIndex
-        else
-            countryIndex <-  getStringWeight accUpd.country
-            countriesDictionary.Add(accUpd.country, countryIndex)
-            account.country <- countryIndex
+        handleCountry accUpd.country account
     account
 
 let updateExistingAccount (existing: Account, accUpd: AccountUpd) =
+    if accUpd.birth.HasValue
+    then
+        existing.birth <- accUpd.birth.Value
+        existing.birthYear <- (convertToDate accUpd.birth.Value).Year
+    if accUpd.joined.HasValue
+    then
+        existing.joined <- accUpd.joined.Value
+        existing.joinedYear <- (convertToDate accUpd.joined.Value).Year
+    if accUpd.sex.HasValue
+    then
+        existing.sex <- accUpd.sex.Value
+    if accUpd.city |> isNotNull
+    then
+        handleCity accUpd.city existing
+    if accUpd.country |> isNotNull
+    then
+        handleCountry accUpd.country existing
+    if accUpd.email |> isNotNull
+    then
+        handleEmail accUpd.email existing
+    if accUpd.phone |> isNotNull
+    then
+        handleEmail accUpd.phone existing
+    if accUpd.fname |> isNotNull
+    then
+        handleFirstName accUpd.fname existing
+    if accUpd.sname |> isNotNull
+    then
+        existing.sname <- accUpd.sname
+    if accUpd.interests |> isNotNull
+    then
+        handleInterests accUpd.interests existing
+    if accUpd.status |> isNotNull
+    then
+        existing.status <- getStatus accUpd.status
+    if box accUpd.premium |> isNotNull
+    then
+        existing.premium <- accUpd.premium
+        existing.premiumNow <- accUpd.premium.start <= currentTs && accUpd.premium.finish > currentTs
+    if accUpd.likes |> isNotNull
+    then
+        existing.likes <- accUpd.likes
+    if accUpd.likes |> isNotNull
+    then
+        existing.likes <- accUpd.likes
     ()
 
 let getFilteredAccounts (next, ctx : HttpContext) =
@@ -406,8 +467,6 @@ let getSimilarity (target: Account) (acc: Account)  =
         |> Array.fold (fun state (targTs, accTs) -> state +  1.0 / Math.Abs(targTs - accTs)) 0.0
     result
 
-
-
 let suggestionFields = [| "status_eq"; "fname_eq"; "sname_eq"; |]
 let getSuggestedAccounts (id, next, ctx : HttpContext) =
     Interlocked.Increment(accountsSuggestCount) |> ignore
@@ -446,16 +505,16 @@ let getSuggestedAccounts (id, next, ctx : HttpContext) =
                     |> Seq.filter(fun acc ->
                         (acc.likes |> isNotNull)
                         && acc.likes.Intersect(target.likes, likesComparer).Any())
-
-                let similarities =
+                let getSimilarityApplied = getSimilarity target
+                let accs =
                     filters
                     |> Seq.fold (fun acc f -> acc |> Seq.filter f) similarAccounts
-                    |> Seq.map (fun acc -> (acc, acc.id, getSimilarity target acc))
-                    |> Seq.sortByDescending (fun (acc, id, similarity) -> id)
-                let accs =
-                    similarities
-                    |> Seq.map (fun (acc, id, similarity) -> acc)
-                    |> Seq.collect(fun acc -> acc.likes |> Array.sortByDescending (fun like -> like.id))
+                    |> Seq.sortByDescending getSimilarityApplied
+                    |> Seq.collect(fun acc ->
+                            acc.likes
+                            |> Array.distinctBy (fun like -> like.id)
+                            |> Array.sortByDescending (fun like -> like.id)
+                        )
                     |> Seq.filter (fun like -> target.likes.Contains(like, likesComparer) |> not)
                     |> Seq.map (fun like -> accounts.[like.id])
                     |> Seq.truncate limit
@@ -548,7 +607,6 @@ let updateAccount (id, next, ctx : HttpContext) =
 let addLikes (next, ctx : HttpContext) =
     Interlocked.Increment(addLikesCount) |> ignore
     setStatusCode 401 next ctx
-
 
 let customPostRoutef : HttpHandler =
     fun (next : HttpFunc) (ctx : HttpContext) ->
