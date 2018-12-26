@@ -158,7 +158,17 @@ let inline handlePhone (phone: string) (account: Account) =
     account.phone <- phone
     account.phoneCode <- phoneCode
 
-let handleLikes (likes: Like[]) (account: Account) =
+let handleLikes (likes: Like[]) (account: Account) (deletePrevious: bool) =
+    if deletePrevious
+    then
+        for like in account.likes do
+            let likers = likesDictionary.[like.id]
+            let struct(oldTsSum, oldCount) = likers.[account.id]
+            if oldCount > 1
+            then 
+                likers.[account.id] <- struct(oldTsSum - (single)like.ts, oldCount - 1)
+            else 
+                likers.Remove(account.id) |> ignore
     for like in likes do
         if likesDictionary.ContainsKey(like.id) |> not
         then likesDictionary.Add(like.id, Dictionary<int, struct(single*int)>())
@@ -169,10 +179,10 @@ let handleLikes (likes: Like[]) (account: Account) =
             likers.[account.id] <- struct(ts + (single)like.ts, count+1)
         else 
             likers.[account.id] <- struct((single)like.ts, 1)
-    account.likes <- likes |> Array.sortByDescending (fun like -> like.id)
-    if account.id = 8585
-    then printfn "Likes 8585: %A" (account.likes |> Array.map (fun like -> like.id))
-    ()
+    account.likes <- 
+        likes 
+        |> Array.distinctBy (fun like -> like.id)
+        |> Array.sortByDescending (fun like -> like.id)
 
 let createAccount (accUpd: AccountUpd): Account =
 
@@ -193,7 +203,7 @@ let createAccount (accUpd: AccountUpd): Account =
     account.sex <- accUpd.sex.Value
     if accUpd.likes |> isNotNull
     then
-        handleLikes accUpd.likes account
+        handleLikes accUpd.likes account false
     account.birth <- accUpd.birth.Value
     account.birthYear <- (convertToDate accUpd.birth.Value).Year
     account.joined <- accUpd.joined.Value
@@ -248,7 +258,7 @@ let updateExistingAccount (existing: Account, accUpd: AccountUpd) =
         existing.premiumNow <- accUpd.premium.start <= currentTs && accUpd.premium.finish > currentTs
     if accUpd.likes |> isNotNull
     then
-        existing.likes <- accUpd.likes
+        handleLikes accUpd.likes existing true
     if accUpd.likes |> isNotNull
     then
         existing.likes <- accUpd.likes
@@ -455,32 +465,7 @@ let getRecommendedAccounts (id, next, ctx : HttpContext) =
         Console.WriteLine("NotSupportedException:" + ex.Message + " " + ctx.Request.Path + ctx.Request.QueryString.Value)
         setStatusCode 400 next ctx
 
-
-//let getSimilarity (target: Account) (acc: Account)  =
-//    let likesIntersection =
-//        target.likes.Intersect(acc.likes, likesComparer)
-//        |> Seq.map (fun like -> like.id)
-//        |> Seq.toArray
-//    let targetLikes =
-//        target.likes
-//        |> Array.filter (fun like -> likesIntersection.Contains(like.id))
-//        |> Array.groupBy (fun like -> like.id)
-//        |> Array.sortBy (fun (id, group) -> id)
-//        |> Array.map (fun (id, group) ->
-//            (group |> Array.sumBy (fun gr -> (float)gr.ts / (float)group.Length )) )
-//    let accLikes =
-//        acc.likes
-//        |> Array.filter (fun like -> likesIntersection.Contains(like.id))
-//        |> Array.groupBy (fun like -> like.id)
-//        |> Array.sortBy (fun (id, group) -> id)
-//        |> Array.map (fun (id, group) ->
-//            (group |> Array.sumBy (fun gr -> (float)gr.ts / (float)group.Length )) )
-//    let result =
-//        Array.zip targetLikes accLikes
-//        |> Array.fold (fun state (targTs, accTs) -> state +  1.0 / Math.Abs(targTs - accTs)) 0.0
-//    result
-
-let inline getSimilarityNew targetId (likers: Dictionary<int,struct(single*int)>) (results:Dictionary<int,single>) =
+let getSimilarityNew targetId (likers: Dictionary<int,struct(single*int)>) (results:Dictionary<int,single>) =
     let struct(targTsSum, count) = likers.[targetId]
     let targTs = targTsSum / (single) count
     for liker in likers do
@@ -492,8 +477,6 @@ let inline getSimilarityNew targetId (likers: Dictionary<int,struct(single*int)>
             if (results.ContainsKey(liker.Key))
             then results.[liker.Key] <- results.[liker.Key] + currrentSimilarity
             else results.[liker.Key] <- currrentSimilarity
-        
-    
 
 let suggestionFields = [| "status_eq"; "fname_eq"; "sname_eq"; |]
 let getSuggestedAccounts (id, next, ctx : HttpContext) =
@@ -532,25 +515,16 @@ let getSuggestedAccounts (id, next, ctx : HttpContext) =
                 let similarAccounts =
                     similaritiesWithUsers.Keys
                     |> Seq.map (fun id -> accounts.[id])
-                    |> Seq.filter(fun acc -> acc.sex = target.sex)
-                    |> Seq.toArray
-                                
+                    |> Seq.filter(fun acc -> acc.sex = target.sex)                                
                 let accs =
                     filters
-                    |> Seq.fold (fun acc f -> acc |> Seq.filter f) (seq similarAccounts)
-                printfn "suitable: %A" (accs |> Seq.map (fun acc -> (acc.id, similaritiesWithUsers.[acc.id])) |> Seq.toArray)
-                let accsx =
-                    accs
+                    |> Seq.fold (fun acc f -> acc |> Seq.filter f) similarAccounts
                     |> Seq.sortByDescending (fun acc -> similaritiesWithUsers.[acc.id])
-                    |> Seq.collect(fun acc ->
-                            acc.likes
-                            |> Array.distinctBy (fun like -> like.id)
-                            |> Array.sortByDescending (fun like -> like.id)
-                        )
+                    |> Seq.collect(fun acc -> acc.likes)
                     |> Seq.filter (fun like -> target.likes.Contains(like, likesComparer) |> not)
                     |> Seq.map (fun like -> accounts.[like.id])
                     |> Seq.truncate limit
-                let memoryStream = serializeAccounts (accsx, suggestionFields)
+                let memoryStream = serializeAccounts (accs, suggestionFields)
                 writeResponse memoryStream next ctx
     with
     | :? KeyNotFoundException -> setStatusCode 400 next ctx
