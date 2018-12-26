@@ -61,6 +61,11 @@ type Like() =
         [<DefaultValue>]val mutable ts: int32
         [<DefaultValue>]val mutable id : int32
 
+type LikeFull() =
+        [<DefaultValue>]val mutable ts: int32
+        [<DefaultValue>]val mutable liker : int32
+        [<DefaultValue>]val mutable likee : int32
+
 type AccountField =
     | Firstname = 0
     | Surname = 1
@@ -105,47 +110,23 @@ type Account() =
         [<DefaultValue>]val mutable sex: char
         [<DefaultValue>]val mutable phone: string
         [<DefaultValue>]val mutable phoneCode: int
-        [<DefaultValue>]val mutable likes: Like[]
         [<DefaultValue>]val mutable birth: int
         [<DefaultValue>]val mutable birthYear: int
+        [<DefaultValue>]val mutable likes: Like[]
         [<DefaultValue>]val mutable joined: int
         [<DefaultValue>]val mutable joinedYear: int
         [<DefaultValue>]val mutable city: int64
         [<DefaultValue>]val mutable country: int64
 
+[<Struct>]
+type LikeStr =
+    {
+        liker: int
+        ts: int
+    }
 
 [<CLIMutable>]
 type AccountsUpd =
     {
         accounts : AccountUpd[]
     }
-
-[<CLIMutable>]
-type VisitUpd =
-    {
-        user : Nullable<int32>
-        location: Nullable<int32>
-        visited_at: Nullable<uint32>
-        mark: Nullable<uint8>
-    }
-
-type Visit() =
-        [<DefaultValue>]val mutable id: int32
-        [<DefaultValue>]val mutable user : int32
-        [<DefaultValue>]val mutable location: int32
-        [<DefaultValue>]val mutable visited_at: uint32
-        [<DefaultValue>]val mutable mark: uint8
-
-[<CLIMutable>]
-type Visits =
-    {
-        visits : Visit[]
-    }
-
-[<Struct>]
-type StructOption<'a> =
-    | Som of 'a
-    | Non
-
-[<Struct>]
-type UserVisit = { mark: uint8; visited_at: uint32; place: byte[] }

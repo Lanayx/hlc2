@@ -151,6 +151,19 @@ let inline handlePhone (phone: string) (account: Account) =
     account.phone <- phone
     account.phoneCode <- phoneCode
 
+let inline handleLikes (likes: Like[]) (account: Account) =
+    for like in likes do
+        if likesDictionary.ContainsKey(like.id) |> not
+        then likesDictionary.Add(like.id, Dictionary<int, struct(single*int)>())
+        let likers = likesDictionary.[like.id]
+        if likers.ContainsKey(account.id)
+        then 
+            let struct(ts, count) = likers.[account.id]
+            likers.[account.id] <- struct(ts + (single)like.ts, count+1)
+        else 
+            likers.[account.id] <- struct((single)like.ts, 1)
+    account.likes <- likes
+
 let createAccount (accUpd: AccountUpd): Account =
 
     let account = Account()
@@ -168,7 +181,9 @@ let createAccount (accUpd: AccountUpd): Account =
     account.premium <- accUpd.premium
     account.premiumNow <- box accUpd.premium |> isNotNull && accUpd.premium.start <= currentTs && accUpd.premium.finish > currentTs
     account.sex <- accUpd.sex.Value
-    account.likes <- accUpd.likes
+    if accUpd.likes |> isNotNull
+    then
+        handleLikes accUpd.likes account
     account.birth <- accUpd.birth.Value
     account.birthYear <- (convertToDate accUpd.birth.Value).Year
     account.joined <- accUpd.joined.Value
@@ -238,12 +253,9 @@ let getFilteredAccounts (next, ctx : HttpContext) =
         let filters =
             keys
             |> Seq.map (fun key -> filters.[key] ctx.Request.Query.[key].[0])
-        let accounts =
-            accounts.Values
-            |> Seq.filter(fun acc -> (box acc) |> isNotNull)
         let accs =
             filters
-            |> Seq.fold (fun acc f -> acc |> Seq.filter f) accounts
+            |> Seq.fold (fun acc f -> acc |> Seq.filter f) (seq accounts.Values)
             |> Seq.sortByDescending (fun acc -> acc.id)
             |> Seq.truncate (Int32.Parse(ctx.Request.Query.["limit"].[0]))
         let memoryStream = serializeAccounts (accs, keys)
@@ -353,12 +365,9 @@ let getGroupedAccounts (next, ctx : HttpContext) =
             ctx.Request.Query.["keys"].[0]
         let order =
             Int32.Parse(ctx.Request.Query.["order"].[0])
-        let accounts =
-            accounts.Values
-            |> Seq.filter(fun acc -> (box acc) |> isNotNull)
         let accs =
             filters
-            |> Seq.fold (fun acc f -> acc |> Seq.filter f) accounts
+            |> Seq.fold (fun acc f -> acc |> Seq.filter f) (seq accounts.Values)
         let mutable memoryStream: MemoryStream = null
         let limit = Int32.Parse(ctx.Request.Query.["limit"].[0])
         applyGrouping(&memoryStream, groupKey, order, accs, limit)
@@ -418,7 +427,6 @@ let getRecommendedAccounts (id, next, ctx : HttpContext) =
                     |> Seq.map (fun (key, value) -> recommendFilters.[key] value)
                 let accounts =
                     accounts.Values
-                    |> Seq.filter(fun acc -> (box acc) |> isNotNull)
                     |> Seq.filter(fun acc -> acc.sex <> target.sex)
                 let accs =
                     filters
@@ -443,29 +451,44 @@ type LikesComparer() =
         member this.GetHashCode(obj) = obj.id
 let likesComparer = new LikesComparer()
 
-let getSimilarity (target: Account) (acc: Account)  =
-    let likesIntersection =
-        target.likes.Intersect(acc.likes, likesComparer)
-        |> Seq.map (fun like -> like.id)
-        |> Seq.toArray
-    let targetLikes =
-        target.likes
-        |> Array.filter (fun like -> likesIntersection.Contains(like.id))
-        |> Array.groupBy (fun like -> like.id)
-        |> Array.sortBy (fun (id, group) -> id)
-        |> Array.map (fun (id, group) ->
-            (group |> Array.sumBy (fun gr -> (float)gr.ts / (float)group.Length )) )
-    let accLikes =
-        acc.likes
-        |> Array.filter (fun like -> likesIntersection.Contains(like.id))
-        |> Array.groupBy (fun like -> like.id)
-        |> Array.sortBy (fun (id, group) -> id)
-        |> Array.map (fun (id, group) ->
-            (group |> Array.sumBy (fun gr -> (float)gr.ts / (float)group.Length )) )
-    let result =
-        Array.zip targetLikes accLikes
-        |> Array.fold (fun state (targTs, accTs) -> state +  1.0 / Math.Abs(targTs - accTs)) 0.0
-    result
+//let getSimilarity (target: Account) (acc: Account)  =
+//    let likesIntersection =
+//        target.likes.Intersect(acc.likes, likesComparer)
+//        |> Seq.map (fun like -> like.id)
+//        |> Seq.toArray
+//    let targetLikes =
+//        target.likes
+//        |> Array.filter (fun like -> likesIntersection.Contains(like.id))
+//        |> Array.groupBy (fun like -> like.id)
+//        |> Array.sortBy (fun (id, group) -> id)
+//        |> Array.map (fun (id, group) ->
+//            (group |> Array.sumBy (fun gr -> (float)gr.ts / (float)group.Length )) )
+//    let accLikes =
+//        acc.likes
+//        |> Array.filter (fun like -> likesIntersection.Contains(like.id))
+//        |> Array.groupBy (fun like -> like.id)
+//        |> Array.sortBy (fun (id, group) -> id)
+//        |> Array.map (fun (id, group) ->
+//            (group |> Array.sumBy (fun gr -> (float)gr.ts / (float)group.Length )) )
+//    let result =
+//        Array.zip targetLikes accLikes
+//        |> Array.fold (fun state (targTs, accTs) -> state +  1.0 / Math.Abs(targTs - accTs)) 0.0
+//    result
+
+let inline getSimilarityNew targetId (likers: Dictionary<int,struct(single*int)>) (results:Dictionary<int,single>) =
+    let struct(targTsSum, count) = likers.[targetId]
+    let targTs = targTsSum / (single) count
+    for liker in likers do
+        if liker.Key <> targetId
+        then
+            let struct(likerTsSum, count) = liker.Value
+            let likerTs = likerTsSum / (single) count
+            let currrentSimilarity = 1.0f / Math.Abs(targTs - likerTs)
+            if (results.ContainsKey(liker.Key))
+            then results.[liker.Key] <- results.[liker.Key] + currrentSimilarity
+            else results.[liker.Key] <- currrentSimilarity
+        
+    
 
 let suggestionFields = [| "status_eq"; "fname_eq"; "sname_eq"; |]
 let getSuggestedAccounts (id, next, ctx : HttpContext) =
@@ -498,18 +521,22 @@ let getSuggestedAccounts (id, next, ctx : HttpContext) =
                 let filters =
                     keys
                     |> Seq.map (fun (key, value) -> recommendFilters.[key] value)
+                let similaritiesWithUsers = Dictionary<int, single>()
+                for like in target.likes do
+                    getSimilarityNew target.id (likesDictionary.[like.id]) similaritiesWithUsers
                 let similarAccounts =
-                    accounts.Values
-                    |> Seq.filter(fun acc -> (box acc) |> isNotNull)
+                    similaritiesWithUsers.Keys
+                    |> Seq.map (fun id -> accounts.[id])
                     |> Seq.filter(fun acc -> acc.sex = target.sex)
-                    |> Seq.filter(fun acc ->
-                        (acc.likes |> isNotNull)
-                        && acc.likes.Intersect(target.likes, likesComparer).Any())
-                let getSimilarityApplied = getSimilarity target
+                    |> Seq.toArray
+                                
                 let accs =
                     filters
-                    |> Seq.fold (fun acc f -> acc |> Seq.filter f) similarAccounts
-                    |> Seq.sortByDescending getSimilarityApplied
+                    |> Seq.fold (fun acc f -> acc |> Seq.filter f) (seq similarAccounts)
+                printfn "suitable: %A" (accs |> Seq.map (fun acc -> (acc.id, similaritiesWithUsers.[acc.id])) |> Seq.toArray)
+                let accsx =
+                    accs
+                    |> Seq.sortByDescending (fun acc -> similaritiesWithUsers.[acc.id])
                     |> Seq.collect(fun acc ->
                             acc.likes
                             |> Array.distinctBy (fun like -> like.id)
@@ -518,7 +545,7 @@ let getSuggestedAccounts (id, next, ctx : HttpContext) =
                     |> Seq.filter (fun like -> target.likes.Contains(like, likesComparer) |> not)
                     |> Seq.map (fun like -> accounts.[like.id])
                     |> Seq.truncate limit
-                let memoryStream = serializeAccounts (accs, suggestionFields)
+                let memoryStream = serializeAccounts (accsx, suggestionFields)
                 writeResponse memoryStream next ctx
     with
     | :? KeyNotFoundException -> setStatusCode 400 next ctx
