@@ -52,6 +52,13 @@ let inline deserializeObject<'a> (str: string) =
     | exn ->
         None
 
+
+type LikesComparer() =
+    interface IEqualityComparer<Like> with
+        member this.Equals(x,y) = x.id = y.id
+        member this.GetHashCode(obj) = obj.id
+let likesComparer = new LikesComparer()
+
 let inline writeResponse (response : MemoryStream) (next : HttpFunc) (ctx: HttpContext) =
     let length = response.Position
     ctx.Response.Headers.["Content-Type"] <- jsonStringValues
@@ -151,7 +158,7 @@ let inline handlePhone (phone: string) (account: Account) =
     account.phone <- phone
     account.phoneCode <- phoneCode
 
-let inline handleLikes (likes: Like[]) (account: Account) =
+let handleLikes (likes: Like[]) (account: Account) =
     for like in likes do
         if likesDictionary.ContainsKey(like.id) |> not
         then likesDictionary.Add(like.id, Dictionary<int, struct(single*int)>())
@@ -162,7 +169,10 @@ let inline handleLikes (likes: Like[]) (account: Account) =
             likers.[account.id] <- struct(ts + (single)like.ts, count+1)
         else 
             likers.[account.id] <- struct((single)like.ts, 1)
-    account.likes <- likes
+    account.likes <- likes |> Array.sortByDescending (fun like -> like.id)
+    if account.id = 8585
+    then printfn "Likes 8585: %A" (account.likes |> Array.map (fun like -> like.id))
+    ()
 
 let createAccount (accUpd: AccountUpd): Account =
 
@@ -445,11 +455,6 @@ let getRecommendedAccounts (id, next, ctx : HttpContext) =
         Console.WriteLine("NotSupportedException:" + ex.Message + " " + ctx.Request.Path + ctx.Request.QueryString.Value)
         setStatusCode 400 next ctx
 
-type LikesComparer() =
-    interface IEqualityComparer<Like> with
-        member this.Equals(x,y) = x.id = y.id
-        member this.GetHashCode(obj) = obj.id
-let likesComparer = new LikesComparer()
 
 //let getSimilarity (target: Account) (acc: Account)  =
 //    let likesIntersection =
