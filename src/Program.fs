@@ -161,14 +161,9 @@ let inline handlePhone (phone: string) (account: Account) =
 let handleLikes (likes: Like[]) (account: Account) (deletePrevious: bool) =
     if deletePrevious
     then
-        for like in account.likes do
-            let likers = likesDictionary.[like.id]
-            let struct(oldTsSum, oldCount) = likers.[account.id]
-            if oldCount > 1
-            then 
-                likers.[account.id] <- struct(oldTsSum - (single)like.ts, oldCount - 1)
-            else 
-                likers.Remove(account.id) |> ignore
+        for likeId in account.likes do
+            let likers = likesDictionary.[likeId]
+            likers.Remove(account.id) |> ignore
     for like in likes do
         if likesDictionary.ContainsKey(like.id) |> not
         then likesDictionary.Add(like.id, Dictionary<int, struct(single*int)>())
@@ -181,8 +176,9 @@ let handleLikes (likes: Like[]) (account: Account) (deletePrevious: bool) =
             likers.[account.id] <- struct((single)like.ts, 1)
     account.likes <- 
         likes 
-        |> Array.distinctBy (fun like -> like.id)
-        |> Array.sortByDescending (fun like -> like.id)
+        |> Array.map(fun like -> like.id)
+        |> Array.distinct
+        |> Array.sortDescending
 
 let createAccount (accUpd: AccountUpd): Account =
 
@@ -259,9 +255,6 @@ let updateExistingAccount (existing: Account, accUpd: AccountUpd) =
     if accUpd.likes |> isNotNull
     then
         handleLikes accUpd.likes existing true
-    if accUpd.likes |> isNotNull
-    then
-        existing.likes <- accUpd.likes
     ()
 
 let getFilteredAccounts (next, ctx : HttpContext) =
@@ -510,8 +503,8 @@ let getSuggestedAccounts (id, next, ctx : HttpContext) =
                     keys
                     |> Seq.map (fun (key, value) -> recommendFilters.[key] value)
                 let similaritiesWithUsers = Dictionary<int, single>()
-                for like in target.likes do
-                    getSimilarityNew target.id (likesDictionary.[like.id]) similaritiesWithUsers
+                for likeId in target.likes do
+                    getSimilarityNew target.id (likesDictionary.[likeId]) similaritiesWithUsers
                 let similarAccounts =
                     similaritiesWithUsers.Keys
                     |> Seq.map (fun id -> accounts.[id])
@@ -521,8 +514,8 @@ let getSuggestedAccounts (id, next, ctx : HttpContext) =
                     |> Seq.fold (fun acc f -> acc |> Seq.filter f) similarAccounts
                     |> Seq.sortByDescending (fun acc -> similaritiesWithUsers.[acc.id])
                     |> Seq.collect(fun acc -> acc.likes)
-                    |> Seq.filter (fun like -> target.likes.Contains(like, likesComparer) |> not)
-                    |> Seq.map (fun like -> accounts.[like.id])
+                    |> Seq.filter (fun likeId -> target.likes.Contains(likeId) |> not)
+                    |> Seq.map (fun likeId -> accounts.[likeId])
                     |> Seq.truncate limit
                 let memoryStream = serializeAccounts (accs, suggestionFields)
                 writeResponse memoryStream next ctx
@@ -539,7 +532,7 @@ let findUser (next, ctx : HttpContext) =
         accounts.Values
         |> Seq.filter(fun acc -> (box acc) |> isNotNull)
         |> Seq.filter(fun acc -> acc.likes |> isNotNull)
-        |> Seq.filter(fun acc -> (acc.likes |> Array.map (fun like -> like.id)).Intersect(likeIds).Count() >= likeIds.Length)
+        |> Seq.filter(fun acc -> acc.likes.Intersect(likeIds).Count() >= likeIds.Length)
     json users next ctx
 
 let private accountsFilterString = "/accounts/filter/"

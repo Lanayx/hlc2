@@ -112,7 +112,7 @@ type Account() =
         [<DefaultValue>]val mutable phoneCode: int
         [<DefaultValue>]val mutable birth: int
         [<DefaultValue>]val mutable birthYear: int
-        [<DefaultValue>]val mutable likes: Like[]
+        [<DefaultValue>]val mutable likes: int[]
         [<DefaultValue>]val mutable joined: int
         [<DefaultValue>]val mutable joinedYear: int
         [<DefaultValue>]val mutable city: int64
