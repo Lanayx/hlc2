@@ -118,6 +118,30 @@ type Account() =
         [<DefaultValue>]val mutable city: int64
         [<DefaultValue>]val mutable country: int64
 
+        member this.CreateCopy() =
+            let copy = Account()
+            copy.id <- this.id
+            copy.fname <- this.fname
+            copy.sname <- this.sname
+            copy.email <- this.email
+            copy.emailDomain <- this.emailDomain
+            copy.interests <- this.interests
+            copy.status <- this.status
+            copy.premium <- this.premium
+            copy.premiumNow <- this.premiumNow
+            copy.sex <- this.sex
+            copy.phone <- this.phone
+            copy.phoneCode <- this.phoneCode
+            copy.birth <- this.birth
+            copy.birthYear <- this.birthYear
+            copy.likes <- this.likes
+            copy.joined <- this.joined
+            copy.joinedYear <- this.joinedYear
+            copy.city <- this.city
+            copy.country <- this.country
+            copy
+
+
 [<CLIMutable>]
 type AccountsUpd =
     {

@@ -152,14 +152,14 @@ let inline handleFirstName (fname: string) (account: Account) =
 let inline handleEmail (email: string) (account: Account) =
     let atIndex = email.IndexOf('@', StringComparison.Ordinal)
     let emailDomain = email.Substring(atIndex+1)
-    if atIndex >= 0 && emailsDictionary.Add(email)
+    if atIndex >= 0 && emailsDictionary.Contains(email) |> not
     then
         if account.email |> isNotNull
         then emailsDictionary.Remove(account.email) |> ignore
         account.email <- email
         account.emailDomain <- emailDomain
     else
-        raise (ArgumentOutOfRangeException("Trying add existing email"))
+        raise (ArgumentOutOfRangeException("Invalid email"))
 
 let inline handlePhone (phone: string) (account: Account) =
     let phoneCode =
@@ -226,6 +226,7 @@ let createAccount (accUpd: AccountUpd): Account =
     if accUpd.country |> isNotNull
     then
         handleCountry accUpd.country account
+    emailsDictionary.Add(account.email) |> ignore
     account
 
 let updateExistingAccount (existing: Account, accUpd: AccountUpd) =
@@ -273,6 +274,9 @@ let updateExistingAccount (existing: Account, accUpd: AccountUpd) =
     if accUpd.likes |> isNotNull
     then
         handleLikes accUpd.likes existing true
+
+    if accUpd.email |> isNotNull
+    then emailsDictionary.Add(accUpd.email) |> ignore
     ()
 
 let getFilteredAccounts (next, ctx : HttpContext) =
@@ -292,8 +296,10 @@ let getFilteredAccounts (next, ctx : HttpContext) =
         let memoryStream = serializeAccounts (accs, keys)
         writeResponse memoryStream next ctx
     with
-    | :? KeyNotFoundException -> setStatusCode 400 next ctx
-    | :? FormatException -> setStatusCode 400 next ctx
+    | :? KeyNotFoundException ->
+        setStatusCode 400 next ctx
+    | :? FormatException ->
+        setStatusCode 400 next ctx
     | :? NotSupportedException ->
         Console.WriteLine("NotSupportedException: " + ctx.Request.Path + ctx.Request.QueryString.Value)
         setStatusCode 400 next ctx
@@ -602,7 +608,6 @@ let newAccount (next, ctx : HttpContext) =
     Interlocked.Increment(newAccountCount) |> ignore
     task {
         try
-
             let! json = ctx.ReadBodyFromRequestAsync()
             let account = deserializeObjectUnsafe<AccountUpd>(json)
             if account.id.HasValue |> not
@@ -620,7 +625,7 @@ let newAccount (next, ctx : HttpContext) =
 
 let updateAccount (id, next, ctx : HttpContext) =
     Interlocked.Increment(updateAccountCount) |> ignore
-    if (id > accounts.Count || (box accounts.[id] |> isNull) )
+    if (accounts.ContainsKey(id) |> not )
     then
         setStatusCode 404 next ctx
     else
@@ -628,16 +633,16 @@ let updateAccount (id, next, ctx : HttpContext) =
             try
                 let! json = ctx.ReadBodyFromRequestAsync()
                 let account = deserializeObjectUnsafe<AccountUpd>(json)
-                if accounts.ContainsKey(id) |> not
-                then
-                    return! setStatusCode 400 next ctx
-                else
-                    let target = accounts.[id]
+                let target = accounts.[id]
+                let rollback = target.CreateCopy()
+                try
                     updateExistingAccount(target, account)
                     return! writePostResponse 202 next ctx
+                with
+                | :? ArgumentOutOfRangeException ->
+                    accounts.[id] <- rollback
+                    return! setStatusCode 400 next ctx
             with
-            | :? ArgumentOutOfRangeException ->
-                return! setStatusCode 400 next ctx
             | :? JsonParsingException ->
                 return! setStatusCode 400 next ctx
         }

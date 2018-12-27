@@ -111,7 +111,10 @@ let cityEqFilter (value: string) =
 
 let cityAnyFilter (value: string) =
     fun (acc: Account) ->
-        value.Split(',') |> Array.exists (fun el -> citiesDictionary.[el] = acc.city)
+        value.Split(',') |> Array.exists (fun el ->
+            let mutable cityWeight = 0L
+            citiesDictionary.TryGetValue(el, &cityWeight) && cityWeight = acc.city
+        )
 
 let cityNullFilter (value: string) =
     fun (acc: Account) ->
