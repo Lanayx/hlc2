@@ -59,6 +59,11 @@ type LikesComparer() =
         member this.GetHashCode(obj) = obj.id
 let likesComparer = new LikesComparer()
 
+type IntReverseComparer() =
+    interface IComparer<int> with
+        member this.Compare(x,y) = if x > y then -1 else 1
+let intReverseComparer = new IntReverseComparer()
+
 let inline writeResponse (response : MemoryStream) (next : HttpFunc) (ctx: HttpContext) =
     let length = response.Position
     ctx.Response.Headers.["Content-Type"] <- jsonStringValues
@@ -147,8 +152,14 @@ let inline handleFirstName (fname: string) (account: Account) =
 let inline handleEmail (email: string) (account: Account) =
     let atIndex = email.IndexOf('@', StringComparison.Ordinal)
     let emailDomain = email.Substring(atIndex+1)
-    account.email <- email
-    account.emailDomain <- emailDomain
+    if atIndex >= 0 && emailsDictionary.Add(email)
+    then
+        if account.email |> isNotNull
+        then emailsDictionary.Remove(account.email) |> ignore
+        account.email <- email
+        account.emailDomain <- emailDomain
+    else
+        raise (ArgumentOutOfRangeException("Trying add existing email"))
 
 let inline handlePhone (phone: string) (account: Account) =
     let phoneCode =
@@ -158,6 +169,17 @@ let inline handlePhone (phone: string) (account: Account) =
     account.phone <- phone
     account.phoneCode <- phoneCode
 
+let inline addLikeToDictionary liker likee likeTs =
+    if likesDictionary.ContainsKey(likee) |> not
+    then likesDictionary.Add(likee, Dictionary<int, struct(single*int)>())
+    let likers = likesDictionary.[likee]
+    if likers.ContainsKey(liker)
+    then
+        let struct(ts, count) = likers.[liker]
+        likers.[liker] <- struct(ts + (single)likeTs, count+1)
+    else
+        likers.[liker] <- struct((single)likeTs, 1)
+
 let handleLikes (likes: Like[]) (account: Account) (deletePrevious: bool) =
     if deletePrevious
     then
@@ -165,20 +187,14 @@ let handleLikes (likes: Like[]) (account: Account) (deletePrevious: bool) =
             let likers = likesDictionary.[likeId]
             likers.Remove(account.id) |> ignore
     for like in likes do
-        if likesDictionary.ContainsKey(like.id) |> not
-        then likesDictionary.Add(like.id, Dictionary<int, struct(single*int)>())
-        let likers = likesDictionary.[like.id]
-        if likers.ContainsKey(account.id)
-        then 
-            let struct(ts, count) = likers.[account.id]
-            likers.[account.id] <- struct(ts + (single)like.ts, count+1)
-        else 
-            likers.[account.id] <- struct((single)like.ts, 1)
-    account.likes <- 
-        likes 
+        addLikeToDictionary account.id like.id like.ts
+
+    account.likes <-
+        likes
         |> Array.map(fun like -> like.id)
         |> Array.distinct
         |> Array.sortDescending
+        |> ResizeArray
 
 let createAccount (accUpd: AccountUpd): Account =
 
@@ -196,7 +212,7 @@ let createAccount (accUpd: AccountUpd): Account =
     account.status <- getStatus accUpd.status
     account.premium <- accUpd.premium
     account.premiumNow <- box accUpd.premium |> isNotNull && accUpd.premium.start <= currentTs && accUpd.premium.finish > currentTs
-    account.sex <- accUpd.sex.Value
+    account.sex <- accUpd.sex.[0]
     if accUpd.likes |> isNotNull
     then
         handleLikes accUpd.likes account false
@@ -221,9 +237,11 @@ let updateExistingAccount (existing: Account, accUpd: AccountUpd) =
     then
         existing.joined <- accUpd.joined.Value
         existing.joinedYear <- (convertToDate accUpd.joined.Value).Year
-    if accUpd.sex.HasValue
+    if accUpd.sex |> isNotNull
     then
-        existing.sex <- accUpd.sex.Value
+        if accUpd.sex.Length > 1
+        then raise (ArgumentOutOfRangeException("Sex is wrong"))
+        existing.sex <- accUpd.sex.[0]
     if accUpd.city |> isNotNull
     then
         handleCity accUpd.city existing
@@ -235,7 +253,7 @@ let updateExistingAccount (existing: Account, accUpd: AccountUpd) =
         handleEmail accUpd.email existing
     if accUpd.phone |> isNotNull
     then
-        handleEmail accUpd.phone existing
+        handlePhone accUpd.phone existing
     if accUpd.fname |> isNotNull
     then
         handleFirstName accUpd.fname existing
@@ -508,7 +526,7 @@ let getSuggestedAccounts (id, next, ctx : HttpContext) =
                 let similarAccounts =
                     similaritiesWithUsers.Keys
                     |> Seq.map (fun id -> accounts.[id])
-                    |> Seq.filter(fun acc -> acc.sex = target.sex)                                
+                    |> Seq.filter(fun acc -> acc.sex = target.sex)
                 let accs =
                     filters
                     |> Seq.fold (fun acc f -> acc |> Seq.filter f) similarAccounts
@@ -583,10 +601,21 @@ let private newLikesString = "/accounts/likes/"
 let newAccount (next, ctx : HttpContext) =
     Interlocked.Increment(newAccountCount) |> ignore
     task {
-        let! json = ctx.ReadBodyFromRequestAsync()
-        let account = deserializeObjectUnsafe<AccountUpd>(json)
-        accounts.[account.id.Value] <- createAccount account
-        return! writePostResponse 201 next ctx
+        try
+
+            let! json = ctx.ReadBodyFromRequestAsync()
+            let account = deserializeObjectUnsafe<AccountUpd>(json)
+            if account.id.HasValue |> not
+            then
+                return! setStatusCode 400 next ctx
+            else
+                accounts.[account.id.Value] <- createAccount account
+                return! writePostResponse 201 next ctx
+        with
+        | :? ArgumentOutOfRangeException ->
+            return! setStatusCode 400 next ctx
+        | :? JsonParsingException ->
+            return! setStatusCode 400 next ctx
     }
 
 let updateAccount (id, next, ctx : HttpContext) =
@@ -596,16 +625,44 @@ let updateAccount (id, next, ctx : HttpContext) =
         setStatusCode 404 next ctx
     else
         task {
-            let! json = ctx.ReadBodyFromRequestAsync()
-            let account = deserializeObjectUnsafe<AccountUpd>(json)
-            let target = accounts.[id]
-            updateExistingAccount(target, account)
-            return! writePostResponse 202 next ctx
+            try
+                let! json = ctx.ReadBodyFromRequestAsync()
+                let account = deserializeObjectUnsafe<AccountUpd>(json)
+                if accounts.ContainsKey(id) |> not
+                then
+                    return! setStatusCode 400 next ctx
+                else
+                    let target = accounts.[id]
+                    updateExistingAccount(target, account)
+                    return! writePostResponse 202 next ctx
+            with
+            | :? ArgumentOutOfRangeException ->
+                return! setStatusCode 400 next ctx
+            | :? JsonParsingException ->
+                return! setStatusCode 400 next ctx
         }
 
 let addLikes (next, ctx : HttpContext) =
     Interlocked.Increment(addLikesCount) |> ignore
-    setStatusCode 401 next ctx
+    task {
+        try
+            let! json = ctx.ReadBodyFromRequestAsync()
+            let likes = deserializeObjectUnsafe<LikesUpd>(json)
+            for like in likes.likes do
+                let acc = accounts.[like.liker]
+                let likee = accounts.[like.likee]
+                if (acc.likes |> isNotNull)
+                then acc.likes.Add(like.likee)
+                else acc.likes <- ResizeArray(seq { yield like.likee })
+                acc.likes.Sort(intReverseComparer)
+                addLikeToDictionary like.liker like.likee like.ts
+            return! writePostResponse 202 next ctx
+        with
+        | :? JsonParsingException ->
+            return! setStatusCode 400 next ctx
+        | :? KeyNotFoundException ->
+                return! setStatusCode 400 next ctx
+    }
 
 let customPostRoutef : HttpHandler =
     fun (next : HttpFunc) (ctx : HttpContext) ->

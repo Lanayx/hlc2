@@ -89,7 +89,7 @@ type AccountUpd() =
         [<DefaultValue>]val mutable interests: string[]
         [<DefaultValue>]val mutable status: string
         [<DefaultValue>]val mutable premium: Premium
-        [<DefaultValue>]val mutable sex: Nullable<char>
+        [<DefaultValue>]val mutable sex: string
         [<DefaultValue>]val mutable phone: string
         [<DefaultValue>]val mutable likes: Like[]
         [<DefaultValue>]val mutable birth: Nullable<int32>
@@ -112,21 +112,20 @@ type Account() =
         [<DefaultValue>]val mutable phoneCode: int
         [<DefaultValue>]val mutable birth: int
         [<DefaultValue>]val mutable birthYear: int
-        [<DefaultValue>]val mutable likes: int[]
+        [<DefaultValue>]val mutable likes: ResizeArray<int>
         [<DefaultValue>]val mutable joined: int
         [<DefaultValue>]val mutable joinedYear: int
         [<DefaultValue>]val mutable city: int64
         [<DefaultValue>]val mutable country: int64
 
-[<Struct>]
-type LikeStr =
-    {
-        liker: int
-        ts: int
-    }
-
 [<CLIMutable>]
 type AccountsUpd =
     {
         accounts : AccountUpd[]
+    }
+
+[<CLIMutable>]
+type LikesUpd =
+    {
+        likes : LikeFull[]
     }
