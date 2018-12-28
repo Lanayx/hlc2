@@ -17,7 +17,7 @@ type RequestCounterMiddleware (next : RequestDelegate,
         let sw = Stopwatch()
         sw.Start()
         let reqCount = Interlocked.Increment(outstandingRequestCount)
-        if (reqCount % 500 = 0)
+        if (reqCount % 1000 = 0)
         then
             Console.WriteLine("Gen0={0} Gen1={1} Gen2={2} Alloc={3} Time={4} ReqCount={5}",
                                     GC.CollectionCount(0),

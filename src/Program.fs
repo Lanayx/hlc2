@@ -226,9 +226,6 @@ let createAccount (accUpd: AccountUpd): Account =
     account.premium <- accUpd.premium
     account.premiumNow <- box accUpd.premium |> isNotNull && accUpd.premium.start <= currentTs && accUpd.premium.finish > currentTs
     account.sex <- accUpd.sex.[0]
-    if accUpd.likes |> isNotNull
-    then
-        handleLikes accUpd.likes account false
     account.birth <- accUpd.birth.Value
     account.birthYear <- (convertToDate accUpd.birth.Value).Year
     account.joined <- accUpd.joined.Value
@@ -239,6 +236,11 @@ let createAccount (accUpd: AccountUpd): Account =
     if accUpd.country |> isNotNull
     then
         handleCountry accUpd.country account
+
+    // handle likes and emails last to not fill dictionaries on failures
+    if accUpd.likes |> isNotNull
+    then
+        handleLikes accUpd.likes account false
     emailsDictionary.Add(account.email) |> ignore
     account
 
@@ -284,10 +286,11 @@ let updateExistingAccount (existing: Account, accUpd: AccountUpd) =
     then
         existing.premium <- accUpd.premium
         existing.premiumNow <- accUpd.premium.start <= currentTs && accUpd.premium.finish > currentTs
+
+    // handle likes and emails last to not fill dictionaries on failures
     if accUpd.likes |> isNotNull
     then
         handleLikes accUpd.likes existing true
-
     if accUpd.email |> isNotNull
     then emailsDictionary.Add(accUpd.email) |> ignore
     ()
@@ -468,7 +471,7 @@ let getRecommendedAccounts (id, next, ctx : HttpContext) =
                         (key, value)
                     )
             let limit = Int32.Parse(ctx.Request.Query.["limit"].[0])
-            if limit < 0 || limit > 20
+            if limit <= 0 || limit > 20
             then
                 setStatusCode 400 next ctx
             else
@@ -527,7 +530,7 @@ let getSuggestedAccounts (id, next, ctx : HttpContext) =
                     (key, value)
                 )
         let limit = Int32.Parse(ctx.Request.Query.["limit"].[0])
-        if limit < 0 || limit > 20
+        if limit <= 0 || limit > 20
         then
             setStatusCode 400 next ctx
         else
@@ -666,20 +669,27 @@ let addLikes (next, ctx : HttpContext) =
         try
             let! json = ctx.ReadBodyFromRequestAsync()
             let likes = deserializeObjectUnsafe<LikesUpd>(json)
-            for like in likes.likes do
-                let acc = accounts.[like.liker]
-                let likee = accounts.[like.likee]
-                if (acc.likes |> isNotNull)
-                then acc.likes.Add(like.likee)
-                else acc.likes <- ResizeArray(seq { yield like.likee })
-                acc.likes.Sort(intReverseComparer)
-                addLikeToDictionary like.liker like.likee like.ts
-            return! writePostResponse 202 next ctx
+            let wrongLike =
+                likes.likes
+                |> Array.tryFind(fun like ->
+                    (accounts.ContainsKey(like.liker) && accounts.ContainsKey(like.likee)) |> not)
+            match wrongLike with
+            | Some _ -> return! setStatusCode 400 next ctx
+            | None ->
+                for like in likes.likes do
+                    let acc = accounts.[like.liker]
+                    if (acc.likes |> isNull)
+                    then acc.likes <- ResizeArray(seq { yield like.likee })
+                    else
+                        if (acc.likes.Contains(like.likee) |> not)
+                        then
+                            acc.likes.Add(like.likee)
+                            acc.likes.Sort(intReverseComparer)
+                    addLikeToDictionary like.liker like.likee like.ts
+                return! writePostResponse 202 next ctx
         with
         | :? JsonParsingException ->
             return! setStatusCode 400 next ctx
-        | :? KeyNotFoundException ->
-                return! setStatusCode 400 next ctx
     }
 
 let customPostRoutef : HttpHandler =
