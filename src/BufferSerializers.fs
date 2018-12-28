@@ -289,7 +289,7 @@ let serializeAccounts (accs: Account seq, field_predicates: string seq): MemoryS
     output
 
 
-let serializeGroups<'T> (groups: ('T*int) seq, groupName: string, writeValue): MemoryStream =
+let serializeGroups<'T> (groups: ('T*int) seq, writeGroupAndValue): MemoryStream =
     let array = ArrayPool.Shared.Rent (50 + 60 * (groups |> Seq.length))
     let output = stream array
     writeArray output ``{"groups":[``
@@ -301,11 +301,7 @@ let serializeGroups<'T> (groups: ('T*int) seq, groupName: string, writeValue): M
             writeChar output '{'
         else
             writeArray output ``},{``
-        writeChar output '"'
-        writeString output groupName
-        writeArray output ``":``
-        writeValue output value
-        writeChar output ','
+        writeGroupAndValue output value
         writeArray output ``"count":``
         writeInt32 output count
     if start |> not
@@ -318,43 +314,59 @@ let serializeGroupsCity (groups: (int64*int) seq, groupName: string): MemoryStre
         if value <> 0L
         then
             writeChar output '"'
+            writeString output groupName
+            writeArray output ``":``
+            writeChar output '"'
             writeArray output (citiesSerializeDictionary.[value])
             writeChar output '"'
-        else
-            writeArray output ``null``
-    serializeGroups (groups, groupName, writeValue)
+            writeChar output ','
+    serializeGroups (groups, writeValue)
 
 let serializeGroupsInterests (groups: (int64*int) seq, groupName: string): MemoryStream =
     let writeValue output value =
         writeChar output '"'
+        writeString output groupName
+        writeArray output ``":``
+        writeChar output '"'
         writeArray output (interestsSerializeDictionary.[value])
         writeChar output '"'
-    serializeGroups (groups, groupName, writeValue)
+        writeChar output ','
+    serializeGroups (groups, writeValue)
 
 let serializeGroupsCountry (groups: (int64*int) seq, groupName: string): MemoryStream =
     let writeValue output value =
         if value <> 0L
         then
             writeChar output '"'
+            writeString output groupName
+            writeArray output ``":``
+            writeChar output '"'
             writeArray output (countriesSerializeDictionary.[value])
             writeChar output '"'
-        else
-            writeArray output ``null``
-    serializeGroups (groups, groupName, writeValue)
+            writeChar output ','
+    serializeGroups (groups, writeValue)
 
 let serializeGroupsSex (groups: (char*int) seq, groupName: string): MemoryStream =
     let writeValue output value =
         writeChar output '"'
+        writeString output groupName
+        writeArray output ``":``
+        writeChar output '"'
         writeChar output value
         writeChar output '"'
-    serializeGroups (groups, groupName, writeValue)
+        writeChar output ','
+    serializeGroups (groups, writeValue)
 
 let serializeGroupsStatus (groups: (int*int) seq, groupName: string): MemoryStream =
     let writeValue output value =
         writeChar output '"'
+        writeString output groupName
+        writeArray output ``":``
+        writeChar output '"'
         writeArray output (getStatusString value)
         writeChar output '"'
-    serializeGroups (groups, groupName, writeValue)
+        writeChar output ','
+    serializeGroups (groups, writeValue)
 
 let serializeGroups2<'T> (groups: ((int64*'T)*int) seq, writeValue1, writeValue2): MemoryStream =
     let array = ArrayPool.Shared.Rent (50 + 80 * (groups |> Seq.length))
