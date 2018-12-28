@@ -125,6 +125,7 @@ let inline handleInterests (interests: string[]) (account: Account) =
                 else
                     interestIndex <- getStringWeight interest
                     interestsDictionary.Add(interest, interestIndex)
+                    interestsSerializeDictionary.Add(interestIndex, utf8 interest)
                     interestIndex
             )
 
@@ -136,6 +137,7 @@ let inline handleCity city (account: Account) =
     else
         cityIndex <- getStringWeight city
         citiesDictionary.Add(city, cityIndex)
+        citiesSerializeDictionary.Add(cityIndex, utf8 city)
         account.city <- cityIndex
 
 let inline handleCountry country (account: Account) =
@@ -146,6 +148,7 @@ let inline handleCountry country (account: Account) =
     else
         countryIndex <- getStringWeight country
         countriesDictionary.Add(country, countryIndex)
+        countriesSerializeDictionary.Add(countryIndex, utf8 country)
         account.country <- countryIndex
 
 let inline handleFirstName (fname: string) (account: Account) =
@@ -156,6 +159,7 @@ let inline handleFirstName (fname: string) (account: Account) =
     else
         nameIndex <- getStringWeight fname
         namesDictionary.Add(fname, nameIndex)
+        countriesSerializeDictionary.Add(nameIndex, utf8 fname)
         account.fname <- nameIndex
 
 let inline handleEmail (email: string) (account: Account) =
