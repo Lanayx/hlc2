@@ -90,19 +90,28 @@ let inline writePostResponse (code: int) (next : HttpFunc) (ctx: HttpContext) =
 
 let getStringWeight (str: string) =
     let strChars = str |> Seq.truncate 11
-    let mutable multiplier = 50542106513726817L //33^11
+    let mutable multiplier = 0L
+    let mutable divisor = 0L
+    if (int)str.[0] > 200
+    then
+        multiplier <- 36028797018963968L //32^11
+        divisor <- 32L
+    else
+        multiplier <- 1521681143169024L // 24^11
+        divisor <- 24L
     let mutable result = 0L
     for chr in strChars do
         let intChr = int chr
         let diff =
             match intChr with
-            | smallRussianLetter when smallRussianLetter >= 1072 -> intChr - 949
-            | bigRussianLetter when bigRussianLetter >= 1040 -> intChr - 949
-            | smallEnglishLetter when smallEnglishLetter >= 97 -> intChr - 32
-            | bigEnglishLetter when bigEnglishLetter >= 65 -> intChr - 32
+            | smallRussianLetter when smallRussianLetter >= 1072 -> intChr - 1070 + 10
+            | bigRussianLetter when bigRussianLetter >= 1040 -> intChr - 1040 + 10
+            | smallEnglishLetter when smallEnglishLetter >= 97 -> intChr - 97 + 20 // hack to compare Pitbull with PS3
+            | bigEnglishLetter when bigEnglishLetter >= 65 -> intChr - 65 + 10
+            | number when number >= 48 -> intChr - 47
             | _ -> intChr - 32
         result <- result + (int64 diff) * multiplier
-        multiplier <- multiplier / 33L
+        multiplier <- multiplier / divisor
     result
 
 let inline handleInterests (interests: string[]) (account: Account) =
