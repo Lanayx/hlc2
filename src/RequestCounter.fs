@@ -9,6 +9,7 @@ open Microsoft.AspNetCore.Http
 open Giraffe
 open GCTimer
 
+let MB = 1024L*1024L
 
 type RequestCounterMiddleware (next : RequestDelegate,
                                handler : HttpHandler) =
@@ -19,13 +20,14 @@ type RequestCounterMiddleware (next : RequestDelegate,
         let reqCount = Interlocked.Increment(outstandingRequestCount)
         if (reqCount % 1000 = 0)
         then
-            Console.WriteLine("Gen0={0} Gen1={1} Gen2={2} Alloc={3} Time={4} ReqCount={5}",
+            Console.WriteLine("Gen0={0} Gen1={1} Gen2={2} Alloc={3}MB Time={4} ReqCount={5} PrivMemSize={6}MB",
                                     GC.CollectionCount(0),
                                     GC.CollectionCount(1),
                                     GC.CollectionCount(2),
-                                    GC.GetTotalMemory(false),
+                                    GC.GetTotalMemory(false)/MB,
                                     DateTime.Now.ToString("HH:mm:ss.ffff"),
-                                    reqCount)
+                                    reqCount,
+                                    Process.GetCurrentProcess().PrivateMemorySize64/MB)
         (next.Invoke ctx).ContinueWith(
             fun x ->
                 if sw.ElapsedMilliseconds > 50L
