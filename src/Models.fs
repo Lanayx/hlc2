@@ -100,7 +100,7 @@ type AccountUpd() =
 type Account() =
         [<DefaultValue>]val mutable id: int
         [<DefaultValue>]val mutable fname : int64
-        [<DefaultValue>]val mutable sname : string
+        [<DefaultValue>]val mutable sname : int64
         [<DefaultValue>]val mutable email: string
         [<DefaultValue>]val mutable emailDomain: string
         [<DefaultValue>]val mutable interests: int64[]

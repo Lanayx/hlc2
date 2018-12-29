@@ -32,13 +32,24 @@ open System
 open Filters
 open Microsoft.Extensions.DependencyInjection
 open System.Text.RegularExpressions
+open System.Diagnostics
 
 // ---------------------------------
 // Web app
 // ---------------------------------
 
-let accounts = Dictionary<int, Account>()
+type IntReverseComparer() =
+    interface IComparer<int> with
+        member this.Compare(x,y) = 
+            if x > y 
+            then -1 
+            else 
+                if x < y
+                then 1
+                else 0
+let intReverseComparer = new IntReverseComparer()
 
+let accounts = SortedDictionary<int, Account>(intReverseComparer)
 
 let jsonStringValues = StringValues "application/json"
 
@@ -58,11 +69,6 @@ type LikesComparer() =
         member this.Equals(x,y) = x.id = y.id
         member this.GetHashCode(obj) = obj.id
 let likesComparer = new LikesComparer()
-
-type IntReverseComparer() =
-    interface IComparer<int> with
-        member this.Compare(x,y) = if x > y then -1 else 1
-let intReverseComparer = new IntReverseComparer()
 
 let inline writeResponse (response : MemoryStream) (next : HttpFunc) (ctx: HttpContext) =
     let length = response.Position
@@ -159,8 +165,19 @@ let inline handleFirstName (fname: string) (account: Account) =
     else
         nameIndex <- getStringWeight fname
         namesDictionary.Add(fname, nameIndex)
-        countriesSerializeDictionary.Add(nameIndex, utf8 fname)
+        namesSerializeDictionary.Add(nameIndex, utf8 fname)
         account.fname <- nameIndex
+
+let inline handleSecondName (sname: string) (account: Account) =
+    let mutable snameIndex = 0L
+    if snamesDictionary.TryGetValue(sname, &snameIndex)
+    then
+        account.sname <- snameIndex
+    else
+        snameIndex <- getStringWeight sname
+        snamesDictionary.Add(sname, snameIndex)
+        snamesSerializeDictionary.Add(snameIndex, struct(sname,utf8 sname))
+        account.sname <- snameIndex
 
 let inline handleEmail (email: string) (account: Account) =
     let atIndex = email.IndexOf('@', StringComparison.Ordinal)
@@ -218,7 +235,9 @@ let createAccount (accUpd: AccountUpd): Account =
     if accUpd.fname |> isNotNull
     then
         handleFirstName accUpd.fname account
-    account.sname <- accUpd.sname
+    if accUpd.sname |> isNotNull
+    then
+        handleSecondName accUpd.sname account
     if accUpd.interests |> isNotNull
     then
         handleInterests accUpd.interests account
@@ -275,7 +294,7 @@ let updateExistingAccount (existing: Account, accUpd: AccountUpd) =
         handleFirstName accUpd.fname existing
     if accUpd.sname |> isNotNull
     then
-        existing.sname <- accUpd.sname
+        handleSecondName accUpd.sname existing
     if accUpd.interests |> isNotNull
     then
         handleInterests accUpd.interests existing
@@ -307,7 +326,6 @@ let getFilteredAccounts (next, ctx : HttpContext) =
         let accs =
             filters
             |> Seq.fold (fun acc f -> acc |> Seq.filter f) (seq accounts.Values)
-            |> Seq.sortByDescending (fun acc -> acc.id)
             |> Seq.truncate (Int32.Parse(ctx.Request.Query.["limit"].[0]))
         let memoryStream = serializeAccounts (accs, keys)
         writeResponse memoryStream next ctx
@@ -770,23 +788,27 @@ let loadData folder =
     currentTs <- str.[0]
                    |> Int32.Parse
 
-    let mutable accsCount = 0;
+    
     Directory.EnumerateFiles(folder, "accounts_*.json")
                 |> Seq.map (File.ReadAllText >> deserializeObjectUnsafe<AccountsUpd>)
-                |> Seq.collect (fun accountsObj -> accountsObj.accounts)
-                |> Seq.iter (fun acc ->
-                    accounts.[acc.id.Value] <- createAccount acc
-                    accsCount <- accsCount + 1
+                |> Seq.iter (fun accsUpd ->
+                        accsUpd.accounts 
+                        |> Seq.iter (fun acc ->
+                            accounts.[acc.id.Value] <- createAccount acc
+                        )
+                        GC.Collect(2)
                     )
 
     namesSerializeDictionary <- namesDictionary.ToDictionary((fun kv -> kv.Value), (fun kv -> utf8 kv.Key))
+    snamesSerializeDictionary <- snamesDictionary.ToDictionary((fun kv -> kv.Value), (fun kv -> struct(kv.Key, utf8 kv.Key)))
     citiesSerializeDictionary <- citiesDictionary.ToDictionary((fun kv -> kv.Value), (fun kv -> utf8 kv.Key))
     countriesSerializeDictionary <- countriesDictionary.ToDictionary((fun kv -> kv.Value), (fun kv -> utf8 kv.Key))
-    interestsSerializeDictionary <- interestsDictionary.ToDictionary((fun kv -> kv.Value), (fun kv -> utf8 kv.Key))
-
-    Console.Write("Accounts {0} ", accsCount)
-
-
+    interestsSerializeDictionary <- interestsDictionary.ToDictionary((fun kv -> kv.Value), (fun kv -> utf8 kv.Key))    
+    
+    let memSize = Process.GetCurrentProcess().PrivateMemorySize64/MB
+    Console.WriteLine("Accounts {0}. Memory used {1}MB", accounts.Count, memSize)
+    Console.WriteLine("Dictionaries names={0},cities={1},countries={2},interests={3},snames={4}",
+        namesDictionary.Count, citiesDictionary.Count,countriesDictionary.Count,interestsDictionary.Count,snamesDictionary.Count)
 
 
 [<EntryPoint>]

@@ -210,10 +210,11 @@ let writeField (field_predicate: string, acc: Account, output: MemoryStream) =
             writeArray output (namesSerializeDictionary.[acc.fname])
             writeChar output '"'
     | AccountField.Surname ->
-        if acc.sname |> isNotNull
+        if acc.sname <> 0L
         then
             writeArray output ``,"sname":"``
-            writeString output acc.sname
+            let struct(_, bytes) = snamesSerializeDictionary.[acc.sname]
+            writeArray output bytes
             writeChar output '"'
     | AccountField.Interests ->
         ()

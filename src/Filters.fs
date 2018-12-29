@@ -62,21 +62,27 @@ let firstNameNullFilter (value: string) =
 
 let surnameEqFilter (value: string) =
     fun (acc: Account) ->
-        acc.sname =~ value
-
-let surnameStartsFilter (value: string) =
-    fun (acc: Account) ->
-        if acc.sname |> isNull
+        if acc.sname = 0L
         then
             false
         else
-            acc.sname.StartsWith(value)
+            let mutable sname = 0L
+            snamesDictionary.TryGetValue(value, &sname) && acc.sname = sname
+
+let surnameStartsFilter (value: string) =
+    fun (acc: Account) ->
+        if acc.sname = 0L
+        then
+            false
+        else
+            let struct(strSname, _) = snamesSerializeDictionary.[acc.sname]
+            strSname.StartsWith(value,StringComparison.Ordinal)
 
 let surnameNullFilter (value: string) =
     fun (acc: Account) ->
         if value.[0] = '1'
-        then acc.sname |> isNull
-        else acc.sname |> isNotNull
+        then acc.sname = 0L
+        else acc.sname <> 0L
 
 let phoneCodeFilter (value: string) =
     fun (acc: Account) ->
