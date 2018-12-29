@@ -322,6 +322,7 @@ let getFilteredAccounts (next, ctx : HttpContext) =
             |> Seq.filter(fun key -> (key =~ "limit" || key =~ "query_id") |> not )
         let filters =
             keys
+            |> Seq.sortBy (fun key -> filtersOrder.[key])
             |> Seq.map (fun key -> filters.[key] ctx.Request.Query.[key].[0])
         let accs =
             filters

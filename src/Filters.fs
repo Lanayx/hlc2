@@ -173,6 +173,37 @@ let premiumNullFilter (value: string) =
         then box acc.premium |> isNull
         else box acc.premium |> isNotNull
 
+let filtersOrder: IDictionary<string, int> =
+    dict [
+        "sex_eq", 0
+        "email_domain", 0
+        "email_lt", 0
+        "email_gt", 0
+        "status_eq", 0
+        "status_neq", 0
+        "fname_eq", 0
+        "fname_any", 1
+        "fname_null", 0
+        "sname_eq", 0
+        "sname_starts", 0
+        "sname_null", 0
+        "phone_code", 0
+        "phone_null", 0
+        "country_eq", 0
+        "country_null", 0
+        "city_eq", 0
+        "city_any", 0
+        "city_null", 0
+        "birth_lt", 0
+        "birth_gt", 0
+        "birth_year", 0
+        "interests_contains", 2
+        "interests_any", 2
+        "likes_contains", 0
+        "premium_now", 0
+        "premium_null", 0
+    ]
+
 let filters: IDictionary<string, Filter> =
     dict [
         "sex_eq", sexEqFilter
