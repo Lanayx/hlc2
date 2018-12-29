@@ -404,6 +404,21 @@ let applyGrouping (memoryStream: byref<MemoryStream>, groupKey, order, accs: Acc
     | _ ->
         ()
 
+let inline intersectTwoArraysCount (first: int64[]) (second: int64[]) =
+    let mutable count = 0
+    let mutable i = 0
+    let mutable j = 0
+    while i < first.Length do
+        j <- 0
+        while j < second.Length do        
+            if first.[i] = second.[j]
+            then 
+                count <- count + 1
+                j <- second.Length
+            else 
+                j <- j + 1
+        i <- i + 1
+    count
 
 let getGroupedAccounts (next, ctx : HttpContext) =
     Interlocked.Increment(accountsGroupCount) |> ignore
@@ -438,7 +453,7 @@ let getCompatibility (target: Account) (acc: Account)  =
     let commonInterestsCount =
         if acc.interests |> isNull || target.interests |> isNull
         then 0
-        else acc.interests.Intersect(target.interests).Count()
+        else intersectTwoArraysCount acc.interests target.interests
     if commonInterestsCount = 0
     then
         None
