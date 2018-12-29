@@ -235,6 +235,20 @@ let filters: IDictionary<string, Filter> =
         "premium_null", premiumNullFilter
     ]
 
+let groupFiltersOrder: IDictionary<string, int> =
+    dict [
+        "sex", 0
+        "status", 0
+        "fname", 0
+        "sname", 0
+        "country", 0
+        "city", 0
+        "birth", 0
+        "interests", 1
+        "likes", 0
+        "joined", 0
+    ]
+
 let groupFilters: IDictionary<string, Filter> =
     dict [
         "sex", sexEqFilter

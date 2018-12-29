@@ -447,6 +447,7 @@ let getGroupedAccounts (next, ctx : HttpContext) =
             |> Seq.filter(fun key -> (key =~ "limit" || key =~ "query_id" || key =~ "order" || key=~"keys") |> not )
         let filters =
             keys
+            |> Seq.sortBy (fun key -> groupFiltersOrder.[key])
             |> Seq.map (fun key -> groupFilters.[key] ctx.Request.Query.[key].[0])
         let groupKey =
             ctx.Request.Query.["keys"].[0]
@@ -498,6 +499,7 @@ let getRecommendedAccounts (id, next, ctx : HttpContext) =
             let keys =
                 ctx.Request.Query.Keys
                 |> Seq.filter(fun key -> (key =~ "limit" || key =~ "query_id") |> not )
+                |> Seq.sortBy (fun key -> groupFiltersOrder.[key])
                 |> Seq.map (fun key ->
                         let value = ctx.Request.Query.[key].[0]
                         if String.IsNullOrEmpty(value)
@@ -557,6 +559,7 @@ let getSuggestedAccounts (id, next, ctx : HttpContext) =
         let keys =
             ctx.Request.Query.Keys
             |> Seq.filter(fun key -> (key =~ "limit" || key =~ "query_id") |> not )
+            |> Seq.sortBy (fun key -> groupFiltersOrder.[key])
             |> Seq.map (fun key ->
                     let value = ctx.Request.Query.[key].[0]
                     if String.IsNullOrEmpty(value)
