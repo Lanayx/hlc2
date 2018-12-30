@@ -5,6 +5,18 @@
     <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
   </PropertyGroup>
   <ItemGroup>
+    <Content Remove="artifacts\**" />
+    <Content Remove="Benchmarks\**" />
+    <Content Remove="BitmapIndex\**" />
+    <Content Remove="data\**" />
+    <Content Remove="EWAH\**" />
+    <EmbeddedResource Remove="artifacts\**" />
+    <EmbeddedResource Remove="Benchmarks\**" />
+    <EmbeddedResource Remove="BitmapIndex\**" />
+    <EmbeddedResource Remove="data\**" />
+    <EmbeddedResource Remove="EWAH\**" />
+  </ItemGroup>
+  <ItemGroup>
     <Compile Include="Helpers.fs" />
     <Compile Include="MethodCounter.fs" />
     <Compile Include="GCTimer.fs" />
