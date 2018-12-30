@@ -170,8 +170,8 @@ let premiumNowFilter (value: string) =
 let premiumNullFilter (value: string) =
     fun (acc: Account) ->
         if value.[0] = '1'
-        then box acc.premium |> isNull
-        else box acc.premium |> isNotNull
+        then acc.premiumStart = 0
+        else acc.premiumStart <> 0
 
 let filtersOrder: IDictionary<string, int> =
     dict [

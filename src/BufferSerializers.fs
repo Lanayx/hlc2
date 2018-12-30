@@ -223,13 +223,13 @@ let writeField (field_predicate: string, acc: Account, output: MemoryStream) =
         writeArray output (getStatusString acc.status)
         writeChar output '"'
     | AccountField.Premium ->
-        if (box acc.premium) |> isNotNull
+        if acc.premiumStart <> 0
         then
             writeArray output ``,"premium":{``
             writeArray output ``"start":``
-            writeInt32 output acc.premium.start
+            writeInt32 output acc.premiumStart
             writeArray output ``,"finish":``
-            writeInt32 output acc.premium.finish
+            writeInt32 output acc.premiumFinish
             writeChar output '}'
     | AccountField.Sex ->
         writeArray output ``,"sex":"``

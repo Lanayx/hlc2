@@ -105,7 +105,8 @@ type Account() =
         [<DefaultValue>]val mutable emailDomain: string
         [<DefaultValue>]val mutable interests: int64[]
         [<DefaultValue>]val mutable status: int
-        [<DefaultValue>]val mutable premium: Premium
+        [<DefaultValue>]val mutable premiumStart: int
+        [<DefaultValue>]val mutable premiumFinish: int
         [<DefaultValue>]val mutable premiumNow: bool
         [<DefaultValue>]val mutable sex: char
         [<DefaultValue>]val mutable phone: string
@@ -127,7 +128,8 @@ type Account() =
             copy.emailDomain <- this.emailDomain
             copy.interests <- this.interests
             copy.status <- this.status
-            copy.premium <- this.premium
+            copy.premiumStart <- this.premiumStart
+            copy.premiumFinish <- this.premiumFinish
             copy.premiumNow <- this.premiumNow
             copy.sex <- this.sex
             copy.phone <- this.phone

@@ -40,10 +40,10 @@ open System.Diagnostics
 
 type IntReverseComparer() =
     interface IComparer<int> with
-        member this.Compare(x,y) = 
-            if x > y 
-            then -1 
-            else 
+        member this.Compare(x,y) =
+            if x > y
+            then -1
+            else
                 if x < y
                 then 1
                 else 0
@@ -242,7 +242,10 @@ let createAccount (accUpd: AccountUpd): Account =
     then
         handleInterests accUpd.interests account
     account.status <- getStatus accUpd.status
-    account.premium <- accUpd.premium
+    if (box accUpd.premium) |> isNotNull
+    then
+        account.premiumStart <- accUpd.premium.start
+        account.premiumFinish <- accUpd.premium.finish
     account.premiumNow <- box accUpd.premium |> isNotNull && accUpd.premium.start <= currentTs && accUpd.premium.finish > currentTs
     account.sex <- accUpd.sex.[0]
     account.birth <- accUpd.birth.Value
@@ -303,7 +306,8 @@ let updateExistingAccount (existing: Account, accUpd: AccountUpd) =
         existing.status <- getStatus accUpd.status
     if box accUpd.premium |> isNotNull
     then
-        existing.premium <- accUpd.premium
+        existing.premiumStart <- accUpd.premium.start
+        existing.premiumFinish <- accUpd.premium.finish
         existing.premiumNow <- accUpd.premium.start <= currentTs && accUpd.premium.finish > currentTs
 
     // handle likes and emails last to not fill dictionaries on failures
@@ -429,12 +433,12 @@ let inline intersectTwoArraysCount (first: int64[]) (second: int64[]) =
     let mutable j = 0
     while i < first.Length do
         j <- 0
-        while j < second.Length do        
+        while j < second.Length do
             if first.[i] = second.[j]
-            then 
+            then
                 count <- count + 1
                 j <- second.Length
-            else 
+            else
                 j <- j + 1
         i <- i + 1
     count
@@ -792,11 +796,11 @@ let loadData folder =
     currentTs <- str.[0]
                    |> Int32.Parse
 
-    
+
     Directory.EnumerateFiles(folder, "accounts_*.json")
                 |> Seq.map (File.ReadAllText >> deserializeObjectUnsafe<AccountsUpd>)
                 |> Seq.iter (fun accsUpd ->
-                        accsUpd.accounts 
+                        accsUpd.accounts
                         |> Seq.iter (fun acc ->
                             accounts.[acc.id.Value] <- createAccount acc
                         )
@@ -807,8 +811,8 @@ let loadData folder =
     snamesSerializeDictionary <- snamesDictionary.ToDictionary((fun kv -> kv.Value), (fun kv -> struct(kv.Key, utf8 kv.Key)))
     citiesSerializeDictionary <- citiesDictionary.ToDictionary((fun kv -> kv.Value), (fun kv -> utf8 kv.Key))
     countriesSerializeDictionary <- countriesDictionary.ToDictionary((fun kv -> kv.Value), (fun kv -> utf8 kv.Key))
-    interestsSerializeDictionary <- interestsDictionary.ToDictionary((fun kv -> kv.Value), (fun kv -> utf8 kv.Key))    
-    
+    interestsSerializeDictionary <- interestsDictionary.ToDictionary((fun kv -> kv.Value), (fun kv -> utf8 kv.Key))
+
     let memSize = Process.GetCurrentProcess().PrivateMemorySize64/MB
     Console.WriteLine("Accounts {0}. Memory used {1}MB", accounts.Count, memSize)
     Console.WriteLine("Dictionaries names={0},cities={1},countries={2},interests={3},snames={4}",
