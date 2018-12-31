@@ -6,6 +6,7 @@ open HCup.Helpers
 open HCup.Dictionaries
 open System.Collections.Generic
 open Giraffe
+open System.Collections
 
 type Filter = string -> Account -> bool
 
@@ -146,22 +147,32 @@ let joinedYearFilter (value: string) =
 
 let interestsContainsFilter (value: string) =
     fun (acc: Account) ->
-        acc.interests |> isNotNull
-            && value.Split(',')
-            |> Array.map(fun el -> interestsDictionary.[el])
-            |> Array.forall (fun interest -> acc.interests |> Array.exists (fun el -> el = interest))
+        if acc.interests |> isNull
+        then
+            false
+        else
+            value.Split(',')
+            |> Seq.map (fun el -> interestsDictionary.[el])
+            |> Seq.forall (fun i -> acc.interests.[i])
 
 let interestsContainsOneFilter (value: string) =
     fun (acc: Account) ->
-        acc.interests |> isNotNull
-            && acc.interests |> Array.contains interestsDictionary.[value]
+        if acc.interests |> isNull
+        then
+            false
+        else
+            let index = interestsDictionary.[value]
+            acc.interests.[index]
 
 let interestsAnyFilter (value: string) =
     fun (acc: Account) ->
-        acc.interests |> isNotNull
-            && value.Split(',')
-            |> Array.map(fun el -> interestsDictionary.[el])
-            |> Array.exists (fun interest -> acc.interests |> Array.exists (fun el -> el = interest))
+        if acc.interests |> isNull
+        then
+            false
+        else
+            value.Split(',')
+            |> Seq.map (fun el -> interestsDictionary.[el])
+            |> Seq.exists (fun i -> acc.interests.[i])
 
 let likesContainsFilter (value: string) =
     fun (acc: Account) ->

@@ -33,6 +33,9 @@ open Filters
 open Microsoft.Extensions.DependencyInjection
 open System.Text.RegularExpressions
 open System.Diagnostics
+open System.Collections
+open CsharpTools
+open System.Buffers
 
 // ---------------------------------
 // Web app
@@ -50,20 +53,21 @@ type IntReverseComparer() =
 let intReverseComparer = new IntReverseComparer()
 
 let accounts = Array.zeroCreate(1400000)
-let mutable accountsNumber = 0
+let mutable accountsCount = 0
+let mutable interestsCount = 0
 
 let inline getRevAccounts() =
     seq {
         let mutable i = 0
-        while i < accountsNumber do
-            yield accounts.[accountsNumber - i]
+        while i < accountsCount do
+            yield accounts.[accountsCount - i]
             i <- i + 1
     }
 
 let inline getAccounts() =
     accounts
     |> Seq.skip 1
-    |> Seq.take accountsNumber
+    |> Seq.take accountsCount
 
 let jsonStringValues = StringValues "application/json"
 
@@ -134,20 +138,29 @@ let getStringWeight (str: string) =
         multiplier <- multiplier / divisor
     result
 
+let inline toInterests (bits: BitArray) =
+    seq {
+        for i = 0 to bits.Length-1 do
+            if bits.[i]
+                then yield interestsWeightsArray.[i]
+    }
+
 let inline handleInterests (interests: string[]) (account: Account) =
-    account.interests <-
-        interests
-        |> Array.map(fun interest ->
-                let mutable interestIndex = 0L
-                if interestsDictionary.TryGetValue(interest, &interestIndex)
-                then
-                    interestIndex
-                else
-                    interestIndex <- getStringWeight interest
-                    interestsDictionary.Add(interest, interestIndex)
-                    interestsSerializeDictionary.Add(interestIndex, utf8 interest)
-                    interestIndex
-            )
+    interests
+    |> Array.iter(fun interest ->
+            let mutable interestIndex = 0
+            if interestsDictionary.TryGetValue(interest, &interestIndex) |> not
+            then
+                let interestWeight = getStringWeight interest
+                interestsWeightsArray.Add(interestWeight)
+                interestsDictionary.Add(interest, interestsWeightsArray.IndexOf(interestWeight))
+                interestsSerializeDictionary.Add(interestWeight, utf8 interest)
+        )
+    let bitArray = BitArray(90)
+    interests
+        |> Array.map(fun interest -> interestsDictionary.[interest])
+        |> Array.iter(fun i -> bitArray.[i] <- true)
+    account.interests <- bitArray
 
 let inline handleCity city (account: Account) =
     let mutable cityIndex = 0L
@@ -400,7 +413,7 @@ let applyGrouping (memoryStream: byref<MemoryStream>, groupKey, order, accs: Acc
         let interests =
             accs
             |> Seq.filter (fun acc -> acc.interests |> isNotNull)
-            |> Seq.collect (fun acc -> acc.interests)
+            |> Seq.collect (fun acc -> acc.interests |> toInterests)
             |> Seq.groupBy id
             |> Seq.map (fun (key, group) -> key, group |> Seq.length)
             |> seq_sort order (fun (group,length) -> length, group)
@@ -441,21 +454,26 @@ let applyGrouping (memoryStream: byref<MemoryStream>, groupKey, order, accs: Acc
     | _ ->
         ()
 
-let inline intersectTwoArraysCount (first: int64[]) (second: int64[]) =
-    let mutable count = 0
-    let mutable i = 0
-    let mutable j = 0
-    while i < first.Length do
-        j <- 0
-        while j < second.Length do
-            if first.[i] = second.[j]
-            then
-                count <- count + 1
-                j <- second.Length
-            else
-                j <- j + 1
-        i <- i + 1
-    count
+//let inline intersectTwoArraysCount (first: int64[]) (second: int64[]) =
+//    let mutable count = 0
+//    let mutable i = 0
+//    let mutable j = 0
+//    while i < first.Length do
+//        j <- 0
+//        while j < second.Length do
+//            if first.[i] = second.[j]
+//            then
+//                count <- count + 1
+//                j <- second.Length
+//            else
+//                j <- j + 1
+//        i <- i + 1
+//    count
+
+let inline intersectTwoArraysCount (first: BitArray) (second: BitArray) =
+    //let bytes = ArrayPool.Shared.Rent(BitHelper.GetBufferLength(first))
+    let andResult = (first.Clone() :?> BitArray).And(second)
+    BitHelper.GetCardinality andResult
 
 let getGroupedAccounts (next, ctx : HttpContext) =
     Interlocked.Increment(accountsGroupCount) |> ignore
@@ -509,7 +527,7 @@ let recommendationFields = [| "status_eq"; "fname_eq"; "sname_eq"; "birth_year";
 let getRecommendedAccounts (id, next, ctx : HttpContext) =
     Interlocked.Increment(accountsRecommendCount) |> ignore
     try
-        if (id > accountsNumber)
+        if (id > accountsCount)
         then
             setStatusCode 404 next ctx
         else
@@ -569,7 +587,7 @@ let suggestionFields = [| "status_eq"; "fname_eq"; "sname_eq"; |]
 let getSuggestedAccounts (id, next, ctx : HttpContext) =
     Interlocked.Increment(accountsSuggestCount) |> ignore
     try
-    if (id > accountsNumber || (box accounts.[id] |> isNull) )
+    if (id > accountsCount || (box accounts.[id] |> isNull) )
     then
         setStatusCode 404 next ctx
     else
@@ -686,7 +704,7 @@ let newAccount (next, ctx : HttpContext) =
                 return! setStatusCode 400 next ctx
             else
                 accounts.[account.id.Value] <- createAccount account
-                Interlocked.Increment(&accountsNumber) |> ignore
+                Interlocked.Increment(&accountsCount) |> ignore
                 return! writePostResponse 201 next ctx
         with
         | :? ArgumentOutOfRangeException ->
@@ -818,7 +836,7 @@ let loadData folder =
                         accsUpd.accounts
                         |> Seq.iter (fun acc ->
                             accounts.[acc.id.Value] <- createAccount acc
-                            Interlocked.Increment(&accountsNumber) |> ignore
+                            Interlocked.Increment(&accountsCount) |> ignore
                         )
                         GC.Collect(2)
                     )
@@ -827,10 +845,11 @@ let loadData folder =
     snamesSerializeDictionary <- snamesDictionary.ToDictionary((fun kv -> kv.Value), (fun kv -> struct(kv.Key, utf8 kv.Key)))
     citiesSerializeDictionary <- citiesDictionary.ToDictionary((fun kv -> kv.Value), (fun kv -> utf8 kv.Key))
     countriesSerializeDictionary <- countriesDictionary.ToDictionary((fun kv -> kv.Value), (fun kv -> utf8 kv.Key))
-    interestsSerializeDictionary <- interestsDictionary.ToDictionary((fun kv -> kv.Value), (fun kv -> utf8 kv.Key))
+    interestsSerializeDictionary <- interestsDictionary.ToDictionary((fun kv -> interestsWeightsArray.[kv.Value]), (fun kv -> utf8 kv.Key))
+    interestsCount <- interestsDictionary.Count
 
     let memSize = Process.GetCurrentProcess().PrivateMemorySize64/MB
-    Console.WriteLine("Accounts {0}. Memory used {1}MB", accountsNumber, memSize)
+    Console.WriteLine("Accounts {0}. Memory used {1}MB", accountsCount, memSize)
     Console.WriteLine("Dictionaries names={0},cities={1},countries={2},interests={3},snames={4}",
         namesDictionary.Count, citiesDictionary.Count,countriesDictionary.Count,interestsDictionary.Count,snamesDictionary.Count)
 

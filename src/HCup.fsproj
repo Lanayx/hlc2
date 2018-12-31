@@ -8,13 +8,18 @@
     <Content Remove="artifacts\**" />
     <Content Remove="Benchmarks\**" />
     <Content Remove="BitmapIndex\**" />
+    <Content Remove="CsharpTools\**" />
     <Content Remove="data\**" />
     <Content Remove="EWAH\**" />
     <EmbeddedResource Remove="artifacts\**" />
     <EmbeddedResource Remove="Benchmarks\**" />
     <EmbeddedResource Remove="BitmapIndex\**" />
+    <EmbeddedResource Remove="CsharpTools\**" />
     <EmbeddedResource Remove="data\**" />
     <EmbeddedResource Remove="EWAH\**" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="CsharpTools\CsharpTools.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Helpers.fs" />

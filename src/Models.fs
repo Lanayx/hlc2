@@ -2,6 +2,7 @@ namespace HCup.Models
 
 open System
 open System.Collections.Concurrent
+open System.Collections
 
 
 type Location() =
@@ -103,7 +104,7 @@ type Account() =
         [<DefaultValue>]val mutable sname : int64
         [<DefaultValue>]val mutable email: string
         [<DefaultValue>]val mutable emailDomain: string
-        [<DefaultValue>]val mutable interests: int64[]
+        [<DefaultValue>]val mutable interests: BitArray
         [<DefaultValue>]val mutable status: int
         [<DefaultValue>]val mutable premiumStart: int
         [<DefaultValue>]val mutable premiumFinish: int
