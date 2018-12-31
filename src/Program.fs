@@ -49,7 +49,21 @@ type IntReverseComparer() =
                 else 0
 let intReverseComparer = new IntReverseComparer()
 
-let accounts = SortedDictionary<int, Account>(intReverseComparer)
+let accounts = Array.zeroCreate(1400000)
+let mutable accountsNumber = 0
+
+let inline getRevAccounts() =
+    seq {
+        let mutable i = 0
+        while i < accountsNumber do
+            yield accounts.[accountsNumber - i]
+            i <- i + 1
+    }
+
+let inline getAccounts() =
+    accounts
+    |> Seq.skip 1
+    |> Seq.take accountsNumber
 
 let jsonStringValues = StringValues "application/json"
 
@@ -330,7 +344,7 @@ let getFilteredAccounts (next, ctx : HttpContext) =
             |> Seq.map (fun key -> filters.[key] ctx.Request.Query.[key].[0])
         let accs =
             filters
-            |> Seq.fold (fun acc f -> acc |> Seq.filter f) (seq accounts.Values)
+            |> Seq.fold (fun acc f -> acc |> Seq.filter f) (getRevAccounts())
             |> Seq.truncate (Int32.Parse(ctx.Request.Query.["limit"].[0]))
         let memoryStream = serializeAccounts (accs, keys)
         writeResponse memoryStream next ctx
@@ -459,7 +473,7 @@ let getGroupedAccounts (next, ctx : HttpContext) =
             Int32.Parse(ctx.Request.Query.["order"].[0])
         let accs =
             filters
-            |> Seq.fold (fun acc f -> acc |> Seq.filter f) (seq accounts.Values)
+            |> Seq.fold (fun acc f -> acc |> Seq.filter f) (getAccounts())
         let mutable memoryStream: MemoryStream = null
         let limit = Int32.Parse(ctx.Request.Query.["limit"].[0])
         applyGrouping(&memoryStream, groupKey, order, accs, limit)
@@ -495,7 +509,7 @@ let recommendationFields = [| "status_eq"; "fname_eq"; "sname_eq"; "birth_year";
 let getRecommendedAccounts (id, next, ctx : HttpContext) =
     Interlocked.Increment(accountsRecommendCount) |> ignore
     try
-        if (id > accounts.Count)
+        if (id > accountsNumber)
         then
             setStatusCode 404 next ctx
         else
@@ -519,7 +533,7 @@ let getRecommendedAccounts (id, next, ctx : HttpContext) =
                     keys
                     |> Seq.map (fun (key, value) -> recommendFilters.[key] value)
                 let accounts =
-                    accounts.Values
+                    getAccounts()
                     |> Seq.filter(fun acc -> acc.sex <> target.sex)
                 let accs =
                     filters
@@ -555,7 +569,7 @@ let suggestionFields = [| "status_eq"; "fname_eq"; "sname_eq"; |]
 let getSuggestedAccounts (id, next, ctx : HttpContext) =
     Interlocked.Increment(accountsSuggestCount) |> ignore
     try
-    if (id > accounts.Count || (box accounts.[id] |> isNull) )
+    if (id > accountsNumber || (box accounts.[id] |> isNull) )
     then
         setStatusCode 404 next ctx
     else
@@ -610,7 +624,7 @@ let getSuggestedAccounts (id, next, ctx : HttpContext) =
 let findUser (next, ctx : HttpContext) =
     let likeIds = ctx.Request.Query.["likes"].[0].Split(',') |> Array.map Int32.Parse
     let users =
-        accounts.Values
+        accounts
         |> Seq.filter(fun acc -> (box acc) |> isNotNull)
         |> Seq.filter(fun acc -> acc.likes |> isNotNull)
         |> Seq.filter(fun acc -> acc.likes.Intersect(likeIds).Count() >= likeIds.Length)
@@ -672,6 +686,7 @@ let newAccount (next, ctx : HttpContext) =
                 return! setStatusCode 400 next ctx
             else
                 accounts.[account.id.Value] <- createAccount account
+                Interlocked.Increment(&accountsNumber) |> ignore
                 return! writePostResponse 201 next ctx
         with
         | :? ArgumentOutOfRangeException ->
@@ -682,7 +697,7 @@ let newAccount (next, ctx : HttpContext) =
 
 let updateAccount (id, next, ctx : HttpContext) =
     Interlocked.Increment(updateAccountCount) |> ignore
-    if (accounts.ContainsKey(id) |> not )
+    if (box accounts.[id] |> isNull)
     then
         setStatusCode 404 next ctx
     else
@@ -713,7 +728,7 @@ let addLikes (next, ctx : HttpContext) =
             let wrongLike =
                 likes.likes
                 |> Array.tryFind(fun like ->
-                    (accounts.ContainsKey(like.liker) && accounts.ContainsKey(like.likee)) |> not)
+                    box accounts.[like.liker] |> isNull || box accounts.[like.likee] |> isNull)
             match wrongLike with
             | Some _ -> return! setStatusCode 400 next ctx
             | None ->
@@ -803,6 +818,7 @@ let loadData folder =
                         accsUpd.accounts
                         |> Seq.iter (fun acc ->
                             accounts.[acc.id.Value] <- createAccount acc
+                            Interlocked.Increment(&accountsNumber) |> ignore
                         )
                         GC.Collect(2)
                     )
@@ -814,7 +830,7 @@ let loadData folder =
     interestsSerializeDictionary <- interestsDictionary.ToDictionary((fun kv -> kv.Value), (fun kv -> utf8 kv.Key))
 
     let memSize = Process.GetCurrentProcess().PrivateMemorySize64/MB
-    Console.WriteLine("Accounts {0}. Memory used {1}MB", accounts.Count, memSize)
+    Console.WriteLine("Accounts {0}. Memory used {1}MB", accountsNumber, memSize)
     Console.WriteLine("Dictionaries names={0},cities={1},countries={2},interests={3},snames={4}",
         namesDictionary.Count, citiesDictionary.Count,countriesDictionary.Count,interestsDictionary.Count,snamesDictionary.Count)
 
