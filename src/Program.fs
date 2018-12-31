@@ -52,13 +52,18 @@ let intReverseComparer = new IntReverseComparer()
 let accounts = Array.zeroCreate(1400000)
 let mutable accountsNumber = 0
 
-let revAccounts() =
+let inline getRevAccounts() =
     seq {
         let mutable i = 0
         while i < accountsNumber do
             yield accounts.[accountsNumber - i]
             i <- i + 1
     }
+
+let inline getAccounts() =
+    accounts
+    |> Seq.skip 1
+    |> Seq.take accountsNumber
 
 let jsonStringValues = StringValues "application/json"
 
@@ -339,7 +344,7 @@ let getFilteredAccounts (next, ctx : HttpContext) =
             |> Seq.map (fun key -> filters.[key] ctx.Request.Query.[key].[0])
         let accs =
             filters
-            |> Seq.fold (fun acc f -> acc |> Seq.filter f) (revAccounts())
+            |> Seq.fold (fun acc f -> acc |> Seq.filter f) (getRevAccounts())
             |> Seq.truncate (Int32.Parse(ctx.Request.Query.["limit"].[0]))
         let memoryStream = serializeAccounts (accs, keys)
         writeResponse memoryStream next ctx
@@ -468,7 +473,7 @@ let getGroupedAccounts (next, ctx : HttpContext) =
             Int32.Parse(ctx.Request.Query.["order"].[0])
         let accs =
             filters
-            |> Seq.fold (fun acc f -> acc |> Seq.filter f) (revAccounts())
+            |> Seq.fold (fun acc f -> acc |> Seq.filter f) (getAccounts())
         let mutable memoryStream: MemoryStream = null
         let limit = Int32.Parse(ctx.Request.Query.["limit"].[0])
         applyGrouping(&memoryStream, groupKey, order, accs, limit)
@@ -528,7 +533,7 @@ let getRecommendedAccounts (id, next, ctx : HttpContext) =
                     keys
                     |> Seq.map (fun (key, value) -> recommendFilters.[key] value)
                 let accounts =
-                    revAccounts()
+                    getAccounts()
                     |> Seq.filter(fun acc -> acc.sex <> target.sex)
                 let accs =
                     filters
