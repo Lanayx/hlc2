@@ -151,6 +151,11 @@ let interestsContainsFilter (value: string) =
             |> Array.map(fun el -> interestsDictionary.[el])
             |> Array.forall (fun interest -> acc.interests |> Array.exists (fun el -> el = interest))
 
+let interestsContainsOneFilter (value: string) =
+    fun (acc: Account) ->
+        acc.interests |> isNotNull
+            && acc.interests |> Array.contains interestsDictionary.[value]
+
 let interestsAnyFilter (value: string) =
     fun (acc: Account) ->
         acc.interests |> isNotNull
@@ -162,6 +167,11 @@ let likesContainsFilter (value: string) =
     fun (acc: Account) ->
         acc.likes |> isNotNull
             && value.Split(',') |> Array.forall (fun id -> acc.likes.Contains(Int32.Parse(id)))
+
+let likesContainsOneFilter (value: string) =
+    fun (acc: Account) ->
+        acc.likes |> isNotNull
+            && acc.likes.Contains(Int32.Parse(value))
 
 let premiumNowFilter (value: string) =
     fun (acc: Account) ->
@@ -258,8 +268,8 @@ let groupFilters: IDictionary<string, Filter> =
         "country", countryEqFilter
         "city", cityEqFilter
         "birth", birthYearFilter
-        "interests", interestsContainsFilter
-        "likes", likesContainsFilter
+        "interests", interestsContainsOneFilter
+        "likes", likesContainsOneFilter
         "joined", joinedYearFilter
     ]
 
