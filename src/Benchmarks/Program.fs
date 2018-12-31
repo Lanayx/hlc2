@@ -12,6 +12,6 @@ open Benchmarks
 
 [<EntryPoint>]
 let main argv =
-    //ignore <| BenchmarkRunner.Run<SerializerBenchmarks>()
-    BenchmarkRunner.Run<RouteBenchmarks>()
+    BenchmarkRunner.Run<ArrayBenchmarks>()
+    // BenchmarkRunner.Run<RouteBenchmarks>()
     0
