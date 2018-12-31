@@ -55,10 +55,8 @@ let mutable accountsNumber = 0
 
 let inline getRevAccounts() =
     seq {
-        let mutable i = 0
-        while i < accountsNumber do
-            yield accounts.[accountsNumber - i]
-            i <- i + 1
+        for i = accountsNumber downto 1 do
+            yield accounts.[i]
     }
 
 let inline getAccounts() =
@@ -333,19 +331,57 @@ let updateExistingAccount (existing: Account, accUpd: AccountUpd) =
     then emailsDictionary.Add(accUpd.email) |> ignore
     ()
 
+let getInterestContainsAccounts (str: string) =
+    let mutable criteria = Unchecked.defaultof<BICriteria>
+    for value in str.Split(',') do
+        let interest = interestsDictionary.[value]
+        if criteria |> isNull
+        then
+            criteria <- BICriteria.equals(BIKey(0, interest))
+        else
+            criteria <- criteria.``and``(BICriteria.equals(BIKey(0, interest)))
+    let result = interestsIndex.query(criteria).GetPositions()
+    seq{
+        for i = result.Count-1 downto 0 do
+            yield accounts.[result.[i]]
+    }
+
+
+let getInterestAnyAccounts (str: string) =
+    let mutable criteria = Unchecked.defaultof<BICriteria>
+    for value in str.Split(',') do
+        let interest = interestsDictionary.[value]
+        if criteria |> isNull
+        then
+            criteria <- BICriteria.equals(BIKey(0, interest))
+        else
+            criteria <- criteria.``or``(BICriteria.equals(BIKey(0, interest)))
+    let result = interestsIndex.query(criteria).GetPositions()
+    seq{
+        for i = result.Count-1 downto 0 do
+            yield accounts.[result.[i]]
+    }
+
 let getFilteredAccounts (next, ctx : HttpContext) =
     Interlocked.Increment(accountFilterCount) |> ignore
     try
         let keys =
             ctx.Request.Query.Keys
             |> Seq.filter(fun key -> (key =~ "limit" || key =~ "query_id") |> not )
+            |> Seq.toArray
         let filters =
             keys
             |> Seq.sortBy (fun key -> filtersOrder.[key])
             |> Seq.map (fun key -> filters.[key] ctx.Request.Query.[key].[0])
+        let accounts =
+            if keys.Contains("interests_contains")
+            then getInterestContainsAccounts ctx.Request.Query.["interests_contains"].[0]
+            else if keys.Contains("interests_any")
+            then getInterestAnyAccounts ctx.Request.Query.["interests_any"].[0]
+            else getRevAccounts()
         let accs =
             filters
-            |> Seq.fold (fun acc f -> acc |> Seq.filter f) (getRevAccounts())
+            |> Seq.fold (fun acc f -> acc |> Seq.filter f) accounts
             |> Seq.truncate (Int32.Parse(ctx.Request.Query.["limit"].[0]))
         let memoryStream = serializeAccounts (accs, keys)
         writeResponse memoryStream next ctx
@@ -780,11 +816,11 @@ let customPostRoutef : HttpHandler =
 let buildBitMapIndex() =
 
     getAccounts()
-    |> Seq.iteri (fun i account ->
+    |> Seq.iter (fun account ->
         if account.interests |> isNotNull
         then
             account.interests
-            |> Seq.iter (fun interest -> interestsIndex.Set(BIKey(0,interest),i+1)))
+            |> Seq.iter (fun interest -> interestsIndex.Set(BIKey(0,interest),account.id)))
 
     //let criteria =
     //    BICriteria.equals(BIKey(0, 880230265529171968L))
