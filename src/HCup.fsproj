@@ -35,6 +35,9 @@
     <PackageReference Include="Microsoft.AspNetCore.Server.Kestrel" Version="2.2.0" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="BitmapIndex\BitmapIndex.csproj" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Update="FSharp.Core" Version="4.5.4" />
   </ItemGroup>
 </Project>

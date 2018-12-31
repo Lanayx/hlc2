@@ -6,8 +6,11 @@ open HCup.Helpers
 open HCup.Dictionaries
 open System.Collections.Generic
 open Giraffe
+open BitmapIndex
 
 type Filter = string -> Account -> bool
+
+let interestsIndex = BitmapIndex()
 
 let inline getStatus status =
     match status with
@@ -158,10 +161,21 @@ let interestsContainsOneFilter (value: string) =
 
 let interestsAnyFilter (value: string) =
     fun (acc: Account) ->
-        acc.interests |> isNotNull
-            && value.Split(',')
-            |> Array.map(fun el -> interestsDictionary.[el])
-            |> Array.exists (fun interest -> acc.interests |> Array.exists (fun el -> el = interest))
+        if acc.interests |> isNull
+        then
+            false
+        else
+            let mutable criteria = Unchecked.defaultof<BICriteria>
+            for value in value.Split(',') do
+                let interest = interestsDictionary.[value]
+                if criteria |> isNull
+                then
+                    criteria <- BICriteria.equals(BIKey(0, interest))
+                else
+                    criteria <- criteria.``or``(BICriteria.equals(BIKey(0, interest)))
+            let result = interestsIndex.query(criteria)
+            true
+
 
 let likesContainsFilter (value: string) =
     fun (acc: Account) ->

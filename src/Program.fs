@@ -33,6 +33,7 @@ open Filters
 open Microsoft.Extensions.DependencyInjection
 open System.Text.RegularExpressions
 open System.Diagnostics
+open BitmapIndex
 
 // ---------------------------------
 // Web app
@@ -775,6 +776,23 @@ let customPostRoutef : HttpHandler =
             else
                 setStatusCode 404 next ctx
 
+
+let buildBitMapIndex() =
+
+    getAccounts()
+    |> Seq.iteri (fun i account ->
+        if account.interests |> isNotNull
+        then
+            account.interests
+            |> Seq.iter (fun interest -> interestsIndex.Set(BIKey(0,interest),i+1)))
+
+    //let criteria =
+    //    BICriteria.equals(BIKey(0, 880230265529171968L))
+    //     .``or``(BICriteria.equals(new BIKey(0, 1)))
+
+    //let result = interestsIndex.query(criteria)
+    //result
+
 let webApp =
     choose [
         GET >=> customGetRoutef
@@ -828,6 +846,8 @@ let loadData folder =
     citiesSerializeDictionary <- citiesDictionary.ToDictionary((fun kv -> kv.Value), (fun kv -> utf8 kv.Key))
     countriesSerializeDictionary <- countriesDictionary.ToDictionary((fun kv -> kv.Value), (fun kv -> utf8 kv.Key))
     interestsSerializeDictionary <- interestsDictionary.ToDictionary((fun kv -> kv.Value), (fun kv -> utf8 kv.Key))
+
+    buildBitMapIndex() |> ignore
 
     let memSize = Process.GetCurrentProcess().PrivateMemorySize64/MB
     Console.WriteLine("Accounts {0}. Memory used {1}MB", accountsNumber, memSize)
