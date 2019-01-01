@@ -561,6 +561,7 @@ let getRecommendedAccounts (id, next, ctx : HttpContext) =
                         then raise (KeyNotFoundException("Unknown value of get parameter"))
                         (key, value)
                     )
+                |> Seq.toArray
             let limit = Int32.Parse(ctx.Request.Query.["limit"].[0])
             if limit <= 0 || limit > 20
             then
@@ -621,6 +622,7 @@ let getSuggestedAccounts (id, next, ctx : HttpContext) =
                     then raise (KeyNotFoundException("Unknown value of get parameter"))
                     (key, value)
                 )
+            |> Seq.toArray
         let limit = Int32.Parse(ctx.Request.Query.["limit"].[0])
         if limit <= 0 || limit > 20
         then
