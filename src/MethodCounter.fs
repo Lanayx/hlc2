@@ -7,3 +7,5 @@ let accountsSuggestCount = ref 0
 let newAccountCount = ref 0
 let updateAccountCount = ref 0
 let addLikesCount = ref 0
+
+let mutable shouldRebuildIndex = false

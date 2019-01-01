@@ -10,8 +10,6 @@ open BitmapIndex
 
 type Filter = string -> Account -> bool
 
-let interestsIndex = BitmapIndex()
-
 let inline getStatus status =
     match status with
     | "свободны" -> freeStatus

@@ -52,6 +52,7 @@ let intReverseComparer = new IntReverseComparer()
 
 let accounts = Array.zeroCreate(1400000)
 let mutable accountsNumber = 0
+let mutable interestsIndex = BitmapIndex()
 
 let inline getRevAccounts() =
     seq {
@@ -240,7 +241,6 @@ let handleLikes (likes: Like[]) (account: Account) (deletePrevious: bool) =
         |> ResizeArray
 
 let createAccount (accUpd: AccountUpd): Account =
-
     let account = Account()
     account.id <- accUpd.id.Value
     handleEmail accUpd.email account
@@ -787,6 +787,7 @@ let addLikes (next, ctx : HttpContext) =
 
 let customPostRoutef : HttpHandler =
     fun (next : HttpFunc) (ctx : HttpContext) ->
+        shouldRebuildIndex <- true
         match ctx.Request.Path.Value with
         | filterPath when filterPath =~ newUserString ->
              newAccount (next, ctx)
@@ -814,20 +815,13 @@ let customPostRoutef : HttpHandler =
 
 
 let buildBitMapIndex() =
-
+    interestsIndex <- BitmapIndex()
     getAccounts()
     |> Seq.iter (fun account ->
         if account.interests |> isNotNull
         then
             account.interests
             |> Seq.iter (fun interest -> interestsIndex.Set(BIKey(0,interest),account.id)))
-
-    //let criteria =
-    //    BICriteria.equals(BIKey(0, 880230265529171968L))
-    //     .``or``(BICriteria.equals(new BIKey(0, 1)))
-
-    //let result = interestsIndex.query(criteria)
-    //result
 
 let webApp =
     choose [
@@ -905,6 +899,7 @@ let main argv =
         ZipFile.ExtractToDirectory("data.zip","./data")
     loadData "./data"
     GC.Collect(2)
+    GCTimer.runTimer buildBitMapIndex
     WebHostBuilder()
         .UseKestrel(Action<KestrelServerOptions> configureKestrel)
         .Configure(Action<IApplicationBuilder> configureApp)
