@@ -215,7 +215,7 @@ let inline handlePhone (phone: string) (account: Account) =
 
 let inline addLikeToDictionary liker likee likeTs =
     if likesDictionary.ContainsKey(likee) |> not
-    then likesDictionary.Add(likee, Dictionary<int, struct(single*int)>())
+    then likesDictionary.Add(likee, SortedDictionary<int, struct(single*int)>(intReverseComparer))
     let likers = likesDictionary.[likee]
     if likers.ContainsKey(liker)
     then
@@ -362,6 +362,15 @@ let getInterestAnyAccounts (str: string) =
             yield accounts.[result.[i]]
     }
 
+let getLikesContainsAccounts (value: string) =
+    let values = value.Split(',')
+    values
+    |> Seq.map (fun str -> Int32.Parse(str))
+    |> Seq.collect(fun like -> likesDictionary.[like].Keys)
+    |> Seq.countBy id
+    |> Seq.filter (fun (id, count) -> count = values.Length)
+    |> Seq.map (fun (id, _) -> accounts.[id])
+
 let getFilteredAccounts (next, ctx : HttpContext) =
     Interlocked.Increment(accountFilterCount) |> ignore
     try
@@ -378,6 +387,8 @@ let getFilteredAccounts (next, ctx : HttpContext) =
             then getInterestContainsAccounts ctx.Request.Query.["interests_contains"].[0]
             else if keys.Contains("interests_any")
             then getInterestAnyAccounts ctx.Request.Query.["interests_any"].[0]
+            else if keys.Contains("likes_contains")
+            then getLikesContainsAccounts ctx.Request.Query.["likes_contains"].[0]
             else getRevAccounts()
         let accs =
             filters
@@ -590,7 +601,7 @@ let getRecommendedAccounts (id, next, ctx : HttpContext) =
         Console.WriteLine("NotSupportedException:" + ex.Message + " " + ctx.Request.Path + ctx.Request.QueryString.Value)
         setStatusCode 400 next ctx
 
-let getSimilarityNew targetId (likers: Dictionary<int,struct(single*int)>) (results:Dictionary<int,single>) =
+let getSimilarityNew targetId (likers: SortedDictionary<int,struct(single*int)>) (results:Dictionary<int,single>) =
     let struct(targTsSum, count) = likers.[targetId]
     let targTs = targTsSum / (single) count
     for liker in likers do

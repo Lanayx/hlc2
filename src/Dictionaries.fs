@@ -15,5 +15,5 @@ let mutable citiesSerializeDictionary = Dictionary<int64, byte[]>()
 let mutable countriesSerializeDictionary = Dictionary<int64, byte[]>()
 let mutable interestsSerializeDictionary = Dictionary<int64, byte[]>()
 
-let likesDictionary = Dictionary<int, Dictionary<int, struct(single*int)>>()
+let likesDictionary = Dictionary<int, SortedDictionary<int, struct(single*int)>>()
 let emailsDictionary = HashSet<string>()
