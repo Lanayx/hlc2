@@ -377,25 +377,27 @@ let getLikesContainsAccounts (value: string) =
     |> Seq.filter (fun (id, count) -> count = values.Length)
     |> Seq.map (fun (id, _) -> accounts.[id])
 
+let rec getAccountsByQuery keys (ctx : HttpContext) =
+    match keys with
+    | [] -> getRevAccounts()
+    | h::t when h = "interests_contains" -> getInterestContainsAccounts (ctx.Request.Query.["interests_contains"].[0])
+    | h::t when h = "interests_any" -> getInterestAnyAccounts (ctx.Request.Query.["interests_any"].[0])
+    | h::t when h = "likes_contains" -> getLikesContainsAccounts (ctx.Request.Query.["likes_contains"].[0])
+    | h::t -> getAccountsByQuery t ctx
+
 let getFilteredAccounts (next, ctx : HttpContext) =
     Interlocked.Increment(accountFilterCount) |> ignore
     try
         let keys =
             ctx.Request.Query.Keys
             |> Seq.filter(fun key -> (key =~ "limit" || key =~ "query_id") |> not )
-            |> Seq.toArray
+            |> Seq.toList
         let filters =
             keys
             |> Seq.sortBy (fun key -> filtersOrder.[key])
             |> Seq.map (fun key -> filters.[key] ctx.Request.Query.[key].[0])
         let accounts =
-            if keys.Contains("interests_contains")
-            then getInterestContainsAccounts ctx.Request.Query.["interests_contains"].[0]
-            else if keys.Contains("interests_any")
-            then getInterestAnyAccounts ctx.Request.Query.["interests_any"].[0]
-            else if keys.Contains("likes_contains")
-            then getLikesContainsAccounts ctx.Request.Query.["likes_contains"].[0]
-            else getRevAccounts()
+            getAccountsByQuery keys ctx
         let accs =
             filters
             |> Seq.fold (fun acc f -> acc |> Seq.filter f) accounts

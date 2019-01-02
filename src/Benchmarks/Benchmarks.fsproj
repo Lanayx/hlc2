@@ -7,6 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="Traverse.fs" />
     <Compile Include="Array.fs" />
     <Compile Include="Route.fs" />
     <Compile Include="Program.fs" />
