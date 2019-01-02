@@ -364,9 +364,15 @@ let getInterestAnyAccounts (str: string) =
 
 let getLikesContainsAccounts (value: string) =
     let values = value.Split(',')
-    values
-    |> Seq.map (fun str -> Int32.Parse(str))
-    |> Seq.collect(fun like -> likesDictionary.[like].Keys)
+    let keys = 
+        values
+        |> Seq.map (fun str -> Int32.Parse(str))    
+        |> Seq.cache    
+    if Seq.forall (fun key -> likesDictionary.ContainsKey(key)) keys 
+    then
+        Seq.collect (fun key -> likesDictionary.[key].Keys) keys
+    else
+        Seq.empty
     |> Seq.countBy id
     |> Seq.filter (fun (id, count) -> count = values.Length)
     |> Seq.map (fun (id, _) -> accounts.[id])
