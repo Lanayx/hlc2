@@ -284,7 +284,7 @@ let createAccount (accUpd: AccountUpd): Account =
     then
         handleCountry accUpd.country account
 
-    // handle likes and emails last to not fill dictionaries on failures
+    // handle fields with indexes to not fill indexes on failures
     if accUpd.likes |> isNotNull
     then
         handleLikes accUpd.likes account false
@@ -335,7 +335,7 @@ let updateExistingAccount (existing: Account, accUpd: AccountUpd) =
         existing.premiumFinish <- accUpd.premium.finish
         existing.premiumNow <- accUpd.premium.start <= currentTs && accUpd.premium.finish > currentTs
 
-    // handle likes and emails last to not fill dictionaries on failures
+    // handle fields with indexes to not fill indexes on failures
     if accUpd.likes |> isNotNull
     then
         handleLikes accUpd.likes existing true
@@ -403,7 +403,7 @@ let getLikesContainsAccounts (value: string) =
             Seq.empty
         |> Seq.map (fun id -> accounts.[id])
 
-let array_max_with_ind (arr: int[]) =
+let arrayMaxWithInd (arr: int[]) =
     let mutable max = 0
     let mutable maxIndex = 0
     for i in [0..arr.Length-1] do
@@ -422,7 +422,7 @@ let sortedCollect (sortedSets: SortedSet<int> seq) =
     seq {
         let mutable enumerable = enumerators.Length
         while enumerable > 0 do
-            let struct(max, maxIndex) = firstValues |> array_max_with_ind
+            let struct(max, maxIndex) = firstValues |> arrayMaxWithInd
             if (enumerators.[maxIndex].MoveNext())
             then 
                 firstValues.[maxIndex] <- enumerators.[maxIndex].Current
