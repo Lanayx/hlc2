@@ -8,6 +8,7 @@ open Microsoft.AspNetCore.Builder
 open Microsoft.AspNetCore.Http
 open Giraffe
 open GCTimer
+open System.Globalization
 
 let MB = 1024L*1024L
 
@@ -31,7 +32,10 @@ type RequestCounterMiddleware (next : RequestDelegate,
         (next.Invoke ctx).ContinueWith(
             fun x ->
                 if sw.ElapsedMilliseconds > 25L
-                then Console.WriteLine("Slow request {0}ms: {1}", sw.ElapsedMilliseconds, ctx.Request.Path + ctx.Request.QueryString)
+                then
+                    Console.WriteLine("Slow request {0} ms: {1}",
+                        sw.ElapsedMilliseconds.ToString(CultureInfo.InvariantCulture),
+                        ctx.Request.Path + ctx.Request.QueryString)
                 sw.Stop()
         )
 

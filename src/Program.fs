@@ -168,11 +168,39 @@ let handleCity city (account: Account) (deletePrevious: bool) =
         let mutable cityUsers: SortedSet<Int32> = null
         if citiesIndex.TryGetValue(account.city, &cityUsers)
         then
-            citiesIndex.[account.city].Add(account.id) |> ignore
+            cityUsers.Add(account.id) |> ignore
         else
             cityUsers <- SortedSet(intReverseComparer)
             cityUsers.Add(account.id) |> ignore
             citiesIndex.[account.city] <- cityUsers
+
+        let mutable citySexGroup: Dictionary<char,int> = null
+        if citySexGroups.TryGetValue(account.city, &citySexGroup)
+        then
+            let mutable groupNumber = 0
+            if citySexGroup.TryGetValue(account.sex, &groupNumber)
+            then
+                citySexGroup.[account.sex] <- groupNumber + 1
+            else
+                citySexGroup.[account.sex] <- 1
+        else
+            citySexGroup <- Dictionary<char, int>()
+            citySexGroup.[account.sex] <- 1
+            citySexGroups.[account.city] <- citySexGroup
+
+        let mutable cityStatusGroup: Dictionary<int,int> = null
+        if cityStatusGroups.TryGetValue(account.city, &cityStatusGroup)
+        then
+            let mutable groupNumber = 0
+            if cityStatusGroup.TryGetValue(account.status, &groupNumber)
+            then
+                cityStatusGroup.[account.status] <- groupNumber + 1
+            else
+                cityStatusGroup.[account.status] <- 1
+        else
+            cityStatusGroup <- Dictionary<int, int>()
+            cityStatusGroup.[account.status] <- 1
+            cityStatusGroups.[account.city] <- cityStatusGroup
 
 let inline handleCountry country (account: Account) (deletePrevious: bool) =
     if deletePrevious && account.country > 0L
@@ -193,7 +221,7 @@ let inline handleCountry country (account: Account) (deletePrevious: bool) =
         let mutable countryUsers: SortedSet<Int32> = null
         if countriesIndex.TryGetValue(account.country, &countryUsers)
         then
-            countriesIndex.[account.country].Add(account.id) |> ignore
+            countryUsers.Add(account.id) |> ignore
         else
             countryUsers <- SortedSet(intReverseComparer)
             countryUsers.Add(account.id) |> ignore
@@ -292,7 +320,7 @@ let createAccount (accUpd: AccountUpd): Account =
     account.birth <- accUpd.birth.Value
     account.birthYear <- (convertToDate accUpd.birth.Value).Year
     account.joined <- accUpd.joined.Value
-    account.joinedYear <- (convertToDate accUpd.joined.Value).Year    
+    account.joinedYear <- (convertToDate accUpd.joined.Value).Year
 
     // handle fields with indexes to not fill indexes on failures
     if accUpd.likes |> isNotNull
@@ -320,7 +348,7 @@ let updateExistingAccount (existing: Account, accUpd: AccountUpd) =
     then
         if accUpd.sex.Length > 1
         then raise (ArgumentOutOfRangeException("Sex is wrong"))
-        existing.sex <- accUpd.sex.[0]    
+        existing.sex <- accUpd.sex.[0]
     if accUpd.email |> isNotNull
     then
         handleEmail accUpd.email existing
@@ -391,7 +419,7 @@ let getInterestAnyAccounts (str: string) =
             yield accounts.[result.[i]]
     }
 
-let inline getLikesContainsAccount value = 
+let inline getLikesContainsAccount value =
     let key = Int32.Parse(value)
     if likesIndex.ContainsKey(key)
     then
@@ -424,7 +452,7 @@ let arrayMaxWithInd (arr: int[]) =
     let mutable maxIndex = 0
     for i in [0..arr.Length-1] do
         if arr.[i] > max
-        then 
+        then
             max <- arr.[i]
             maxIndex <- i
     struct(max, maxIndex)
@@ -440,7 +468,7 @@ let sortedCollect (sortedSets: SortedSet<int> seq) =
         while enumerable > 0 do
             let struct(max, maxIndex) = firstValues |> arrayMaxWithInd
             if (enumerators.[maxIndex].MoveNext())
-            then 
+            then
                 firstValues.[maxIndex] <- enumerators.[maxIndex].Current
             else
                 firstValues.[maxIndex] <- 0
@@ -467,20 +495,20 @@ let getCityAnyAccounts (value: string) =
             let weight = citiesWeightDictionary.[value]
             citiesIndex.[weight]
             |> Seq.map (fun id -> accounts.[id])
-    
-let getCityEqAccounts (value: string) =   
+
+let getCityEqAccounts (value: string) =
     let mutable weight = 0L
     if citiesWeightDictionary.TryGetValue(value, &weight)
-    then    
+    then
         citiesIndex.[weight]
         |> Seq.map (fun id -> accounts.[id])
     else
         Seq.empty
 
-let getCountryEqAccounts (value: string) =   
+let getCountryEqAccounts (value: string) =
     let mutable weight = 0L
     if countriesWeightDictionary.TryGetValue(value, &weight)
-    then    
+    then
         countriesIndex.[weight]
         |> Seq.map (fun id -> accounts.[id])
     else
@@ -527,10 +555,15 @@ let getFilteredAccounts (next, ctx : HttpContext) =
         Console.WriteLine("NotSupportedException: " + ctx.Request.Path + ctx.Request.QueryString.Value)
         setStatusCode 400 next ctx
 
-let seq_sort value =
-    if value = -1
+let seq_sort order =
+    if order = -1
     then Seq.sortByDescending
     else Seq.sortBy
+
+let seq_take order length take =
+    if order = -1
+    then Seq.skip (length - take)
+    else Seq.truncate take
 
 let applyGrouping (memoryStream: byref<MemoryStream>, groupKey, order, accs: Account seq, limit) =
     match groupKey with
@@ -587,11 +620,90 @@ let applyGrouping (memoryStream: byref<MemoryStream>, groupKey, order, accs: Acc
     | "city,sex" ->
         let groups =
             accs
-            
             |> Seq.groupBy (fun acc -> acc.city, acc.sex)
             |> Seq.map (fun (key, group) -> key, group |> Seq.length)
             |> seq_sort order (fun (group,length) -> length, group)
             |> Seq.truncate limit
+        memoryStream <- serializeGroups2Sex(groups, "city", "sex")
+    | "country,sex" ->
+        let groups =
+            accs
+            |> Seq.groupBy (fun acc -> acc.country, acc.sex)
+            |> Seq.map (fun (key, group) -> key, group |> Seq.length)
+            |> seq_sort order (fun (group,length) -> length, group)
+            |> Seq.truncate limit
+        memoryStream <- serializeGroups2Sex(groups, "country", "sex")
+    | "country,status" ->
+        let groups =
+            accs
+            |> Seq.groupBy (fun acc -> acc.country, acc.status)
+            |> Seq.map (fun (key, group) -> key, group |> Seq.length)
+            |> seq_sort order (fun (group,length) -> length, group)
+            |> Seq.truncate limit
+        memoryStream <- serializeGroups2Status(groups, "country", "status")
+    | _ ->
+        ()
+
+let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, order, limit) =
+    let accs = getAccounts()
+    match groupKey with
+    | "sex" ->
+        let groups =
+            accs
+            |> Seq.groupBy (fun acc -> acc.sex)
+            |> Seq.map (fun (key, group) -> (key, group |> Seq.length))
+            |> seq_sort order (fun (group,length) -> length, group)
+            |> Seq.truncate limit
+        memoryStream <- serializeGroupsSex(groups, "sex")
+    | "status" ->
+        let groups =
+            accs
+            |> Seq.groupBy (fun acc -> acc.status)
+            |> Seq.map (fun (key, group) -> key, group |> Seq.length)
+            |> seq_sort order (fun (group,length) -> length, group)
+            |> Seq.truncate limit
+        memoryStream <- serializeGroupsStatus(groups, "status")
+    | "country" ->
+        let groups =
+            accs
+            |> Seq.groupBy (fun acc -> acc.country)
+            |> Seq.map (fun (key, group) -> key, group |> Seq.length)
+            |> seq_sort order (fun (group,length) -> length, group)
+            |> Seq.truncate limit
+        memoryStream <- serializeGroupsCountry(groups, "country")
+    | "city" ->
+        let groups =
+            accs
+            |> Seq.groupBy (fun acc -> acc.city)
+            |> Seq.map (fun (key, group) -> key, group |> Seq.length)
+            |> seq_sort order (fun (group,length) -> length, group)
+            |> Seq.truncate limit
+        memoryStream <- serializeGroupsCity(groups, "city")
+    | "interests" ->
+        let interests =
+            accs
+            |> Seq.filter (fun acc -> acc.interests |> isNotNull)
+            |> Seq.collect (fun acc -> acc.interests)
+            |> Seq.groupBy id
+            |> Seq.map (fun (key, group) -> key, group |> Seq.length)
+            |> seq_sort order (fun (group,length) -> length, group)
+            |> Seq.truncate limit
+        memoryStream <- serializeGroupsInterests(interests , "interests")
+    | "city,status" ->
+        let groups =
+            cityStatusGroups
+            |> seq_take order cityStatusGroups.Count limit
+            |> Seq.collect (fun kv ->
+                kv.Value |> Seq.map(fun xy -> ((kv.Key,xy.Key), xy.Value))
+                )
+        memoryStream <- serializeGroups2Status(groups, "city", "status")
+    | "city,sex" ->
+        let groups =
+            citySexGroups
+            |> seq_take order citySexGroups.Count limit
+            |> Seq.collect (fun kv ->
+                kv.Value |> Seq.map(fun xy -> ((kv.Key,xy.Key), xy.Value))
+                )
         memoryStream <- serializeGroups2Sex(groups, "city", "sex")
     | "country,sex" ->
         let groups =
@@ -641,22 +753,26 @@ let getGroupedAccounts (next, ctx : HttpContext) =
             ctx.Request.Query.Keys
             |> Seq.filter(fun key -> (key =~ "limit" || key =~ "query_id" || key =~ "order" || key=~"keys") |> not )
             |> Seq.toList
-        let filters =
-            keys
-            |> Seq.sortBy (fun key -> groupFiltersOrder.[key])
-            |> Seq.map (fun key -> groupFilters.[key] ctx.Request.Query.[key].[0])
+        let limit = Int32.Parse(ctx.Request.Query.["limit"].[0])
         let groupKey =
             ctx.Request.Query.["keys"].[0]
         let order =
-            Int32.Parse(ctx.Request.Query.["order"].[0])
-        let accounts =
-            getGroupedAccountsByQuery keys ctx
-        let accs =
-            filters
-            |> Seq.fold (fun acc f -> acc |> Seq.filter f) accounts
+                Int32.Parse(ctx.Request.Query.["order"].[0])
         let mutable memoryStream: MemoryStream = null
-        let limit = Int32.Parse(ctx.Request.Query.["limit"].[0])
-        applyGrouping(&memoryStream, groupKey, order, accs, limit)
+        if keys.IsEmpty
+        then
+            getGroupsWithEmptyFilter(&memoryStream, groupKey, order, limit)
+        else
+            let filters =
+                keys
+                |> Seq.sortBy (fun key -> groupFiltersOrder.[key])
+                |> Seq.map (fun key -> groupFilters.[key] ctx.Request.Query.[key].[0])
+            let accounts =
+                getGroupedAccountsByQuery keys ctx
+            let accs =
+                filters
+                |> Seq.fold (fun acc f -> acc |> Seq.filter f) accounts
+            applyGrouping(&memoryStream, groupKey, order, accs, limit)
         if (memoryStream |> isNotNull)
         then writeResponse memoryStream next ctx
         else setStatusCode 400 next ctx
@@ -896,7 +1012,7 @@ let updateAccount (id, next, ctx : HttpContext) =
                 | :? ArgumentOutOfRangeException ->
                     accounts.[id] <- rollback
                     return! setStatusCode 400 next ctx
-                
+
                 | :? KeyNotFoundException ->
                     return! setStatusCode 400 next ctx
             with
