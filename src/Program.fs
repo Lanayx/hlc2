@@ -378,6 +378,15 @@ let getInterestAnyAccounts (str: string) =
             yield accounts.[result.[i]]
     }
 
+let inline getLikesContainsAccount value = 
+    let key = Int32.Parse(value)
+    if likesIndex.ContainsKey(key)
+    then
+        seq likesIndex.[key].Keys
+    else
+        Seq.empty
+    |> Seq.map (fun id -> accounts.[id])
+
 let getLikesContainsAccounts (value: string) =
     let values = value.Split(',')
     if (value.Length <> 1)
@@ -395,13 +404,7 @@ let getLikesContainsAccounts (value: string) =
         |> Seq.filter (fun (id, count) -> count = values.Length)
         |> Seq.map (fun (id, _) -> accounts.[id])
     else
-        let key = Int32.Parse(value)
-        if likesIndex.ContainsKey(key)
-        then
-            seq likesIndex.[key].Keys
-        else
-            Seq.empty
-        |> Seq.map (fun id -> accounts.[id])
+        getLikesContainsAccount value
 
 let arrayMaxWithInd (arr: int[]) =
     let mutable max = 0
@@ -452,14 +455,14 @@ let getCityAnyAccounts (value: string) =
             citiesIndex.[weight]
             |> Seq.map (fun id -> accounts.[id])
 
-let rec getAccountsByQuery keys (ctx : HttpContext) =
+let rec getFilteredAccountsByQuery keys (ctx : HttpContext) =
     match keys with
     | [] -> getRevAccounts()
     | h::t when h = "likes_contains" -> getLikesContainsAccounts (ctx.Request.Query.["likes_contains"].[0])
     | h::t when h = "interests_contains" -> getInterestContainsAccounts (ctx.Request.Query.["interests_contains"].[0])
     | h::t when h = "interests_any" -> getInterestAnyAccounts (ctx.Request.Query.["interests_any"].[0])
     | h::t when h = "city_any" -> getCityAnyAccounts (ctx.Request.Query.["city_any"].[0])
-    | h::t -> getAccountsByQuery t ctx
+    | h::t -> getFilteredAccountsByQuery t ctx
 
 let getFilteredAccounts (next, ctx : HttpContext) =
     Interlocked.Increment(accountFilterCount) |> ignore
@@ -473,7 +476,7 @@ let getFilteredAccounts (next, ctx : HttpContext) =
             |> Seq.sortBy (fun key -> filtersOrder.[key])
             |> Seq.map (fun key -> filters.[key] ctx.Request.Query.[key].[0])
         let accounts =
-            getAccountsByQuery keys ctx
+            getFilteredAccountsByQuery keys ctx
         let accs =
             filters
             |> Seq.fold (fun acc f -> acc |> Seq.filter f) accounts
@@ -592,12 +595,19 @@ let inline intersectTwoArraysCount (first: int64[]) (second: int64[]) =
         i <- i + 1
     count
 
+let rec getGroupedAccountsByQuery keys (ctx : HttpContext) =
+    match keys with
+    | [] -> getAccounts()
+    | h::t when h = "likes" -> getLikesContainsAccount (ctx.Request.Query.["likes"].[0])
+    | h::t -> getGroupedAccountsByQuery t ctx
+
 let getGroupedAccounts (next, ctx : HttpContext) =
     Interlocked.Increment(accountsGroupCount) |> ignore
     try
         let keys =
             ctx.Request.Query.Keys
             |> Seq.filter(fun key -> (key =~ "limit" || key =~ "query_id" || key =~ "order" || key=~"keys") |> not )
+            |> Seq.toList
         let filters =
             keys
             |> Seq.sortBy (fun key -> groupFiltersOrder.[key])
@@ -606,9 +616,11 @@ let getGroupedAccounts (next, ctx : HttpContext) =
             ctx.Request.Query.["keys"].[0]
         let order =
             Int32.Parse(ctx.Request.Query.["order"].[0])
+        let accounts =
+            getGroupedAccountsByQuery keys ctx
         let accs =
             filters
-            |> Seq.fold (fun acc f -> acc |> Seq.filter f) (getAccounts())
+            |> Seq.fold (fun acc f -> acc |> Seq.filter f) accounts
         let mutable memoryStream: MemoryStream = null
         let limit = Int32.Parse(ctx.Request.Query.["limit"].[0])
         applyGrouping(&memoryStream, groupKey, order, accs, limit)
