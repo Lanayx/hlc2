@@ -7,6 +7,7 @@ open HCup.MethodCounter
 let outstandingRequestCount = ref 0
 let mutable lastRequestCount = 0
 let mutable GCRun = false
+let mutable rebuildingIndex = false
 
 
 let syncTimer = new System.Timers.Timer(500.0)
@@ -16,7 +17,17 @@ let runTimer indexRebuild =
     syncTimer.Elapsed.Add(fun arg ->
         if (lastRequestCount > 10 && lastRequestCount = outstandingRequestCount.Value)
         then
-            if not GCRun
+            if shouldRebuildIndex
+            then
+                shouldRebuildIndex <- false
+                rebuildingIndex <- true
+                Console.WriteLine("Rebuilding index {0}",DateTime.Now.ToString("HH:mm:ss.ffff"))
+                indexRebuild()
+                Console.WriteLine("Rebuilding index finished {0}",DateTime.Now.ToString("HH:mm:ss.ffff"))
+                rebuildingIndex <- false
+                GCRun <- false
+
+            if not GCRun && not rebuildingIndex
             then
                 Console.WriteLine("Running GC {0} {1} accf:{2} accgr:{3} accr:{4} accs:{5} newacc:{6} updacc:{7} addl: {8}",
                     lastRequestCount,
@@ -31,12 +42,7 @@ let runTimer indexRebuild =
                 GCRun <- true
                 GC.Collect(2)
             // client.GetAsync("http://127.0.0.1/visits/8").Result |> ignore
-            if shouldRebuildIndex
-            then
-                shouldRebuildIndex <- false
-                Console.WriteLine("Rebuilding index {0}",DateTime.Now.ToString("HH:mm:ss.ffff"))
-                indexRebuild()
-                Console.WriteLine("Rebuilding index finished {0}",DateTime.Now.ToString("HH:mm:ss.ffff"))
+            
         else
             GCRun <- false
         lastRequestCount <- outstandingRequestCount.Value
