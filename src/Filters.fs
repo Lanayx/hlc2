@@ -49,11 +49,11 @@ let statusNeqFilter (value: string) =
 let firstNameEqFilter (value: string) =
     fun (acc: Account) ->
         let mutable name = 0L
-        namesDictionary.TryGetValue(value, &name) && acc.fname = name
+        namesWeightDictionary.TryGetValue(value, &name) && acc.fname = name
 
 let firstNameAnyFilter (value: string) =
     fun (acc: Account) ->
-        value.Split(',') |> Array.exists (fun el -> namesDictionary.[el] = acc.fname)
+        value.Split(',') |> Array.exists (fun el -> namesWeightDictionary.[el] = acc.fname)
 
 let firstNameNullFilter (value: string) =
     fun (acc: Account) ->
@@ -68,7 +68,7 @@ let surnameEqFilter (value: string) =
             false
         else
             let mutable sname = 0L
-            snamesDictionary.TryGetValue(value, &sname) && acc.sname = sname
+            snamesWeightDictionary.TryGetValue(value, &sname) && acc.sname = sname
 
 let surnameStartsFilter (value: string) =
     fun (acc: Account) ->
@@ -103,7 +103,7 @@ let phoneNullFilter (value: string) =
 let countryEqFilter (value: string) =
     fun (acc: Account) ->
         let mutable country = 0L
-        countriesDictionary.TryGetValue(value, &country) && acc.country = country
+        countriesWeightDictionary.TryGetValue(value, &country) && acc.country = country
 
 let countryNullFilter (value: string) =
     fun (acc: Account) ->
@@ -114,13 +114,13 @@ let countryNullFilter (value: string) =
 let cityEqFilter (value: string) =
     fun (acc: Account) ->
         let mutable city = 0L
-        citiesDictionary.TryGetValue(value, &city) && acc.city = city
+        citiesWeightDictionary.TryGetValue(value, &city) && acc.city = city
 
 let cityAnyFilter (value: string) =
     fun (acc: Account) ->
         value.Split(',') |> Array.exists (fun el ->
             let mutable cityWeight = 0L
-            citiesDictionary.TryGetValue(el, &cityWeight) && cityWeight = acc.city
+            citiesWeightDictionary.TryGetValue(el, &cityWeight) && cityWeight = acc.city
         )
 
 let cityNullFilter (value: string) =
@@ -149,19 +149,19 @@ let interestsContainsFilter (value: string) =
     fun (acc: Account) ->
         acc.interests |> isNotNull
             && value.Split(',')
-            |> Array.map(fun el -> interestsDictionary.[el])
+            |> Array.map(fun el -> interestsWeightDictionary.[el])
             |> Array.forall (fun interest -> acc.interests |> Array.exists (fun el -> el = interest))
 
 let interestsContainsOneFilter (value: string) =
     fun (acc: Account) ->
         acc.interests |> isNotNull
-            && acc.interests |> Array.contains interestsDictionary.[value]
+            && acc.interests |> Array.contains interestsWeightDictionary.[value]
 
 let interestsAnyFilter (value: string) =
     fun (acc: Account) ->
         acc.interests |> isNotNull
             && value.Split(',')
-            |> Array.map(fun el -> interestsDictionary.[el])
+            |> Array.map(fun el -> interestsWeightDictionary.[el])
             |> Array.exists (fun interest -> acc.interests |> Array.exists (fun el -> el = interest))
 
 let likesContainsFilter (value: string) =

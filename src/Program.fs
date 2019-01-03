@@ -138,60 +138,71 @@ let inline handleInterests (interests: string[]) (account: Account) =
     account.interests <-
         interests
         |> Array.map(fun interest ->
-                let mutable interestIndex = 0L
-                if interestsDictionary.TryGetValue(interest, &interestIndex)
+                let mutable weight = 0L
+                if interestsWeightDictionary.TryGetValue(interest, &weight)
                 then
-                    interestIndex
+                    weight
                 else
-                    interestIndex <- getStringWeight interest
-                    interestsDictionary.Add(interest, interestIndex)
-                    interestsSerializeDictionary.Add(interestIndex, utf8 interest)
-                    interestIndex
+                    weight <- getStringWeight interest
+                    interestsWeightDictionary.Add(interest, weight)
+                    interestsSerializeDictionary.Add(weight, utf8 interest)
+                    weight
             )
 
-let inline handleCity city (account: Account) =
-    let mutable cityIndex = 0L
-    if citiesDictionary.TryGetValue(city, &cityIndex)
+let inline handleCity city (account: Account) (deletePrevious: bool) =
+    if deletePrevious
     then
-        account.city <- cityIndex
+        citiesIndex.[account.city].Remove(account.id) |> ignore
+    let mutable weight = 0L
+    if citiesWeightDictionary.TryGetValue(city, &weight)
+    then
+        account.city <- weight
     else
-        cityIndex <- getStringWeight city
-        citiesDictionary.Add(city, cityIndex)
-        citiesSerializeDictionary.Add(cityIndex, utf8 city)
-        account.city <- cityIndex
+        weight <- getStringWeight city
+        citiesWeightDictionary.Add(city, weight)
+        citiesSerializeDictionary.Add(weight, utf8 city)
+        account.city <- weight
+    let mutable cityUsers: SortedSet<Int32> = null
+    if citiesIndex.TryGetValue(account.city, &cityUsers)
+    then
+        citiesIndex.[account.city].Add(account.id) |> ignore
+    else
+        cityUsers <- SortedSet()
+        cityUsers.Add(account.id) |> ignore
+        citiesIndex.[account.city] <- cityUsers
 
 let inline handleCountry country (account: Account) =
-    let mutable countryIndex = 0L
-    if countriesDictionary.TryGetValue(country, &countryIndex)
+    let mutable weight = 0L
+    if countriesWeightDictionary.TryGetValue(country, &weight)
     then
-        account.country <- countryIndex
+        account.country <- weight
     else
-        countryIndex <- getStringWeight country
-        countriesDictionary.Add(country, countryIndex)
-        countriesSerializeDictionary.Add(countryIndex, utf8 country)
-        account.country <- countryIndex
+        weight <- getStringWeight country
+        countriesWeightDictionary.Add(country, weight)
+        countriesSerializeDictionary.Add(weight, utf8 country)
+        account.country <- weight
 
 let inline handleFirstName (fname: string) (account: Account) =
-    let mutable nameIndex = 0L
-    if namesDictionary.TryGetValue(fname, &nameIndex)
+    let mutable weight = 0L
+    if namesWeightDictionary.TryGetValue(fname, &weight)
     then
-        account.fname <- nameIndex
+        account.fname <- weight
     else
-        nameIndex <- getStringWeight fname
-        namesDictionary.Add(fname, nameIndex)
-        namesSerializeDictionary.Add(nameIndex, utf8 fname)
-        account.fname <- nameIndex
+        weight <- getStringWeight fname
+        namesWeightDictionary.Add(fname, weight)
+        namesSerializeDictionary.Add(weight, utf8 fname)
+        account.fname <- weight
 
 let inline handleSecondName (sname: string) (account: Account) =
-    let mutable snameIndex = 0L
-    if snamesDictionary.TryGetValue(sname, &snameIndex)
+    let mutable weight = 0L
+    if snamesWeightDictionary.TryGetValue(sname, &weight)
     then
-        account.sname <- snameIndex
+        account.sname <- weight
     else
-        snameIndex <- getStringWeight sname
-        snamesDictionary.Add(sname, snameIndex)
-        snamesSerializeDictionary.Add(snameIndex, struct(sname,utf8 sname))
-        account.sname <- snameIndex
+        weight <- getStringWeight sname
+        snamesWeightDictionary.Add(sname, weight)
+        snamesSerializeDictionary.Add(weight, struct(sname,utf8 sname))
+        account.sname <- weight
 
 let inline handleEmail (email: string) (account: Account) =
     let atIndex = email.IndexOf('@', StringComparison.Ordinal)
@@ -214,9 +225,9 @@ let inline handlePhone (phone: string) (account: Account) =
     account.phoneCode <- phoneCode
 
 let inline addLikeToDictionary liker likee likeTs =
-    if likesDictionary.ContainsKey(likee) |> not
-    then likesDictionary.Add(likee, SortedDictionary<int, struct(single*int)>(intReverseComparer))
-    let likers = likesDictionary.[likee]
+    if likesIndex.ContainsKey(likee) |> not
+    then likesIndex.Add(likee, SortedDictionary<int, struct(single*int)>(intReverseComparer))
+    let likers = likesIndex.[likee]
     if likers.ContainsKey(liker)
     then
         let struct(ts, count) = likers.[liker]
@@ -228,7 +239,7 @@ let handleLikes (likes: Like[]) (account: Account) (deletePrevious: bool) =
     if deletePrevious
     then
         for likeId in account.likes do
-            let likers = likesDictionary.[likeId]
+            let likers = likesIndex.[likeId]
             likers.Remove(account.id) |> ignore
     for like in likes do
         addLikeToDictionary account.id like.id like.ts
@@ -265,9 +276,7 @@ let createAccount (accUpd: AccountUpd): Account =
     account.birthYear <- (convertToDate accUpd.birth.Value).Year
     account.joined <- accUpd.joined.Value
     account.joinedYear <- (convertToDate accUpd.joined.Value).Year
-    if accUpd.city |> isNotNull
-    then
-        handleCity accUpd.city account
+
     if accUpd.country |> isNotNull
     then
         handleCountry accUpd.country account
@@ -276,6 +285,9 @@ let createAccount (accUpd: AccountUpd): Account =
     if accUpd.likes |> isNotNull
     then
         handleLikes accUpd.likes account false
+    if accUpd.city |> isNotNull
+    then
+        handleCity accUpd.city account false
     emailsDictionary.Add(account.email) |> ignore
     account
 
@@ -293,9 +305,6 @@ let updateExistingAccount (existing: Account, accUpd: AccountUpd) =
         if accUpd.sex.Length > 1
         then raise (ArgumentOutOfRangeException("Sex is wrong"))
         existing.sex <- accUpd.sex.[0]
-    if accUpd.city |> isNotNull
-    then
-        handleCity accUpd.city existing
     if accUpd.country |> isNotNull
     then
         handleCountry accUpd.country existing
@@ -327,14 +336,18 @@ let updateExistingAccount (existing: Account, accUpd: AccountUpd) =
     if accUpd.likes |> isNotNull
     then
         handleLikes accUpd.likes existing true
+    if accUpd.city |> isNotNull
+    then
+        handleCity accUpd.city existing true
     if accUpd.email |> isNotNull
-    then emailsDictionary.Add(accUpd.email) |> ignore
+    then
+        emailsDictionary.Add(accUpd.email) |> ignore
     ()
 
 let getInterestContainsAccounts (str: string) =
     let mutable criteria = Unchecked.defaultof<BICriteria>
     for value in str.Split(',') do
-        let interest = interestsDictionary.[value]
+        let interest = interestsWeightDictionary.[value]
         if criteria |> isNull
         then
             criteria <- BICriteria.equals(BIKey(0, interest))
@@ -350,7 +363,7 @@ let getInterestContainsAccounts (str: string) =
 let getInterestAnyAccounts (str: string) =
     let mutable criteria = Unchecked.defaultof<BICriteria>
     for value in str.Split(',') do
-        let interest = interestsDictionary.[value]
+        let interest = interestsWeightDictionary.[value]
         if criteria |> isNull
         then
             criteria <- BICriteria.equals(BIKey(0, interest))
@@ -364,25 +377,66 @@ let getInterestAnyAccounts (str: string) =
 
 let getLikesContainsAccounts (value: string) =
     let values = value.Split(',')
-    let keys = 
-        values
-        |> Seq.map (fun str -> Int32.Parse(str))    
-        |> Seq.cache    
-    if Seq.forall (fun key -> likesDictionary.ContainsKey(key)) keys 
+    if (value.Length <> 1)
     then
-        Seq.collect (fun key -> likesDictionary.[key].Keys) keys
+        let keys =
+            values
+            |> Seq.map (fun str -> Int32.Parse(str))
+            |> Seq.cache
+        if Seq.forall (fun key -> likesIndex.ContainsKey(key)) keys
+        then
+            Seq.collect (fun key -> likesIndex.[key].Keys) keys
+        else
+            Seq.empty
+        |> Seq.countBy id
+        |> Seq.filter (fun (id, count) -> count = values.Length)
+        |> Seq.map (fun (id, _) -> accounts.[id])
     else
-        Seq.empty
-    |> Seq.countBy id
-    |> Seq.filter (fun (id, count) -> count = values.Length)
-    |> Seq.map (fun (id, _) -> accounts.[id])
+        let key = Int32.Parse(value)
+        if likesIndex.ContainsKey(key)
+        then
+            seq likesIndex.[key].Keys
+        else
+            Seq.empty
+        |> Seq.map (fun id -> accounts.[id])
+
+let sortedCollect (sortedSets: SortedSet<int> seq) =
+    let setsArray = sortedSets |> Seq.toArray
+    let enumerators = setsArray |> Array.map (fun set -> set.GetEnumerator())
+    seq {
+        let mutable finish = false
+        while finish |> not do
+            yield setsArray.[0].First()
+    }
+
+let getCityAnyAccounts (value: string) =
+    let values = value.Split(',')
+    if (value.Length <> 1)
+    then
+        if Seq.forall (fun key -> citiesWeightDictionary.ContainsKey(key)) values
+        then
+            Seq.map (fun key -> citiesWeightDictionary.[key]) values
+        else
+            Seq.empty
+        |> Seq.map (fun weight -> citiesIndex.[weight])
+        |> sortedCollect
+        |> Seq.map (fun id -> accounts.[id])
+    else
+        if citiesWeightDictionary.ContainsKey(value) |> not
+        then
+            Seq.empty
+        else
+            let weight = citiesWeightDictionary.[value]
+            citiesIndex.[weight]
+            |> Seq.map (fun id -> accounts.[id])
 
 let rec getAccountsByQuery keys (ctx : HttpContext) =
     match keys with
     | [] -> getRevAccounts()
+    | h::t when h = "likes_contains" -> getLikesContainsAccounts (ctx.Request.Query.["likes_contains"].[0])
     | h::t when h = "interests_contains" -> getInterestContainsAccounts (ctx.Request.Query.["interests_contains"].[0])
     | h::t when h = "interests_any" -> getInterestAnyAccounts (ctx.Request.Query.["interests_any"].[0])
-    | h::t when h = "likes_contains" -> getLikesContainsAccounts (ctx.Request.Query.["likes_contains"].[0])
+    | h::t when h = "city_any" -> getCityAnyAccounts (ctx.Request.Query.["city_any"].[0])
     | h::t -> getAccountsByQuery t ctx
 
 let getFilteredAccounts (next, ctx : HttpContext) =
@@ -657,7 +711,7 @@ let getSuggestedAccounts (id, next, ctx : HttpContext) =
                     |> Seq.map (fun (key, value) -> recommendFilters.[key] value)
                 let similaritiesWithUsers = Dictionary<int, single>()
                 for likeId in target.likes do
-                    getSimilarityNew target.id (likesDictionary.[likeId]) similaritiesWithUsers
+                    getSimilarityNew target.id (likesIndex.[likeId]) similaritiesWithUsers
                 let similarAccounts =
                     similaritiesWithUsers.Keys
                     |> Seq.map (fun id -> accounts.[id])
@@ -892,18 +946,18 @@ let loadData folder =
                         GC.Collect(2)
                     )
 
-    namesSerializeDictionary <- namesDictionary.ToDictionary((fun kv -> kv.Value), (fun kv -> utf8 kv.Key))
-    snamesSerializeDictionary <- snamesDictionary.ToDictionary((fun kv -> kv.Value), (fun kv -> struct(kv.Key, utf8 kv.Key)))
-    citiesSerializeDictionary <- citiesDictionary.ToDictionary((fun kv -> kv.Value), (fun kv -> utf8 kv.Key))
-    countriesSerializeDictionary <- countriesDictionary.ToDictionary((fun kv -> kv.Value), (fun kv -> utf8 kv.Key))
-    interestsSerializeDictionary <- interestsDictionary.ToDictionary((fun kv -> kv.Value), (fun kv -> utf8 kv.Key))
+    namesSerializeDictionary <- namesWeightDictionary.ToDictionary((fun kv -> kv.Value), (fun kv -> utf8 kv.Key))
+    snamesSerializeDictionary <- snamesWeightDictionary.ToDictionary((fun kv -> kv.Value), (fun kv -> struct(kv.Key, utf8 kv.Key)))
+    citiesSerializeDictionary <- citiesWeightDictionary.ToDictionary((fun kv -> kv.Value), (fun kv -> utf8 kv.Key))
+    countriesSerializeDictionary <- countriesWeightDictionary.ToDictionary((fun kv -> kv.Value), (fun kv -> utf8 kv.Key))
+    interestsSerializeDictionary <- interestsWeightDictionary.ToDictionary((fun kv -> kv.Value), (fun kv -> utf8 kv.Key))
 
     buildBitMapIndex() |> ignore
 
     let memSize = Process.GetCurrentProcess().PrivateMemorySize64/MB
     Console.WriteLine("Accounts {0}. Memory used {1}MB", accountsNumber, memSize)
     Console.WriteLine("Dictionaries names={0},cities={1},countries={2},interests={3},snames={4}",
-        namesDictionary.Count, citiesDictionary.Count,countriesDictionary.Count,interestsDictionary.Count,snamesDictionary.Count)
+        namesWeightDictionary.Count, citiesWeightDictionary.Count,countriesWeightDictionary.Count,interestsWeightDictionary.Count,snamesWeightDictionary.Count)
 
 
 [<EntryPoint>]
