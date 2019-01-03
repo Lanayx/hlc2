@@ -162,14 +162,17 @@ let handleCity city (account: Account) (deletePrevious: bool) =
         citiesWeightDictionary.Add(city, weight)
         citiesSerializeDictionary.Add(weight, utf8 city)
         account.city <- weight
-    let mutable cityUsers: SortedSet<Int32> = null
-    if citiesIndex.TryGetValue(account.city, &cityUsers)
+
+    if account.city > 0L
     then
-        citiesIndex.[account.city].Add(account.id) |> ignore
-    else
-        cityUsers <- SortedSet(intReverseComparer)
-        cityUsers.Add(account.id) |> ignore
-        citiesIndex.[account.city] <- cityUsers
+        let mutable cityUsers: SortedSet<Int32> = null
+        if citiesIndex.TryGetValue(account.city, &cityUsers)
+        then
+            citiesIndex.[account.city].Add(account.id) |> ignore
+        else
+            cityUsers <- SortedSet(intReverseComparer)
+            cityUsers.Add(account.id) |> ignore
+            citiesIndex.[account.city] <- cityUsers
 
 let inline handleCountry country (account: Account) =
     let mutable weight = 0L
@@ -434,11 +437,9 @@ let getCityAnyAccounts (value: string) =
     let values = value.Split(',')
     if (value.Length <> 1)
     then
-        if Seq.forall (fun key -> citiesWeightDictionary.ContainsKey(key)) values
-        then
-            Seq.map (fun key -> citiesWeightDictionary.[key]) values
-        else
-            Seq.empty
+        values
+        |> Seq.filter (fun key -> citiesWeightDictionary.ContainsKey(key))
+        |> Seq.map (fun key -> citiesWeightDictionary.[key])
         |> Seq.map (fun weight -> citiesIndex.[weight])
         |> sortedCollect
         |> Seq.map (fun id -> accounts.[id])
