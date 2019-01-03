@@ -17,4 +17,5 @@ let mutable interestsSerializeDictionary = Dictionary<int64, byte[]>()
 
 let likesIndex = Dictionary<int, SortedDictionary<int, struct(single*int)>>()
 let citiesIndex = Dictionary<int64, SortedSet<int>>()
+let countriesIndex = Dictionary<int64, SortedSet<int>>()
 let emailsDictionary = HashSet<string>()

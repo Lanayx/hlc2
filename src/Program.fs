@@ -174,7 +174,10 @@ let handleCity city (account: Account) (deletePrevious: bool) =
             cityUsers.Add(account.id) |> ignore
             citiesIndex.[account.city] <- cityUsers
 
-let inline handleCountry country (account: Account) =
+let inline handleCountry country (account: Account) (deletePrevious: bool) =
+    if deletePrevious && account.country > 0L
+    then
+        countriesIndex.[account.country].Remove(account.id) |> ignore
     let mutable weight = 0L
     if countriesWeightDictionary.TryGetValue(country, &weight)
     then
@@ -184,6 +187,17 @@ let inline handleCountry country (account: Account) =
         countriesWeightDictionary.Add(country, weight)
         countriesSerializeDictionary.Add(weight, utf8 country)
         account.country <- weight
+
+    if account.country > 0L
+    then
+        let mutable countryUsers: SortedSet<Int32> = null
+        if countriesIndex.TryGetValue(account.country, &countryUsers)
+        then
+            countriesIndex.[account.country].Add(account.id) |> ignore
+        else
+            countryUsers <- SortedSet(intReverseComparer)
+            countryUsers.Add(account.id) |> ignore
+            countriesIndex.[account.country] <- countryUsers
 
 let inline handleFirstName (fname: string) (account: Account) =
     let mutable weight = 0L
@@ -278,11 +292,7 @@ let createAccount (accUpd: AccountUpd): Account =
     account.birth <- accUpd.birth.Value
     account.birthYear <- (convertToDate accUpd.birth.Value).Year
     account.joined <- accUpd.joined.Value
-    account.joinedYear <- (convertToDate accUpd.joined.Value).Year
-
-    if accUpd.country |> isNotNull
-    then
-        handleCountry accUpd.country account
+    account.joinedYear <- (convertToDate accUpd.joined.Value).Year    
 
     // handle fields with indexes to not fill indexes on failures
     if accUpd.likes |> isNotNull
@@ -291,6 +301,9 @@ let createAccount (accUpd: AccountUpd): Account =
     if accUpd.city |> isNotNull
     then
         handleCity accUpd.city account false
+    if accUpd.country |> isNotNull
+    then
+        handleCountry accUpd.country account false
     emailsDictionary.Add(account.email) |> ignore
     account
 
@@ -307,10 +320,7 @@ let updateExistingAccount (existing: Account, accUpd: AccountUpd) =
     then
         if accUpd.sex.Length > 1
         then raise (ArgumentOutOfRangeException("Sex is wrong"))
-        existing.sex <- accUpd.sex.[0]
-    if accUpd.country |> isNotNull
-    then
-        handleCountry accUpd.country existing
+        existing.sex <- accUpd.sex.[0]    
     if accUpd.email |> isNotNull
     then
         handleEmail accUpd.email existing
@@ -342,6 +352,9 @@ let updateExistingAccount (existing: Account, accUpd: AccountUpd) =
     if accUpd.city |> isNotNull
     then
         handleCity accUpd.city existing true
+    if accUpd.country |> isNotNull
+    then
+        handleCountry accUpd.country existing true
     if accUpd.email |> isNotNull
     then
         emailsDictionary.Add(accUpd.email) |> ignore
@@ -454,6 +467,24 @@ let getCityAnyAccounts (value: string) =
             let weight = citiesWeightDictionary.[value]
             citiesIndex.[weight]
             |> Seq.map (fun id -> accounts.[id])
+    
+let getCityEqAccounts (value: string) =   
+    let mutable weight = 0L
+    if citiesWeightDictionary.TryGetValue(value, &weight)
+    then    
+        citiesIndex.[weight]
+        |> Seq.map (fun id -> accounts.[id])
+    else
+        Seq.empty
+
+let getCountryEqAccounts (value: string) =   
+    let mutable weight = 0L
+    if countriesWeightDictionary.TryGetValue(value, &weight)
+    then    
+        countriesIndex.[weight]
+        |> Seq.map (fun id -> accounts.[id])
+    else
+        Seq.empty
 
 let rec getFilteredAccountsByQuery keys (ctx : HttpContext) =
     match keys with
@@ -462,6 +493,8 @@ let rec getFilteredAccountsByQuery keys (ctx : HttpContext) =
     | h::t when h = "interests_contains" -> getInterestContainsAccounts (ctx.Request.Query.["interests_contains"].[0])
     | h::t when h = "interests_any" -> getInterestAnyAccounts (ctx.Request.Query.["interests_any"].[0])
     | h::t when h = "city_any" -> getCityAnyAccounts (ctx.Request.Query.["city_any"].[0])
+    | h::t when h = "city_eq" -> getCityEqAccounts (ctx.Request.Query.["city_eq"].[0])
+    | h::t when h = "country_eq" -> getCountryEqAccounts (ctx.Request.Query.["country_eq"].[0])
     | h::t -> getFilteredAccountsByQuery t ctx
 
 let getFilteredAccounts (next, ctx : HttpContext) =
