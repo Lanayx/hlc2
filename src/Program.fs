@@ -149,8 +149,8 @@ let inline handleInterests (interests: string[]) (account: Account) =
                     weight
             )
 
-let inline handleCity city (account: Account) (deletePrevious: bool) =
-    if deletePrevious
+let handleCity city (account: Account) (deletePrevious: bool) =
+    if deletePrevious && account.city > 0L
     then
         citiesIndex.[account.city].Remove(account.id) |> ignore
     let mutable weight = 0L
@@ -167,7 +167,7 @@ let inline handleCity city (account: Account) (deletePrevious: bool) =
     then
         citiesIndex.[account.city].Add(account.id) |> ignore
     else
-        cityUsers <- SortedSet()
+        cityUsers <- SortedSet(intReverseComparer)
         cityUsers.Add(account.id) |> ignore
         citiesIndex.[account.city] <- cityUsers
 
@@ -400,14 +400,35 @@ let getLikesContainsAccounts (value: string) =
             Seq.empty
         |> Seq.map (fun id -> accounts.[id])
 
+let array_max_with_ind (arr: int[]) =
+    let mutable max = 0
+    let mutable maxIndex = 0
+    for i in [0..arr.Length-1] do
+        if arr.[i] > max
+        then 
+            max <- arr.[i]
+            maxIndex <- i
+    struct(max, maxIndex)
+
 let sortedCollect (sortedSets: SortedSet<int> seq) =
     let setsArray = sortedSets |> Seq.toArray
     let enumerators = setsArray |> Array.map (fun set -> set.GetEnumerator())
+    for i in [0..enumerators.Length-1] do
+        enumerators.[i].MoveNext() |> ignore
+    let firstValues = enumerators |> Array.map (fun en -> en.Current)
     seq {
-        let mutable finish = false
-        while finish |> not do
-            yield setsArray.[0].First()
+        let mutable enumerable = enumerators.Length
+        while enumerable > 0 do
+            let struct(max, maxIndex) = firstValues |> array_max_with_ind
+            if (enumerators.[maxIndex].MoveNext())
+            then 
+                firstValues.[maxIndex] <- enumerators.[maxIndex].Current
+            else
+                firstValues.[maxIndex] <- 0
+                enumerable <- enumerable - 1
+            yield max
     }
+    |> Seq.cache
 
 let getCityAnyAccounts (value: string) =
     let values = value.Split(',')
@@ -459,6 +480,8 @@ let getFilteredAccounts (next, ctx : HttpContext) =
         let memoryStream = serializeAccounts (accs, keys)
         writeResponse memoryStream next ctx
     with
+    | :? IndexOutOfRangeException ->
+        setStatusCode 400 next ctx
     | :? KeyNotFoundException ->
         setStatusCode 400 next ctx
     | :? FormatException ->
@@ -527,6 +550,7 @@ let applyGrouping (memoryStream: byref<MemoryStream>, groupKey, order, accs: Acc
     | "city,sex" ->
         let groups =
             accs
+            
             |> Seq.groupBy (fun acc -> acc.city, acc.sex)
             |> Seq.map (fun (key, group) -> key, group |> Seq.length)
             |> seq_sort order (fun (group,length) -> length, group)
@@ -825,6 +849,9 @@ let updateAccount (id, next, ctx : HttpContext) =
                 with
                 | :? ArgumentOutOfRangeException ->
                     accounts.[id] <- rollback
+                    return! setStatusCode 400 next ctx
+                
+                | :? KeyNotFoundException ->
                     return! setStatusCode 400 next ctx
             with
             | :? JsonParsingException ->
