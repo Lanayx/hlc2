@@ -31,7 +31,7 @@ type RequestCounterMiddleware (next : RequestDelegate,
                                     Process.GetCurrentProcess().PrivateMemorySize64/MB)
         (next.Invoke ctx).ContinueWith(
             fun x ->
-                if sw.ElapsedMilliseconds > 25L
+                if sw.ElapsedMilliseconds > 20L
                 then
                     Console.WriteLine("Slow request {0} ms: {1}",
                         sw.ElapsedMilliseconds.ToString(CultureInfo.InvariantCulture),

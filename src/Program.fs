@@ -34,6 +34,7 @@ open Microsoft.Extensions.DependencyInjection
 open System.Text.RegularExpressions
 open System.Diagnostics
 open BitmapIndex
+open System.Collections.ObjectModel
 
 // ---------------------------------
 // Web app
@@ -149,39 +150,45 @@ let inline handleInterests (interests: string[]) (account: Account) =
                     weight
             )
 
-let updateCityIndex (account: Account) = 
-    let mutable citySexGroupCount: int = 0
-    let key = (account.city,account.sex)
-    if citySexGroups.TryGetValue(key, &citySexGroupCount)
+let updateCityIndex oldSex oldStatus oldCity (account: Account) (deletePrevious: bool) = 
+    if deletePrevious
     then
-        citySexGroups.[key] <- citySexGroupCount + 1
-    else
-        citySexGroups.[key] <- 1
+        citySexGroups.[oldSex].[oldCity] <- citySexGroups.[oldSex].[oldCity] - 1
+        cityStatusGroups.[oldStatus].[oldCity] <- cityStatusGroups.[oldStatus].[oldCity] - 1
 
-    let mutable cityStatusGroupCount: int = 0
-    let key = (account.city,account.status)
-    if cityStatusGroups.TryGetValue(key, &cityStatusGroupCount)
+    let mutable sexCount: int = 0    
+    if citySexGroups.[account.sex].TryGetValue(account.city, &sexCount)
     then
-        cityStatusGroups.[key] <- cityStatusGroupCount + 1
+        citySexGroups.[account.sex].[account.city] <- sexCount + 1
     else
-        cityStatusGroups.[key] <- 1
+        citySexGroups.[account.sex].[account.city] <- 1
 
-let updateCountryIndex (account: Account) = 
-    let mutable countrySexGroupCount: int = 0
-    let key = (account.country,account.sex)
-    if countrySexGroups.TryGetValue(key, &countrySexGroupCount)
+    let mutable statusCount: int = 0
+    if cityStatusGroups.[account.status].TryGetValue(account.city, &statusCount)
     then
-        countrySexGroups.[key] <- countrySexGroupCount + 1
+        cityStatusGroups.[account.status].[account.city] <- statusCount + 1
     else
-        countrySexGroups.[key] <- 1
+        cityStatusGroups.[account.status].[account.city] <- 1
 
-    let mutable countryStatusGroupCount: int = 0
-    let key = (account.country,account.status)
-    if countryStatusGroups.TryGetValue(key, &countryStatusGroupCount)
+let updateCountryIndex oldSex oldStatus oldCountry (account: Account) (deletePrevious: bool) =
+    if deletePrevious
     then
-        countryStatusGroups.[key] <- countryStatusGroupCount + 1
+        countrySexGroups.[oldSex].[oldCountry] <- countrySexGroups.[oldSex].[oldCountry] - 1
+        countryStatusGroups.[oldStatus].[oldCountry] <- countryStatusGroups.[oldStatus].[oldCountry] - 1
+
+    let mutable sexCount: int = 0    
+    if countrySexGroups.[account.sex].TryGetValue(account.country, &sexCount)
+    then
+        countrySexGroups.[account.sex].[account.country] <- sexCount + 1
     else
-        countryStatusGroups.[key] <- 1
+        countrySexGroups.[account.sex].[account.country] <- 1
+
+    let mutable statusCount: int = 0
+    if countryStatusGroups.[account.status].TryGetValue(account.country, &statusCount)
+    then
+        countryStatusGroups.[account.status].[account.country] <- statusCount + 1
+    else
+        countryStatusGroups.[account.status].[account.country] <- 1
 
 let handleCity city (account: Account) (deletePrevious: bool) =
     if deletePrevious && account.city > 0L
@@ -335,12 +342,17 @@ let createAccount (accUpd: AccountUpd): Account =
     if accUpd.country |> isNotNull
     then
         handleCountry accUpd.country account false
-    updateCityIndex account
-    updateCountryIndex account
+    updateCityIndex ' ' 0 0L account false
+    updateCountryIndex ' ' 0 0L account false
     emailsDictionary.Add(account.email) |> ignore
     account
 
 let updateExistingAccount (existing: Account, accUpd: AccountUpd) =
+    let oldCity = existing.city
+    let oldCountry = existing.country
+    let oldStatus = existing.status
+    let oldSex = existing.sex
+
     if accUpd.birth.HasValue
     then
         existing.birth <- accUpd.birth.Value
@@ -387,7 +399,13 @@ let updateExistingAccount (existing: Account, accUpd: AccountUpd) =
         handleCity accUpd.city existing true
     if accUpd.country |> isNotNull
     then
-        handleCountry accUpd.country existing true
+        handleCountry accUpd.country existing true 
+    if accUpd.city |> isNotNull || accUpd.sex |> isNotNull || accUpd.status |> isNotNull
+    then
+        updateCityIndex oldSex oldStatus oldCity existing true
+    if accUpd.country |> isNotNull || accUpd.sex |> isNotNull || accUpd.status |> isNotNull
+    then
+        updateCountryIndex oldSex oldStatus oldCountry existing true  
     if accUpd.email |> isNotNull
     then
         emailsDictionary.Add(accUpd.email) |> ignore
@@ -461,7 +479,39 @@ let arrayMaxWithInd (arr: int[]) =
             maxIndex <- i
     struct(max, maxIndex)
 
-let sortedCollect (sortedSets: SortedSet<int> seq) =
+let arrayMinInd (arr: KeyValuePair<int64,int>[]) =
+    let mutable minIndex = 0
+    for i in [0..arr.Length-1] do
+        if arr.[i].Value < arr.[minIndex].Value 
+            || (arr.[i].Value = arr.[minIndex].Value && arr.[i].Key < arr.[minIndex].Key)
+        then
+            minIndex <- i
+    minIndex
+
+let sortedCollectDict<'T> (sortedSets: KeyValuePair<'T,Dictionary<int64, int>> seq) =
+    let setsArray = sortedSets |> Seq.toArray
+    let enumerators = setsArray |> Array.map (fun kv -> kv.Value.GetEnumerator())
+    let types = setsArray |> Array.map (fun kv -> kv.Key)
+    for i in [0..enumerators.Length-1] do
+        enumerators.[i].MoveNext() |> ignore
+    let firstValues = enumerators |> Array.map (fun en -> en.Current)
+    seq {
+        let mutable enumerable = enumerators.Length
+        while enumerable > 0 do
+            let minIndex = firstValues |> arrayMinInd
+            let t = types.[minIndex]
+            let values = enumerators.[minIndex].Current
+            if (enumerators.[minIndex].MoveNext())
+            then
+                firstValues.[minIndex] <- enumerators.[minIndex].Current
+            else
+                firstValues.[minIndex] <- KeyValuePair(Int64.MaxValue,Int32.MaxValue)
+                enumerable <- enumerable - 1
+            yield (values.Key, t), values.Value
+    }
+    |> Seq.cache
+
+let sortedReverseCollect (sortedSets: SortedSet<int> seq) =
     let setsArray = sortedSets |> Seq.toArray
     let enumerators = setsArray |> Array.map (fun set -> set.GetEnumerator())
     for i in [0..enumerators.Length-1] do
@@ -489,7 +539,7 @@ let getCityAnyAccounts (value: string) =
         |> Seq.filter (fun key -> citiesWeightDictionary.ContainsKey(key))
         |> Seq.map (fun key -> citiesWeightDictionary.[key])
         |> Seq.map (fun weight -> citiesIndex.[weight])
-        |> sortedCollect
+        |> sortedReverseCollect
         |> Seq.map (fun id -> accounts.[id])
     else
         if citiesWeightDictionary.ContainsKey(value) |> not
@@ -698,26 +748,26 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, order
     | "city,status" ->
         let groups =
             cityStatusGroups
-            |> seq_take order cityStatusGroups.Count limit
-            |> Seq.map (fun kv -> kv.Key, kv.Value)
+            |> sortedCollectDict
+            |> seq_take order (cityStatusGroups.[0].Count + cityStatusGroups.[1].Count + cityStatusGroups.[2].Count) limit
         memoryStream <- serializeGroups2Status(groups, "city", "status")
     | "city,sex" ->
         let groups =
             citySexGroups
-            |> seq_take order citySexGroups.Count limit
-            |> Seq.map (fun kv -> kv.Key, kv.Value)
+            |> sortedCollectDict
+            |> seq_take order (citySexGroups.['f'].Count + citySexGroups.['m'].Count) limit
         memoryStream <- serializeGroups2Sex(groups, "city", "sex")
     | "country,sex" ->
         let groups =
             countrySexGroups
-            |> seq_take order countrySexGroups.Count limit
-            |> Seq.map (fun kv -> kv.Key, kv.Value)
+            |> sortedCollectDict
+            |> seq_take order (countrySexGroups.['f'].Count + countrySexGroups.['m'].Count) limit
         memoryStream <- serializeGroups2Sex(groups, "country", "sex")
     | "country,status" ->
         let groups =
             countryStatusGroups
-            |> seq_take order countryStatusGroups.Count limit
-            |> Seq.map (fun kv -> kv.Key, kv.Value)
+            |> sortedCollectDict
+            |> seq_take order (countryStatusGroups.[0].Count + countryStatusGroups.[1].Count + countryStatusGroups.[2].Count) limit
         memoryStream <- serializeGroups2Status(groups, "country", "status")
     | _ ->
         ()
@@ -1086,10 +1136,16 @@ let buildBitMapIndex() =
             |> Seq.iter (fun interest -> interestsIndex.Set(BIKey(0,interest),account.id)))
 
 let sortGroupDictionaries() =
-    citySexGroups <- citySexGroups.OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
-    cityStatusGroups <- cityStatusGroups.OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
-    countrySexGroups <- countrySexGroups.OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
-    countryStatusGroups <- countryStatusGroups.OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
+    citySexGroups.['f'] <- citySexGroups.['f'].OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
+    citySexGroups.['m'] <- citySexGroups.['m'].OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
+    cityStatusGroups.[0] <- cityStatusGroups.[0].OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
+    cityStatusGroups.[1] <- cityStatusGroups.[1].OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
+    cityStatusGroups.[2] <- cityStatusGroups.[2].OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
+    countrySexGroups.['f'] <- countrySexGroups.['f'].OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
+    countrySexGroups.['m'] <- countrySexGroups.['m'].OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
+    countryStatusGroups.[0] <- countryStatusGroups.[0].OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
+    countryStatusGroups.[1] <- countryStatusGroups.[1].OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
+    countryStatusGroups.[2] <- countryStatusGroups.[2].OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
 
 let indexesRebuild() =
     buildBitMapIndex()
