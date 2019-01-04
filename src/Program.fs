@@ -149,6 +149,40 @@ let inline handleInterests (interests: string[]) (account: Account) =
                     weight
             )
 
+let updateCityIndex (account: Account) = 
+    let mutable citySexGroupCount: int = 0
+    let key = (account.city,account.sex)
+    if citySexGroups.TryGetValue(key, &citySexGroupCount)
+    then
+        citySexGroups.[key] <- citySexGroupCount + 1
+    else
+        citySexGroups.[key] <- 1
+
+    let mutable cityStatusGroupCount: int = 0
+    let key = (account.city,account.status)
+    if cityStatusGroups.TryGetValue(key, &cityStatusGroupCount)
+    then
+        cityStatusGroups.[key] <- cityStatusGroupCount + 1
+    else
+        cityStatusGroups.[key] <- 1
+
+let updateCountryIndex (account: Account) = 
+    let mutable countrySexGroupCount: int = 0
+    let key = (account.country,account.sex)
+    if countrySexGroups.TryGetValue(key, &countrySexGroupCount)
+    then
+        countrySexGroups.[key] <- countrySexGroupCount + 1
+    else
+        countrySexGroups.[key] <- 1
+
+    let mutable countryStatusGroupCount: int = 0
+    let key = (account.country,account.status)
+    if countryStatusGroups.TryGetValue(key, &countryStatusGroupCount)
+    then
+        countryStatusGroups.[key] <- countryStatusGroupCount + 1
+    else
+        countryStatusGroups.[key] <- 1
+
 let handleCity city (account: Account) (deletePrevious: bool) =
     if deletePrevious && account.city > 0L
     then
@@ -162,45 +196,14 @@ let handleCity city (account: Account) (deletePrevious: bool) =
         citiesWeightDictionary.Add(city, weight)
         citiesSerializeDictionary.Add(weight, utf8 city)
         account.city <- weight
-
-    if account.city > 0L
+    let mutable cityUsers: SortedSet<Int32> = null
+    if citiesIndex.TryGetValue(account.city, &cityUsers)
     then
-        let mutable cityUsers: SortedSet<Int32> = null
-        if citiesIndex.TryGetValue(account.city, &cityUsers)
-        then
-            cityUsers.Add(account.id) |> ignore
-        else
-            cityUsers <- SortedSet(intReverseComparer)
-            cityUsers.Add(account.id) |> ignore
-            citiesIndex.[account.city] <- cityUsers
-
-        let mutable citySexGroup: Dictionary<char,int> = null
-        if citySexGroups.TryGetValue(account.city, &citySexGroup)
-        then
-            let mutable groupNumber = 0
-            if citySexGroup.TryGetValue(account.sex, &groupNumber)
-            then
-                citySexGroup.[account.sex] <- groupNumber + 1
-            else
-                citySexGroup.[account.sex] <- 1
-        else
-            citySexGroup <- Dictionary<char, int>()
-            citySexGroup.[account.sex] <- 1
-            citySexGroups.[account.city] <- citySexGroup
-
-        let mutable cityStatusGroup: Dictionary<int,int> = null
-        if cityStatusGroups.TryGetValue(account.city, &cityStatusGroup)
-        then
-            let mutable groupNumber = 0
-            if cityStatusGroup.TryGetValue(account.status, &groupNumber)
-            then
-                cityStatusGroup.[account.status] <- groupNumber + 1
-            else
-                cityStatusGroup.[account.status] <- 1
-        else
-            cityStatusGroup <- Dictionary<int, int>()
-            cityStatusGroup.[account.status] <- 1
-            cityStatusGroups.[account.city] <- cityStatusGroup
+        cityUsers.Add(account.id) |> ignore
+    else
+        cityUsers <- SortedSet(intReverseComparer)
+        cityUsers.Add(account.id) |> ignore
+        citiesIndex.[account.city] <- cityUsers
 
 let inline handleCountry country (account: Account) (deletePrevious: bool) =
     if deletePrevious && account.country > 0L
@@ -332,6 +335,8 @@ let createAccount (accUpd: AccountUpd): Account =
     if accUpd.country |> isNotNull
     then
         handleCountry accUpd.country account false
+    updateCityIndex account
+    updateCountryIndex account
     emailsDictionary.Add(account.email) |> ignore
     account
 
@@ -402,7 +407,6 @@ let getInterestContainsAccounts (str: string) =
         for i = result.Count-1 downto 0 do
             yield accounts.[result.[i]]
     }
-
 
 let getInterestAnyAccounts (str: string) =
     let mutable criteria = Unchecked.defaultof<BICriteria>
@@ -562,8 +566,10 @@ let seq_sort order =
 
 let seq_take order length take =
     if order = -1
-    then Seq.skip (length - take)
-    else Seq.truncate take
+    then 
+        Seq.skip (length - take) >> Seq.rev
+    else 
+        Seq.truncate take
 
 let applyGrouping (memoryStream: byref<MemoryStream>, groupKey, order, accs: Account seq, limit) =
     match groupKey with
@@ -693,33 +699,25 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, order
         let groups =
             cityStatusGroups
             |> seq_take order cityStatusGroups.Count limit
-            |> Seq.collect (fun kv ->
-                kv.Value |> Seq.map(fun xy -> ((kv.Key,xy.Key), xy.Value))
-                )
+            |> Seq.map (fun kv -> kv.Key, kv.Value)
         memoryStream <- serializeGroups2Status(groups, "city", "status")
     | "city,sex" ->
         let groups =
             citySexGroups
             |> seq_take order citySexGroups.Count limit
-            |> Seq.collect (fun kv ->
-                kv.Value |> Seq.map(fun xy -> ((kv.Key,xy.Key), xy.Value))
-                )
+            |> Seq.map (fun kv -> kv.Key, kv.Value)
         memoryStream <- serializeGroups2Sex(groups, "city", "sex")
     | "country,sex" ->
         let groups =
-            accs
-            |> Seq.groupBy (fun acc -> acc.country, acc.sex)
-            |> Seq.map (fun (key, group) -> key, group |> Seq.length)
-            |> seq_sort order (fun (group,length) -> length, group)
-            |> Seq.truncate limit
+            countrySexGroups
+            |> seq_take order countrySexGroups.Count limit
+            |> Seq.map (fun kv -> kv.Key, kv.Value)
         memoryStream <- serializeGroups2Sex(groups, "country", "sex")
     | "country,status" ->
         let groups =
-            accs
-            |> Seq.groupBy (fun acc -> acc.country, acc.status)
-            |> Seq.map (fun (key, group) -> key, group |> Seq.length)
-            |> seq_sort order (fun (group,length) -> length, group)
-            |> Seq.truncate limit
+            countryStatusGroups
+            |> seq_take order countryStatusGroups.Count limit
+            |> Seq.map (fun kv -> kv.Key, kv.Value)
         memoryStream <- serializeGroups2Status(groups, "country", "status")
     | _ ->
         ()
@@ -1087,6 +1085,16 @@ let buildBitMapIndex() =
             account.interests
             |> Seq.iter (fun interest -> interestsIndex.Set(BIKey(0,interest),account.id)))
 
+let sortGroupDictionaries() =
+    citySexGroups <- citySexGroups.OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
+    cityStatusGroups <- cityStatusGroups.OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
+    countrySexGroups <- countrySexGroups.OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
+    countryStatusGroups <- countryStatusGroups.OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
+
+let indexesRebuild() =
+    buildBitMapIndex()
+    sortGroupDictionaries()
+
 let webApp =
     choose [
         GET >=> customGetRoutef
@@ -1141,7 +1149,7 @@ let loadData folder =
     countriesSerializeDictionary <- countriesWeightDictionary.ToDictionary((fun kv -> kv.Value), (fun kv -> utf8 kv.Key))
     interestsSerializeDictionary <- interestsWeightDictionary.ToDictionary((fun kv -> kv.Value), (fun kv -> utf8 kv.Key))
 
-    buildBitMapIndex() |> ignore
+    indexesRebuild() |> ignore
 
     let memSize = Process.GetCurrentProcess().PrivateMemorySize64/MB
     Console.WriteLine("Accounts {0}. Memory used {1}MB", accountsNumber, memSize)
