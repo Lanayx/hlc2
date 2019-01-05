@@ -215,6 +215,11 @@ let loadData folder =
 
     indexesRebuild() |> ignore
 
+    GC.Collect(2, GCCollectionMode.Forced, true, true)
+    GC.WaitForPendingFinalizers()
+    GCSettings.LargeObjectHeapCompactionMode <- GCLargeObjectHeapCompactionMode.CompactOnce
+    GC.Collect(2, GCCollectionMode.Forced, true, true)
+
     let memSize = Process.GetCurrentProcess().PrivateMemorySize64/MB
     Console.WriteLine("Accounts {0}. Memory used {1}MB", accountsNumber, memSize)
     Console.WriteLine("Dictionaries names={0},cities={1},countries={2},interests={3},snames={4}",
