@@ -34,6 +34,7 @@ open System.Text.RegularExpressions
 open System.Diagnostics
 open BitmapIndex
 open System.Collections.ObjectModel
+open System.Runtime
 
 // ---------------------------------
 // Web app
@@ -203,7 +204,7 @@ let loadData folder =
                             accounts.[acc.id.Value] <- PostAccount.createAccount acc
                             Interlocked.Increment(&accountsNumber) |> ignore
                         )
-                        GC.Collect(2)
+                        GC.Collect(2, GCCollectionMode.Forced, true, true)
                     )
 
     namesSerializeDictionary <- namesWeightDictionary.ToDictionary((fun kv -> kv.Value), (fun kv -> utf8 kv.Key))

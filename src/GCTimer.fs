@@ -40,9 +40,9 @@ let runTimer indexRebuild =
                     updateAccountCount.Value,
                     addLikesCount.Value)
                 GCRun <- true
-                GC.Collect(2)
+                GC.Collect(2, GCCollectionMode.Forced, true, true)
             // client.GetAsync("http://127.0.0.1/visits/8").Result |> ignore
-            
+
         else
             GCRun <- false
         lastRequestCount <- outstandingRequestCount.Value
