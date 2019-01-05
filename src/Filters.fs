@@ -49,11 +49,11 @@ let statusNeqFilter (value: string) =
 let firstNameEqFilter (value: string) =
     fun (acc: Account) ->
         let mutable name = 0L
-        namesWeightDictionary.TryGetValue(value, &name) && acc.fname = name
+        fnamesWeightDictionary.TryGetValue(value, &name) && acc.fname = name
 
 let firstNameAnyFilter (value: string) =
     fun (acc: Account) ->
-        value.Split(',') |> Array.exists (fun el -> namesWeightDictionary.[el] = acc.fname)
+        value.Split(',') |> Array.exists (fun el -> fnamesWeightDictionary.[el] = acc.fname)
 
 let firstNameNullFilter (value: string) =
     fun (acc: Account) ->

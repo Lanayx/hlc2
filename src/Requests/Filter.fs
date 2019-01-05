@@ -62,6 +62,25 @@ let getCityAnyAccounts (value: string) =
             citiesIndex.[weight]
             |> Seq.map (fun id -> accounts.[id])
 
+let getFnameAnyAccounts (value: string) =
+    let values = value.Split(',')
+    if (value.Length <> 1)
+    then
+        values
+        |> Seq.filter (fun key -> fnamesWeightDictionary.ContainsKey(key))
+        |> Seq.map (fun key -> fnamesWeightDictionary.[key])
+        |> Seq.map (fun weight -> fnamesIndex.[weight])
+        |> sortedReverseCollect
+        |> Seq.map (fun id -> accounts.[id])
+    else
+        if fnamesWeightDictionary.ContainsKey(value) |> not
+        then
+            Seq.empty
+        else
+            let weight = fnamesWeightDictionary.[value]
+            fnamesIndex.[weight]
+            |> Seq.map (fun id -> accounts.[id])
+
 let getInterestContainsAccounts (str: string) =
     let mutable criteria = Unchecked.defaultof<BICriteria>
     for value in str.Split(',') do
@@ -145,6 +164,7 @@ let rec getFilteredAccountsByQuery keys (ctx : HttpContext) =
     | h::t when h = "interests_contains" -> getInterestContainsAccounts (ctx.Request.Query.["interests_contains"].[0])
     | h::t when h = "interests_any" -> getInterestAnyAccounts (ctx.Request.Query.["interests_any"].[0])
     | h::t when h = "city_any" -> getCityAnyAccounts (ctx.Request.Query.["city_any"].[0])
+    | h::t when h = "fname_any" -> getFnameAnyAccounts (ctx.Request.Query.["fname_any"].[0])
     | h::t when h = "city_eq" -> getCityEqAccounts (ctx.Request.Query.["city_eq"].[0])
     | h::t when h = "country_eq" -> getCountryEqAccounts (ctx.Request.Query.["country_eq"].[0])
     | h::t -> getFilteredAccountsByQuery t ctx

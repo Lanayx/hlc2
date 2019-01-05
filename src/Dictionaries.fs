@@ -3,7 +3,7 @@
 open System.Collections.Generic
 open HCup.Models
 
-let namesWeightDictionary = Dictionary<string, int64>()
+let fnamesWeightDictionary = Dictionary<string, int64>()
 let snamesWeightDictionary = Dictionary<string, int64>()
 let citiesWeightDictionary = Dictionary<string, int64>()
 let countriesWeightDictionary = Dictionary<string, int64>()
@@ -18,6 +18,7 @@ let mutable interestsSerializeDictionary = Dictionary<int64, byte[]>()
 let likesIndex = Dictionary<int, SortedDictionary<int, struct(single*int)>>()
 let citiesIndex = Dictionary<int64, SortedSet<int>>()
 let countriesIndex = Dictionary<int64, SortedSet<int>>()
+let fnamesIndex = Dictionary<int64, SortedSet<int>>()
 let emailsDictionary = HashSet<string>()
 
 // key is city*sex, value is count

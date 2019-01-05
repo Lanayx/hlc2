@@ -158,16 +158,30 @@ let inline handleCountry country (account: Account) (deletePrevious: bool) =
             countryUsers.Add(account.id) |> ignore
             countriesIndex.[account.country] <- countryUsers
 
-let inline handleFirstName (fname: string) (account: Account) =
+let inline handleFirstName (fname: string) (account: Account) (deletePrevious: bool) =
+    if deletePrevious && account.fname > 0L
+    then
+        fnamesIndex.[account.fname].Remove(account.id) |> ignore
     let mutable weight = 0L
-    if namesWeightDictionary.TryGetValue(fname, &weight)
+    if fnamesWeightDictionary.TryGetValue(fname, &weight)
     then
         account.fname <- weight
     else
         weight <- getStringWeight fname
-        namesWeightDictionary.Add(fname, weight)
+        fnamesWeightDictionary.Add(fname, weight)
         namesSerializeDictionary.Add(weight, utf8 fname)
         account.fname <- weight
+
+    if account.fname > 0L
+    then
+        let mutable fnameUsers: SortedSet<Int32> = null
+        if fnamesIndex.TryGetValue(account.fname, &fnameUsers)
+        then
+            fnameUsers.Add(account.id) |> ignore
+        else
+            fnameUsers <- SortedSet(intReverseComparer)
+            fnameUsers.Add(account.id) |> ignore
+            fnamesIndex.[account.fname] <- fnameUsers
 
 let inline handleSecondName (sname: string) (account: Account) =
     let mutable weight = 0L
@@ -232,9 +246,6 @@ let createAccount (accUpd: AccountUpd): Account =
     account.id <- accUpd.id.Value
     handleEmail accUpd.email account
     handlePhone accUpd.phone account
-    if accUpd.fname |> isNotNull
-    then
-        handleFirstName accUpd.fname account
     if accUpd.sname |> isNotNull
     then
         handleSecondName accUpd.sname account
@@ -257,6 +268,9 @@ let createAccount (accUpd: AccountUpd): Account =
     if accUpd.likes |> isNotNull
     then
         handleLikes accUpd.likes account false
+    if accUpd.fname |> isNotNull
+    then
+        handleFirstName accUpd.fname account false
     if accUpd.city |> isNotNull
     then
         handleCity accUpd.city account false
@@ -293,9 +307,6 @@ let updateExistingAccount (existing: Account, accUpd: AccountUpd) =
     if accUpd.phone |> isNotNull
     then
         handlePhone accUpd.phone existing
-    if accUpd.fname |> isNotNull
-    then
-        handleFirstName accUpd.fname existing
     if accUpd.sname |> isNotNull
     then
         handleSecondName accUpd.sname existing
@@ -315,6 +326,9 @@ let updateExistingAccount (existing: Account, accUpd: AccountUpd) =
     if accUpd.likes |> isNotNull
     then
         handleLikes accUpd.likes existing true
+    if accUpd.fname |> isNotNull
+    then
+        handleFirstName accUpd.fname existing true
     if accUpd.city |> isNotNull
     then
         handleCity accUpd.city existing true
