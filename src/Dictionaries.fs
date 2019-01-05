@@ -20,7 +20,7 @@ let citiesIndex = Dictionary<int64, SortedSet<int>>()
 let countriesIndex = Dictionary<int64, SortedSet<int>>()
 let emailsDictionary = HashSet<string>()
 
-// key is city*sex, value is count 
+// key is city*sex, value is count
 let mutable citySexGroups = Dictionary<char, Dictionary<int64,int>>()
 citySexGroups.['f'] <- Dictionary<int64,int>()
 citySexGroups.['m'] <- Dictionary<int64,int>()

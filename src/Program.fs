@@ -150,13 +150,24 @@ let inline handleInterests (interests: string[]) (account: Account) =
                     weight
             )
 
-let updateCityIndex oldSex oldStatus oldCity (account: Account) (deletePrevious: bool) = 
+let updateCityIndex oldSex oldStatus oldCity (account: Account) (deletePrevious: bool) =
     if deletePrevious
     then
-        citySexGroups.[oldSex].[oldCity] <- citySexGroups.[oldSex].[oldCity] - 1
-        cityStatusGroups.[oldStatus].[oldCity] <- cityStatusGroups.[oldStatus].[oldCity] - 1
+        let oldSexCount = citySexGroups.[oldSex].[oldCity]
+        if oldSexCount > 1
+        then
+            citySexGroups.[oldSex].[oldCity] <- oldSexCount - 1
+        else
+            citySexGroups.[oldSex].Remove(oldCity) |> ignore
 
-    let mutable sexCount: int = 0    
+        let oldStatusCount = cityStatusGroups.[oldStatus].[oldCity]
+        if oldStatusCount > 1
+        then
+            cityStatusGroups.[oldStatus].[oldCity] <- oldStatusCount - 1
+        else
+            cityStatusGroups.[oldStatus].Remove(oldCity) |> ignore
+
+    let mutable sexCount: int = 0
     if citySexGroups.[account.sex].TryGetValue(account.city, &sexCount)
     then
         citySexGroups.[account.sex].[account.city] <- sexCount + 1
@@ -176,7 +187,7 @@ let updateCountryIndex oldSex oldStatus oldCountry (account: Account) (deletePre
         countrySexGroups.[oldSex].[oldCountry] <- countrySexGroups.[oldSex].[oldCountry] - 1
         countryStatusGroups.[oldStatus].[oldCountry] <- countryStatusGroups.[oldStatus].[oldCountry] - 1
 
-    let mutable sexCount: int = 0    
+    let mutable sexCount: int = 0
     if countrySexGroups.[account.sex].TryGetValue(account.country, &sexCount)
     then
         countrySexGroups.[account.sex].[account.country] <- sexCount + 1
@@ -399,13 +410,13 @@ let updateExistingAccount (existing: Account, accUpd: AccountUpd) =
         handleCity accUpd.city existing true
     if accUpd.country |> isNotNull
     then
-        handleCountry accUpd.country existing true 
+        handleCountry accUpd.country existing true
     if accUpd.city |> isNotNull || accUpd.sex |> isNotNull || accUpd.status |> isNotNull
     then
         updateCityIndex oldSex oldStatus oldCity existing true
     if accUpd.country |> isNotNull || accUpd.sex |> isNotNull || accUpd.status |> isNotNull
     then
-        updateCountryIndex oldSex oldStatus oldCountry existing true  
+        updateCountryIndex oldSex oldStatus oldCountry existing true
     if accUpd.email |> isNotNull
     then
         emailsDictionary.Add(accUpd.email) |> ignore
@@ -482,7 +493,7 @@ let arrayMaxWithInd (arr: int[]) =
 let arrayMinInd (arr: KeyValuePair<int64,int>[]) =
     let mutable minIndex = 0
     for i in [0..arr.Length-1] do
-        if arr.[i].Value < arr.[minIndex].Value 
+        if arr.[i].Value < arr.[minIndex].Value
             || (arr.[i].Value = arr.[minIndex].Value && arr.[i].Key < arr.[minIndex].Key)
         then
             minIndex <- i
@@ -616,9 +627,9 @@ let seq_sort order =
 
 let seq_take order length take =
     if order = -1
-    then 
+    then
         Seq.skip (length - take) >> Seq.rev
-    else 
+    else
         Seq.truncate take
 
 let applyGrouping (memoryStream: byref<MemoryStream>, groupKey, order, accs: Account seq, limit) =
@@ -1136,6 +1147,7 @@ let buildBitMapIndex() =
             |> Seq.iter (fun interest -> interestsIndex.Set(BIKey(0,interest),account.id)))
 
 let sortGroupDictionaries() =
+    Console.WriteLine("Sorting group dictionaries")
     citySexGroups.['f'] <- citySexGroups.['f'].OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
     citySexGroups.['m'] <- citySexGroups.['m'].OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
     cityStatusGroups.[0] <- cityStatusGroups.[0].OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
@@ -1148,8 +1160,11 @@ let sortGroupDictionaries() =
     countryStatusGroups.[2] <- countryStatusGroups.[2].OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
 
 let indexesRebuild() =
-    buildBitMapIndex()
-    sortGroupDictionaries()
+    try
+        buildBitMapIndex()
+        sortGroupDictionaries()
+    with
+    | :? Exception as ex -> Console.WriteLine("Exception whild building index" + ex.ToString())
 
 let webApp =
     choose [
@@ -1227,7 +1242,7 @@ let main argv =
         ZipFile.ExtractToDirectory("data.zip","./data")
     loadData "./data"
     GC.Collect(2)
-    GCTimer.runTimer buildBitMapIndex
+    GCTimer.runTimer indexesRebuild
     WebHostBuilder()
         .UseKestrel(Action<KestrelServerOptions> configureKestrel)
         .Configure(Action<IApplicationBuilder> configureApp)
