@@ -9,7 +9,7 @@ open System.Text
 open FSharp.NativeInterop
 
 open HCup.Models
-open HCup.Helpers
+open HCup.Common
 open HCup
 
 #nowarn "9"
@@ -18,6 +18,9 @@ open System.Collections
 open Giraffe
 open System.Text.RegularExpressions
 open HCup.Dictionaries
+open Microsoft.AspNetCore.Http
+open FSharp.Control.Tasks.V2.ContextInsensitive
+open Microsoft.Extensions.Primitives
 
 let private utf8Encoding = Encoding.UTF8
 let utf8 : string -> byte[] = utf8Encoding.GetBytes
@@ -193,9 +196,9 @@ let occupiedStringStatus = utf8 "\u0437\u0430\u043d\u044f\u0442\u044b"
 let getStatusString status =
     let x=
         match status with
-        | Helpers.freeStatus -> freeStringStatus
-        | Helpers.complexStatus -> complexStringStatus
-        | Helpers.occupiedStatus -> occupiedStringStatus
+        | Common.freeStatus -> freeStringStatus
+        | Common.complexStatus -> complexStringStatus
+        | Common.occupiedStatus -> occupiedStringStatus
         | _ -> failwith "Invalid int status"
     x
 
@@ -435,3 +438,28 @@ let serializeGroups2Status (groups: ((int64*int)*int) seq, groupName1: string, g
         writeArray output (getStatusString value)
         writeArray output ``",``
     serializeGroups2 (groups, writeValue1, writeValue2)
+
+let jsonStringValues = StringValues "application/json"
+let inline writeResponse (response : MemoryStream) (next : HttpFunc) (ctx: HttpContext) =
+    let length = response.Position
+    ctx.Response.Headers.["Content-Type"] <- jsonStringValues
+    ctx.Response.Headers.ContentLength <- Nullable(length)
+    let bytes = response.GetBuffer()
+    task {
+        do! ctx.Response.Body.WriteAsync(bytes, 0, (int32)length)
+        do! ctx.Response.Body.FlushAsync()
+        ArrayPool.Shared.Return bytes
+        return! next ctx
+    }
+
+let postResponseBytes = utf8 "{}"
+let inline writePostResponse (code: int) (next : HttpFunc) (ctx: HttpContext) =
+    let length = postResponseBytes.Length
+    ctx.Response.Headers.["Content-Type"] <- jsonStringValues
+    ctx.Response.Headers.ContentLength <- Nullable(int64 length)
+    ctx.Response.StatusCode <- code
+    task {
+        do! ctx.Response.Body.WriteAsync(postResponseBytes, 0, length)
+        do! ctx.Response.Body.FlushAsync()
+        return! next ctx
+    }

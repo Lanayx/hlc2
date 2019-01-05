@@ -2,7 +2,7 @@
 
 open System
 open HCup.Models
-open HCup.Helpers
+open HCup.Common
 open HCup.Dictionaries
 open System.Collections.Generic
 open Giraffe
