@@ -15,12 +15,12 @@ open Giraffe
 open System.IO
 open HCup.Models
 
-let seq_sort order =
+let seqSort order =
     if order = -1
     then Seq.sortByDescending
     else Seq.sortBy
 
-let seq_take order length take =
+let seqTake order length take =
     if order = -1
     then
         Seq.skip (length - take) >> Seq.rev
@@ -66,7 +66,7 @@ let applyGrouping (memoryStream: byref<MemoryStream>, groupKey, order, accs: Acc
             accs
             |> Seq.groupBy (fun acc -> acc.sex)
             |> Seq.map (fun (key, group) -> (key, group |> Seq.length))
-            |> seq_sort order (fun (group,length) -> length, group)
+            |> seqSort order (fun (group,length) -> length, group)
             |> Seq.truncate limit
         memoryStream <- serializeGroupsSex(groups, "sex")
     | "status" ->
@@ -74,7 +74,7 @@ let applyGrouping (memoryStream: byref<MemoryStream>, groupKey, order, accs: Acc
             accs
             |> Seq.groupBy (fun acc -> acc.status)
             |> Seq.map (fun (key, group) -> key, group |> Seq.length)
-            |> seq_sort order (fun (group,length) -> length, group)
+            |> seqSort order (fun (group,length) -> length, group)
             |> Seq.truncate limit
         memoryStream <- serializeGroupsStatus(groups, "status")
     | "country" ->
@@ -82,7 +82,7 @@ let applyGrouping (memoryStream: byref<MemoryStream>, groupKey, order, accs: Acc
             accs
             |> Seq.groupBy (fun acc -> acc.country)
             |> Seq.map (fun (key, group) -> key, group |> Seq.length)
-            |> seq_sort order (fun (group,length) -> length, group)
+            |> seqSort order (fun (group,length) -> length, group)
             |> Seq.truncate limit
         memoryStream <- serializeGroupsCountry(groups, "country")
     | "city" ->
@@ -90,7 +90,7 @@ let applyGrouping (memoryStream: byref<MemoryStream>, groupKey, order, accs: Acc
             accs
             |> Seq.groupBy (fun acc -> acc.city)
             |> Seq.map (fun (key, group) -> key, group |> Seq.length)
-            |> seq_sort order (fun (group,length) -> length, group)
+            |> seqSort order (fun (group,length) -> length, group)
             |> Seq.truncate limit
         memoryStream <- serializeGroupsCity(groups, "city")
     | "interests" ->
@@ -100,7 +100,7 @@ let applyGrouping (memoryStream: byref<MemoryStream>, groupKey, order, accs: Acc
             |> Seq.collect (fun acc -> acc.interests)
             |> Seq.groupBy id
             |> Seq.map (fun (key, group) -> key, group |> Seq.length)
-            |> seq_sort order (fun (group,length) -> length, group)
+            |> seqSort order (fun (group,length) -> length, group)
             |> Seq.truncate limit
         memoryStream <- serializeGroupsInterests(interests , "interests")
     | "city,status" ->
@@ -108,7 +108,7 @@ let applyGrouping (memoryStream: byref<MemoryStream>, groupKey, order, accs: Acc
             accs
             |> Seq.groupBy (fun acc -> acc.city, acc.status)
             |> Seq.map (fun (key, group) -> key, group |> Seq.length)
-            |> seq_sort order (fun (group,length) -> length, group)
+            |> seqSort order (fun (group,length) -> length, group)
             |> Seq.truncate limit
         memoryStream <- serializeGroups2Status(groups, "city", "status")
     | "city,sex" ->
@@ -116,7 +116,7 @@ let applyGrouping (memoryStream: byref<MemoryStream>, groupKey, order, accs: Acc
             accs
             |> Seq.groupBy (fun acc -> acc.city, acc.sex)
             |> Seq.map (fun (key, group) -> key, group |> Seq.length)
-            |> seq_sort order (fun (group,length) -> length, group)
+            |> seqSort order (fun (group,length) -> length, group)
             |> Seq.truncate limit
         memoryStream <- serializeGroups2Sex(groups, "city", "sex")
     | "country,sex" ->
@@ -124,7 +124,7 @@ let applyGrouping (memoryStream: byref<MemoryStream>, groupKey, order, accs: Acc
             accs
             |> Seq.groupBy (fun acc -> acc.country, acc.sex)
             |> Seq.map (fun (key, group) -> key, group |> Seq.length)
-            |> seq_sort order (fun (group,length) -> length, group)
+            |> seqSort order (fun (group,length) -> length, group)
             |> Seq.truncate limit
         memoryStream <- serializeGroups2Sex(groups, "country", "sex")
     | "country,status" ->
@@ -132,7 +132,7 @@ let applyGrouping (memoryStream: byref<MemoryStream>, groupKey, order, accs: Acc
             accs
             |> Seq.groupBy (fun acc -> acc.country, acc.status)
             |> Seq.map (fun (key, group) -> key, group |> Seq.length)
-            |> seq_sort order (fun (group,length) -> length, group)
+            |> seqSort order (fun (group,length) -> length, group)
             |> Seq.truncate limit
         memoryStream <- serializeGroups2Status(groups, "country", "status")
     | _ ->
@@ -146,7 +146,7 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, order
             accs
             |> Seq.groupBy (fun acc -> acc.sex)
             |> Seq.map (fun (key, group) -> (key, group |> Seq.length))
-            |> seq_sort order (fun (group,length) -> length, group)
+            |> seqSort order (fun (group,length) -> length, group)
             |> Seq.truncate limit
         memoryStream <- serializeGroupsSex(groups, "sex")
     | "status" ->
@@ -154,7 +154,7 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, order
             accs
             |> Seq.groupBy (fun acc -> acc.status)
             |> Seq.map (fun (key, group) -> key, group |> Seq.length)
-            |> seq_sort order (fun (group,length) -> length, group)
+            |> seqSort order (fun (group,length) -> length, group)
             |> Seq.truncate limit
         memoryStream <- serializeGroupsStatus(groups, "status")
     | "country" ->
@@ -162,7 +162,7 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, order
             accs
             |> Seq.groupBy (fun acc -> acc.country)
             |> Seq.map (fun (key, group) -> key, group |> Seq.length)
-            |> seq_sort order (fun (group,length) -> length, group)
+            |> seqSort order (fun (group,length) -> length, group)
             |> Seq.truncate limit
         memoryStream <- serializeGroupsCountry(groups, "country")
     | "city" ->
@@ -170,7 +170,7 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, order
             accs
             |> Seq.groupBy (fun acc -> acc.city)
             |> Seq.map (fun (key, group) -> key, group |> Seq.length)
-            |> seq_sort order (fun (group,length) -> length, group)
+            |> seqSort order (fun (group,length) -> length, group)
             |> Seq.truncate limit
         memoryStream <- serializeGroupsCity(groups, "city")
     | "interests" ->
@@ -180,32 +180,32 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, order
             |> Seq.collect (fun acc -> acc.interests)
             |> Seq.groupBy id
             |> Seq.map (fun (key, group) -> key, group |> Seq.length)
-            |> seq_sort order (fun (group,length) -> length, group)
+            |> seqSort order (fun (group,length) -> length, group)
             |> Seq.truncate limit
         memoryStream <- serializeGroupsInterests(interests , "interests")
     | "city,status" ->
         let groups =
             cityStatusGroups
             |> sortedCollectDict
-            |> seq_take order (cityStatusGroups.[0].Count + cityStatusGroups.[1].Count + cityStatusGroups.[2].Count) limit
+            |> seqTake order (cityStatusGroups.[0].Count + cityStatusGroups.[1].Count + cityStatusGroups.[2].Count) limit
         memoryStream <- serializeGroups2Status(groups, "city", "status")
     | "city,sex" ->
         let groups =
             citySexGroups
             |> sortedCollectDict
-            |> seq_take order (citySexGroups.['f'].Count + citySexGroups.['m'].Count) limit
+            |> seqTake order (citySexGroups.['f'].Count + citySexGroups.['m'].Count) limit
         memoryStream <- serializeGroups2Sex(groups, "city", "sex")
     | "country,sex" ->
         let groups =
             countrySexGroups
             |> sortedCollectDict
-            |> seq_take order (countrySexGroups.['f'].Count + countrySexGroups.['m'].Count) limit
+            |> seqTake order (countrySexGroups.['f'].Count + countrySexGroups.['m'].Count) limit
         memoryStream <- serializeGroups2Sex(groups, "country", "sex")
     | "country,status" ->
         let groups =
             countryStatusGroups
             |> sortedCollectDict
-            |> seq_take order (countryStatusGroups.[0].Count + countryStatusGroups.[1].Count + countryStatusGroups.[2].Count) limit
+            |> seqTake order (countryStatusGroups.[0].Count + countryStatusGroups.[1].Count + countryStatusGroups.[2].Count) limit
         memoryStream <- serializeGroups2Status(groups, "country", "status")
     | _ ->
         ()
