@@ -60,6 +60,30 @@ let inline handleInterests (interests: string[]) (account: Account) =
                     weight
             )
 
+let updateInterestIndex oldInterests (account: Account) (deletePrevious: bool) =
+    if deletePrevious && oldInterests |> isNotNull
+    then
+        oldInterests
+        |> Array.iter(fun oldInterestWeight ->
+                let oldInterestCount = interestGroups.[oldInterestWeight]
+                if oldInterestCount > 1
+                then
+                    interestGroups.[oldInterestWeight] <- oldInterestCount - 1
+                else
+                    interestGroups.Remove(oldInterestWeight) |> ignore
+            )
+    if account.interests |> isNotNull
+    then
+        account.interests
+            |> Array.iter(fun interestWeight ->
+                    let mutable interestCount: int = 0
+                    if interestGroups.TryGetValue(interestWeight, &interestCount)
+                    then
+                        interestGroups.[interestWeight] <- interestCount + 1
+                    else
+                        interestGroups.[interestWeight] <- 1
+                )
+
 let updateCityIndex oldSex oldStatus oldCity (account: Account) (deletePrevious: bool) =
     if deletePrevious
     then
@@ -279,6 +303,7 @@ let createAccount (accUpd: AccountUpd): Account =
         handleCountry accUpd.country account false
     updateCityIndex ' ' 0 0L account false
     updateCountryIndex ' ' 0 0L account false
+    updateInterestIndex [||] account false
     emailsDictionary.Add(account.email) |> ignore
     account
 
@@ -287,6 +312,7 @@ let updateExistingAccount (existing: Account, accUpd: AccountUpd) =
     let oldCountry = existing.country
     let oldStatus = existing.status
     let oldSex = existing.sex
+    let oldInterests = existing.interests
 
     if accUpd.birth.HasValue
     then
@@ -341,6 +367,9 @@ let updateExistingAccount (existing: Account, accUpd: AccountUpd) =
     if accUpd.country |> isNotNull || accUpd.sex |> isNotNull || accUpd.status |> isNotNull
     then
         updateCountryIndex oldSex oldStatus oldCountry existing true
+    if accUpd.interests |> isNotNull
+    then
+        updateInterestIndex oldInterests existing true
     if accUpd.email |> isNotNull
     then
         emailsDictionary.Add(accUpd.email) |> ignore

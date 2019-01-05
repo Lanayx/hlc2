@@ -175,13 +175,9 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, order
         memoryStream <- serializeGroupsCity(groups, "city")
     | "interests" ->
         let interests =
-            accs
-            |> Seq.filter (fun acc -> acc.interests |> isNotNull)
-            |> Seq.collect (fun acc -> acc.interests)
-            |> Seq.groupBy id
-            |> Seq.map (fun (key, group) -> key, group |> Seq.length)
-            |> seqSort order (fun (group,length) -> length, group)
-            |> Seq.truncate limit
+            interestGroups
+            |> Seq.map(fun kv -> kv.Key, kv.Value)
+            |> seqTake order interestGroups.Count limit
         memoryStream <- serializeGroupsInterests(interests , "interests")
     | "city,status" ->
         let groups =

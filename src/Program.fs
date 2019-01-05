@@ -152,6 +152,8 @@ let sortGroupDictionaries() =
     countryStatusGroups.[1] <- countryStatusGroups.[1].OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
     countryStatusGroups.[2] <- countryStatusGroups.[2].OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
 
+    interestGroups <- interestGroups.OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
+
 let indexesRebuild() =
     try
         buildBitMapIndex()

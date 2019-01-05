@@ -15,13 +15,15 @@ let mutable citiesSerializeDictionary = Dictionary<int64, byte[]>()
 let mutable countriesSerializeDictionary = Dictionary<int64, byte[]>()
 let mutable interestsSerializeDictionary = Dictionary<int64, byte[]>()
 
+// key is likeId,  value is dict of key=userId, value=sumOfTs*tsCount
 let likesIndex = Dictionary<int, SortedDictionary<int, struct(single*int)>>()
+// key is cityWeight, value is usersId's set
 let citiesIndex = Dictionary<int64, SortedSet<int>>()
 let countriesIndex = Dictionary<int64, SortedSet<int>>()
 let fnamesIndex = Dictionary<int64, SortedSet<int>>()
 let emailsDictionary = HashSet<string>()
 
-// key is city*sex, value is count
+// key is sex, value is dict of key=city, value=Count
 let mutable citySexGroups = Dictionary<char, Dictionary<int64,int>>()
 citySexGroups.['f'] <- Dictionary<int64,int>()
 citySexGroups.['m'] <- Dictionary<int64,int>()
@@ -36,3 +38,6 @@ let mutable countryStatusGroups = Dictionary<int, Dictionary<int64,int>>()
 countryStatusGroups.[0] <- Dictionary<int64,int>()
 countryStatusGroups.[1] <- Dictionary<int64,int>()
 countryStatusGroups.[2] <- Dictionary<int64,int>()
+
+// key is interest value is Count
+let mutable interestGroups = Dictionary<int64,int>()
