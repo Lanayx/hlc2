@@ -149,8 +149,8 @@ let interestsContainsFilter (value: string) =
     fun (acc: Account) ->
         acc.interests |> isNotNull
             && value.Split(',')
-            |> Array.map(fun el -> interestsWeightDictionary.[el])
-            |> Array.forall (fun interest -> acc.interests |> Array.exists (fun el -> el = interest))
+            |> Seq.map(fun el -> interestsWeightDictionary.[el])
+            |> Seq.forall (fun interest -> acc.interests |> Array.exists (fun el -> el = interest))
 
 let interestsContainsOneFilter (value: string) =
     fun (acc: Account) ->
@@ -161,8 +161,8 @@ let interestsAnyFilter (value: string) =
     fun (acc: Account) ->
         acc.interests |> isNotNull
             && value.Split(',')
-            |> Array.map(fun el -> interestsWeightDictionary.[el])
-            |> Array.exists (fun interest -> acc.interests |> Array.exists (fun el -> el = interest))
+            |> Seq.map(fun el -> interestsWeightDictionary.[el])
+            |> Seq.exists (fun interest -> acc.interests |> Array.exists (fun el -> el = interest))
 
 let likesContainsFilter (value: string) =
     fun (acc: Account) ->
