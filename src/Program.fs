@@ -64,11 +64,13 @@ let customGetRoutef : HttpHandler =
     fun (next : HttpFunc) (ctx : HttpContext) ->
         match ctx.Request.Path.Value with
         | filterPath when filterPath =~ accountsFilterString ->
-             Filter.getFilteredAccounts (next, ctx)
+            ctx.Items.Add(Common.routeName, Common.filterRoute)
+            Filter.getFilteredAccounts (next, ctx)
         | filterPath when filterPath =~ accountsGroupString ->
-             Group.getGroupedAccounts (next, ctx)
+            ctx.Items.Add(Common.routeName, Common.groupRoute)
+            Group.getGroupedAccounts (next, ctx)
         | filterPath when filterPath =~ findUserString ->
-             findUser (next, ctx)
+            findUser (next, ctx)
         | filterPath ->
             if filterPath.Length > 10
             then
@@ -84,10 +86,12 @@ let customGetRoutef : HttpHandler =
                     then
                         if "recommend/" == ending
                         then
+                            ctx.Items.Add(Common.routeName, Common.recommendRoute)
                             Recommend.getRecommendedAccounts (id, next, ctx)
                         else
                             if "suggest/" == ending
                             then
+                                ctx.Items.Add(Common.routeName, Common.suggestRoute)
                                 Suggest.getSuggestedAccounts (id, next, ctx)
                             else
                                 setStatusCode 404 next ctx
@@ -106,9 +110,11 @@ let customPostRoutef : HttpHandler =
         shouldRebuildIndex <- true
         match ctx.Request.Path.Value with
         | filterPath when filterPath =~ newUserString ->
-             PostAccount.newAccount (next, ctx)
+            ctx.Items.Add(Common.routeName, Common.newAccountRoute)
+            PostAccount.newAccount (next, ctx)
         | filterPath when filterPath =~ newLikesString ->
-             PostLikes.addLikes (next, ctx)
+            ctx.Items.Add(Common.routeName, Common.addLikesRoute)
+            PostLikes.addLikes (next, ctx)
         | filterPath ->
             if filterPath.Length > 10
             then
@@ -121,6 +127,7 @@ let customPostRoutef : HttpHandler =
                     let mutable id = 0
                     if Int32.TryParse(stringId, &id)
                     then
+                        ctx.Items.Add(Common.routeName, Common.updateAccountRoute)
                         PostAccount.updateAccount (id, next, ctx)
                     else
                         setStatusCode 404 next ctx

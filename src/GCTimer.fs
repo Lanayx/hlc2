@@ -29,7 +29,7 @@ let runTimer indexRebuild =
 
             if not GCRun && not rebuildingIndex
             then
-                Console.WriteLine("Running GC {0} {1} accf:{2} accgr:{3} accr:{4} accs:{5} newacc:{6} updacc:{7} addl: {8}",
+                Console.WriteLine("Running GC {0} {1} Counts: accf:{2} accgr:{3} accr:{4} accs:{5} newacc:{6} updacc:{7} addl: {8}",
                     lastRequestCount,
                     DateTime.Now.ToString("HH:mm:ss.ffff"),
                     accountFilterCount.Value,
@@ -41,6 +41,16 @@ let runTimer indexRebuild =
                     addLikesCount.Value)
                 GCRun <- true
                 GC.Collect(2, GCCollectionMode.Forced, true, true)
+                Console.WriteLine("Finished GC {0} {1} Times: accf:{2} accgr:{3} accr:{4} accs:{5} newacc:{6} updacc:{7} addl: {8}",
+                    lastRequestCount,
+                    DateTime.Now.ToString("HH:mm:ss.ffff"),
+                    accountFilterTime.Value,
+                    accountsGroupTime.Value,
+                    accountsRecommendTime.Value,
+                    accountsSuggestTime.Value,
+                    newAccountTime.Value,
+                    updateAccountTime.Value,
+                    addLikesTime.Value)
             // client.GetAsync("http://127.0.0.1/visits/8").Result |> ignore
 
         else

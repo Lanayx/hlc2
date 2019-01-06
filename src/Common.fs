@@ -32,6 +32,23 @@ let complexStatus = 0
 [<Literal>]
 let occupiedStatus = 1
 
+[<Literal>]
+let routeName = "routeName"
+[<Literal>]
+let filterRoute = "filter"
+[<Literal>]
+let groupRoute = "group"
+[<Literal>]
+let recommendRoute = "recommend"
+[<Literal>]
+let suggestRoute = "suggest"
+[<Literal>]
+let newAccountRoute = "newAccount"
+[<Literal>]
+let updateAccountRoute = "updateAccount"
+[<Literal>]
+let addLikesRoute = "addLikes"
+
 type IntReverseComparer() =
     interface IComparer<int> with
         member this.Compare(x,y) =

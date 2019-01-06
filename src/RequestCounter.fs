@@ -9,6 +9,7 @@ open Microsoft.AspNetCore.Http
 open Giraffe
 open GCTimer
 open System.Globalization
+open HCup.MethodCounter
 
 let MB = 1024L*1024L
 
@@ -31,10 +32,21 @@ type RequestCounterMiddleware (next : RequestDelegate,
                                     Process.GetCurrentProcess().PrivateMemorySize64/MB)
         (next.Invoke ctx).ContinueWith(
             fun x ->
-                if sw.ElapsedMilliseconds > 25L
+                let elapsed = int sw.ElapsedMilliseconds
+                match (string ctx.Items.[Common.routeName]) with
+                | Common.filterRoute -> Interlocked.Add(accountFilterTime, elapsed) |> ignore
+                | Common.groupRoute -> Interlocked.Add(accountsGroupTime, elapsed) |> ignore
+                | Common.recommendRoute -> Interlocked.Add(accountsRecommendTime, elapsed) |> ignore
+                | Common.suggestRoute -> Interlocked.Add(accountsSuggestTime, elapsed) |> ignore
+                | Common.newAccountRoute -> Interlocked.Add(newAccountTime, elapsed) |> ignore
+                | Common.updateAccountRoute -> Interlocked.Add(updateAccountTime, elapsed) |> ignore
+                | Common.addLikesRoute -> Interlocked.Add(addLikesTime, elapsed) |> ignore
+                | _ -> ()
+
+                if elapsed > 25
                 then
                     Console.WriteLine("Slow request {0} ms: {1}",
-                        sw.ElapsedMilliseconds.ToString(CultureInfo.InvariantCulture),
+                        elapsed.ToString(CultureInfo.InvariantCulture),
                         ctx.Request.Path + ctx.Request.QueryString)
                 sw.Stop()
         )
