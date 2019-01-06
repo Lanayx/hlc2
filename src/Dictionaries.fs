@@ -42,5 +42,8 @@ countryStatusGroups.[2uy] <- Dictionary<int64,int>()
 // key is interest value is Count
 let mutable interestGroups = Dictionary<int64,int>()
 
-// sex*status*interests*country*city
-let allGroups = Dictionary<(char*int*int64*int64*int64),ResizeArray<int>>()
+// sex*status*interest*country
+let allCountryGroups = Dictionary<struct(byte*byte*int64*int64),ResizeArray<int>>()
+
+// sex*status*interest*city
+let allCityGroups = Dictionary<struct(byte*byte*int64*int64),ResizeArray<int>>()

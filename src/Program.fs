@@ -204,17 +204,21 @@ let loadData folder =
     currentTs <- str.[0]
                    |> Int32.Parse
 
-
+    let sw = Stopwatch()
+    sw.Start()
     Directory.EnumerateFiles(folder, "accounts_*.json")
                 |> Seq.map (File.ReadAllText >> deserializeObjectUnsafe<AccountsUpd>)
-                |> Seq.iter (fun accsUpd ->
+                |> Seq.iteri (fun i accsUpd ->
                         accsUpd.accounts
                         |> Seq.iter (fun acc ->
                             accounts.[acc.id.Value] <- PostAccount.createAccount acc
                             Interlocked.Increment(&accountsNumber) |> ignore
                         )
                         GC.Collect(2, GCCollectionMode.Forced, true, true)
+                        Console.Write("{0}){1}mb:{2}s ", i, Process.GetCurrentProcess().PrivateMemorySize64/MB, sw.Elapsed.TotalSeconds)
                     )
+    sw.Stop()
+    Console.WriteLine()
 
     namesSerializeDictionary <- fnamesWeightDictionary.ToDictionary((fun kv -> kv.Value), (fun kv -> utf8 kv.Key))
     snamesSerializeDictionary <- snamesWeightDictionary.ToDictionary((fun kv -> kv.Value), (fun kv -> struct(kv.Key, utf8 kv.Key)))
@@ -233,7 +237,7 @@ let loadData folder =
     Console.WriteLine("Accounts {0}. Memory used {1}MB", accountsNumber, memSize)
     Console.WriteLine("Dictionaries names={0},cities={1},countries={2},interests={3},snames={4}",
         fnamesWeightDictionary.Count, citiesWeightDictionary.Count,countriesWeightDictionary.Count,interestsWeightDictionary.Count,snamesWeightDictionary.Count)
-
+    // Dictionaries names=108,cities=609,countries=70,interests=90,snames=1638
 
 [<EntryPoint>]
 let main argv =
