@@ -104,11 +104,11 @@ type Account() =
         [<DefaultValue>]val mutable email: string
         [<DefaultValue>]val mutable emailDomain: string
         [<DefaultValue>]val mutable interests: int64[]
-        [<DefaultValue>]val mutable status: int
+        [<DefaultValue>]val mutable status: byte
         [<DefaultValue>]val mutable premiumStart: int
         [<DefaultValue>]val mutable premiumFinish: int
         [<DefaultValue>]val mutable premiumNow: bool
-        [<DefaultValue>]val mutable sex: char
+        [<DefaultValue>]val mutable sex: byte
         [<DefaultValue>]val mutable phone: string
         [<DefaultValue>]val mutable phoneCode: int
         [<DefaultValue>]val mutable birth: int

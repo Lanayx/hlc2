@@ -183,25 +183,25 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, order
         let groups =
             cityStatusGroups
             |> sortedCollectDict
-            |> seqTake order (cityStatusGroups.[0].Count + cityStatusGroups.[1].Count + cityStatusGroups.[2].Count) limit
+            |> seqTake order (cityStatusGroups.[0uy].Count + cityStatusGroups.[1uy].Count + cityStatusGroups.[2uy].Count) limit
         memoryStream <- serializeGroups2Status(groups, "city", "status")
     | "city,sex" ->
         let groups =
             citySexGroups
             |> sortedCollectDict
-            |> seqTake order (citySexGroups.['f'].Count + citySexGroups.['m'].Count) limit
+            |> seqTake order (citySexGroups.[0uy].Count + citySexGroups.[1uy].Count) limit
         memoryStream <- serializeGroups2Sex(groups, "city", "sex")
     | "country,sex" ->
         let groups =
             countrySexGroups
             |> sortedCollectDict
-            |> seqTake order (countrySexGroups.['f'].Count + countrySexGroups.['m'].Count) limit
+            |> seqTake order (countrySexGroups.[0uy].Count + countrySexGroups.[1uy].Count) limit
         memoryStream <- serializeGroups2Sex(groups, "country", "sex")
     | "country,status" ->
         let groups =
             countryStatusGroups
             |> sortedCollectDict
-            |> seqTake order (countryStatusGroups.[0].Count + countryStatusGroups.[1].Count + countryStatusGroups.[2].Count) limit
+            |> seqTake order (countryStatusGroups.[0uy].Count + countryStatusGroups.[1uy].Count + countryStatusGroups.[2uy].Count) limit
         memoryStream <- serializeGroups2Status(groups, "country", "status")
     | _ ->
         ()

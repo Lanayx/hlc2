@@ -17,8 +17,16 @@ let inline getStatus status =
     | "заняты" -> occupiedStatus
     | _ -> raise (ArgumentOutOfRangeException("Status is invalid"))
 
+let inline getSex status =
+    match status with
+    | "f" -> female
+    | "m" -> male
+    | _ -> raise (ArgumentOutOfRangeException("Sex is invalid"))
+
 let sexEqFilter (value: string) =
-    fun (acc: Account) -> acc.sex = value.[0]
+    fun (acc: Account) ->
+        let sex = getSex value
+        acc.sex = sex
 
 let emailDomainFilter (value: string) =
     fun (acc: Account) ->

@@ -26,11 +26,16 @@ let inline (==) (str1: string) str2 =
 
 
 [<Literal>]
-let freeStatus = 2
+let freeStatus = 2uy
 [<Literal>]
-let complexStatus = 0
+let complexStatus = 0uy
 [<Literal>]
-let occupiedStatus = 1
+let occupiedStatus = 1uy
+
+[<Literal>]
+let female = 0uy
+[<Literal>]
+let male = 1uy
 
 [<Literal>]
 let routeName = "routeName"

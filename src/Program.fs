@@ -148,16 +148,16 @@ let buildBitMapIndex() =
 
 let sortGroupDictionaries() =
     Console.WriteLine("Sorting group dictionaries")
-    citySexGroups.['f'] <- citySexGroups.['f'].OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
-    citySexGroups.['m'] <- citySexGroups.['m'].OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
-    cityStatusGroups.[0] <- cityStatusGroups.[0].OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
-    cityStatusGroups.[1] <- cityStatusGroups.[1].OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
-    cityStatusGroups.[2] <- cityStatusGroups.[2].OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
-    countrySexGroups.['f'] <- countrySexGroups.['f'].OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
-    countrySexGroups.['m'] <- countrySexGroups.['m'].OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
-    countryStatusGroups.[0] <- countryStatusGroups.[0].OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
-    countryStatusGroups.[1] <- countryStatusGroups.[1].OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
-    countryStatusGroups.[2] <- countryStatusGroups.[2].OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
+    citySexGroups.[0uy] <- citySexGroups.[0uy].OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
+    citySexGroups.[1uy] <- citySexGroups.[1uy].OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
+    cityStatusGroups.[0uy] <- cityStatusGroups.[0uy].OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
+    cityStatusGroups.[1uy] <- cityStatusGroups.[1uy].OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
+    cityStatusGroups.[2uy] <- cityStatusGroups.[2uy].OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
+    countrySexGroups.[0uy] <- countrySexGroups.[0uy].OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
+    countrySexGroups.[1uy] <- countrySexGroups.[1uy].OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
+    countryStatusGroups.[0uy] <- countryStatusGroups.[0uy].OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
+    countryStatusGroups.[1uy] <- countryStatusGroups.[1uy].OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
+    countryStatusGroups.[2uy] <- countryStatusGroups.[2uy].OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
 
     interestGroups <- interestGroups.OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
 

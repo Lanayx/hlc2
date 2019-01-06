@@ -282,7 +282,7 @@ let createAccount (accUpd: AccountUpd): Account =
         account.premiumStart <- accUpd.premium.start
         account.premiumFinish <- accUpd.premium.finish
     account.premiumNow <- box accUpd.premium |> isNotNull && accUpd.premium.start <= currentTs && accUpd.premium.finish > currentTs
-    account.sex <- accUpd.sex.[0]
+    account.sex <- getSex accUpd.sex
     account.birth <- accUpd.birth.Value
     account.birthYear <- (convertToDate accUpd.birth.Value).Year
     account.joined <- accUpd.joined.Value
@@ -301,8 +301,8 @@ let createAccount (accUpd: AccountUpd): Account =
     if accUpd.country |> isNotNull
     then
         handleCountry accUpd.country account false
-    updateCityIndex ' ' 0 0L account false
-    updateCountryIndex ' ' 0 0L account false
+    updateCityIndex 0uy 0uy 0L account false
+    updateCountryIndex 0uy 0uy 0L account false
     updateInterestIndex [||] account false
     emailsDictionary.Add(account.email) |> ignore
     account
@@ -326,7 +326,7 @@ let updateExistingAccount (existing: Account, accUpd: AccountUpd) =
     then
         if accUpd.sex.Length > 1
         then raise (ArgumentOutOfRangeException("Sex is wrong"))
-        existing.sex <- accUpd.sex.[0]
+        existing.sex <- getSex accUpd.sex
     if accUpd.email |> isNotNull
     then
         handleEmail accUpd.email existing

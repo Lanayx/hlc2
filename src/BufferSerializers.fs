@@ -199,7 +199,15 @@ let getStatusString status =
         | Common.freeStatus -> freeStringStatus
         | Common.complexStatus -> complexStringStatus
         | Common.occupiedStatus -> occupiedStringStatus
-        | _ -> failwith "Invalid int status"
+        | _ -> failwith "Invalid byte status"
+    x
+
+let getSexChar sex =
+    let x=
+        match sex with
+        | Common.female -> 'f'
+        | Common.male -> 'm'
+        | _ -> failwith "Invalid byte sex"
     x
 
 let writeField (field_predicate: string, acc: Account, output: MemoryStream) =
@@ -236,7 +244,7 @@ let writeField (field_predicate: string, acc: Account, output: MemoryStream) =
             writeChar output '}'
     | AccountField.Sex ->
         writeArray output ``,"sex":"``
-        writeChar output acc.sex
+        writeChar output (getSexChar acc.sex)
         writeChar output '"'
     | AccountField.Phone ->
         if acc.phone |> isNotNull
@@ -350,18 +358,18 @@ let serializeGroupsCountry (groups: (int64*int) seq, groupName: string): MemoryS
             writeChar output ','
     serializeGroups (groups, writeValue)
 
-let serializeGroupsSex (groups: (char*int) seq, groupName: string): MemoryStream =
+let serializeGroupsSex (groups: (byte*int) seq, groupName: string): MemoryStream =
     let writeValue output value =
         writeChar output '"'
         writeString output groupName
         writeArray output ``":``
         writeChar output '"'
-        writeChar output value
+        writeChar output (getSexChar value)
         writeChar output '"'
         writeChar output ','
     serializeGroups (groups, writeValue)
 
-let serializeGroupsStatus (groups: (int*int) seq, groupName: string): MemoryStream =
+let serializeGroupsStatus (groups: (byte*int) seq, groupName: string): MemoryStream =
     let writeValue output value =
         writeChar output '"'
         writeString output groupName
@@ -393,7 +401,7 @@ let serializeGroups2<'T> (groups: ((int64*'T)*int) seq, writeValue1, writeValue2
     writeArray output ``]}``
     output
 
-let serializeGroups2Sex (groups: ((int64*char)*int) seq, groupName1: string, groupName2: string): MemoryStream =
+let serializeGroups2Sex (groups: ((int64*byte)*int) seq, groupName1: string, groupName2: string): MemoryStream =
     let dictionary =
         if (groupName1 =~ "country")
         then countriesSerializeDictionary
@@ -412,11 +420,11 @@ let serializeGroups2Sex (groups: ((int64*char)*int) seq, groupName1: string, gro
         writeString output groupName2
         writeArray output ``":``
         writeChar output '"'
-        writeChar output value
+        writeChar output (getSexChar value)
         writeArray output ``",``
     serializeGroups2 (groups, writeValue1, writeValue2)
 
-let serializeGroups2Status (groups: ((int64*int)*int) seq, groupName1: string, groupName2: string): MemoryStream =
+let serializeGroups2Status (groups: ((int64*byte)*int) seq, groupName1: string, groupName2: string): MemoryStream =
     let dictionary =
         if (groupName1 =~ "country")
         then countriesSerializeDictionary
