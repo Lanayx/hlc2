@@ -239,15 +239,15 @@ let inline handlePhone (phone: string) (account: Account) =
     account.phoneCode <- phoneCode
 
 let inline addLikeToDictionary liker likee likeTs =
-    if likesIndex.ContainsKey(likee) |> not
-    then likesIndex.Add(likee, SortedDictionary<int, struct(single*int)>(intReverseComparer))
+    if likesIndex.[likee] |> isNull
+    then likesIndex.[likee] <- SortedDictionary<int, struct(single*byte)>(intReverseComparer)
     let likers = likesIndex.[likee]
     if likers.ContainsKey(liker)
     then
         let struct(ts, count) = likers.[liker]
-        likers.[liker] <- struct(ts + (single)likeTs, count+1)
+        likers.[liker] <- struct(ts + (single)likeTs, count+1uy)
     else
-        likers.[liker] <- struct((single)likeTs, 1)
+        likers.[liker] <- struct((single)likeTs, 1uy)
 
 let handleLikes (likes: Like[]) (account: Account) (deletePrevious: bool) =
     if deletePrevious

@@ -113,7 +113,7 @@ let getInterestAnyAccounts (str: string) =
 
 let inline getLikesContainsAccount value =
     let key = Int32.Parse(value)
-    if likesIndex.ContainsKey(key)
+    if likesIndex.[key] |> isNotNull
     then
         seq likesIndex.[key].Keys
     else
@@ -128,7 +128,7 @@ let getLikesContainsAccounts (value: string) =
             values
             |> Seq.map (fun str -> Int32.Parse(str))
             |> Seq.cache
-        if Seq.forall (fun key -> likesIndex.ContainsKey(key)) keys
+        if Seq.forall (fun key -> likesIndex.[key] |> isNotNull) keys
         then
             Seq.collect (fun key -> likesIndex.[key].Keys) keys
         else

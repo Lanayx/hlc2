@@ -17,7 +17,7 @@ open System.IO
 open HCup.Models
 open HCup.Requests
 
-let getSimilarityNew targetId (likers: SortedDictionary<int,struct(single*int)>) (results:Dictionary<int,single>) =
+let getSimilarityNew targetId (likers: SortedDictionary<int,struct(single*byte)>) (results:Dictionary<int,single>) =
     let struct(targTsSum, count) = likers.[targetId]
     let targTs = targTsSum / (single) count
     for liker in likers do

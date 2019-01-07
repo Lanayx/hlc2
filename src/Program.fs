@@ -138,6 +138,7 @@ let customPostRoutef : HttpHandler =
 
 
 let buildBitMapIndex() =
+    Console.WriteLine("Building bitmap index")
     interestsIndex <- BitmapIndex()
     getAccounts()
     |> Seq.iter (fun account ->
