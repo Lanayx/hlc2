@@ -240,7 +240,7 @@ let inline handlePhone (phone: string) (account: Account) =
 
 let inline addLikeToDictionary liker likee likeTs =
     if likesIndex.[likee] |> isNull
-    then likesIndex.[likee] <- SortedDictionary<int, struct(single*byte)>(intReverseComparer)
+    then likesIndex.[likee] <- SortedList<int, struct(single*byte)>(intReverseComparer)
     let likers = likesIndex.[likee]
     if likers.ContainsKey(liker)
     then
