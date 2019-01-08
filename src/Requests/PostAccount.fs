@@ -145,14 +145,18 @@ let updateCountryIndex oldSex oldStatus oldCountry oldInterests oldBirth oldJoin
     if deletePrevious
     then
         let struct(i,b,j,st) = allCountrySexGroups.[struct(oldCountry,oldSex)]
-        for interest in oldInterests do
-            decreaseCounter i interest
+        if oldInterests |> isNotNull
+        then
+            for interest in oldInterests do
+                decreaseCounter i interest
         decreaseCounter b oldBirth
         decreaseCounter j oldJoined
         decreaseCounter st oldStatus
         let struct(i,b,j,s) = allCountryStatusGroups.[struct(oldCountry,oldStatus)]
-        for interest in oldInterests do
-            decreaseCounter i interest
+        if oldInterests |> isNotNull
+        then
+            for interest in oldInterests do
+                decreaseCounter i interest
         decreaseCounter b oldBirth
         decreaseCounter j oldJoined
         decreaseCounter s oldSex

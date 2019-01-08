@@ -183,40 +183,40 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, order
         let groups =
             allCityStatusGroups
             |> Seq.map(fun kv ->
-                let struct(a,_,_,_) = kv.Value
-                kv.Key.ToTuple(), (a.Values |> Seq.sum)
+                let struct(_,_,_,s) = kv.Value
+                kv.Key.ToTuple(), (s.Values |> Seq.sum)
                 )
-            |> seqSort order (fun (_, count) -> count)
+            |> seqSort order (fun (field, count) -> count, field)
             |> Seq.take limit
         memoryStream <- serializeGroups2Status(groups, "city", "status")
     | "city,sex" ->
         let groups =
             allCitySexGroups
             |> Seq.map(fun kv ->
-                let struct(a,_,_,_) = kv.Value
-                kv.Key.ToTuple(), (a.Values |> Seq.sum)
+                let struct(_,_,_,s) = kv.Value
+                kv.Key.ToTuple(), (s.Values |> Seq.sum)
                 )
-            |> seqSort order (fun (_, count) -> count)
+            |> seqSort order (fun (field, count) -> count, field)
             |> Seq.take limit
         memoryStream <- serializeGroups2Sex(groups, "city", "sex")
     | "country,sex" ->
         let groups =
             allCountrySexGroups
             |> Seq.map(fun kv ->
-                let struct(a,_,_,_) = kv.Value
-                kv.Key.ToTuple(), (a.Values |> Seq.sum)
+                let struct(_,_,_,s) = kv.Value
+                kv.Key.ToTuple(), (s.Values |> Seq.sum)
                 )
-            |> seqSort order (fun (_, count) -> count)
+            |> seqSort order (fun (field, count) -> count, field)
             |> Seq.take limit
         memoryStream <- serializeGroups2Sex(groups, "country", "sex")
     | "country,status" ->
         let groups =
             allCountryStatusGroups
             |> Seq.map(fun kv ->
-                let struct(a,_,_,_) = kv.Value
-                kv.Key.ToTuple(), (a.Values |> Seq.sum)
+                let struct(_,_,_,s) = kv.Value
+                kv.Key.ToTuple(), (s.Values |> Seq.sum)
                 )
-            |> seqSort order (fun (_, count) -> count)
+            |> seqSort order (fun (field, count) -> count, field)
             |> Seq.take limit
         memoryStream <- serializeGroups2Status(groups, "country", "status")
     | _ ->
