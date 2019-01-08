@@ -2,6 +2,7 @@
 
 open System.Collections.Generic
 open HCup.Models
+open System
 
 let fnamesWeightDictionary = Dictionary<string, int64>()
 let snamesWeightDictionary = Dictionary<string, int64>()
@@ -41,9 +42,30 @@ countryStatusGroups.[2uy] <- Dictionary<int64,int>()
 
 // key is interest value is Count
 let mutable interestGroups = Dictionary<int64,int>()
-
-// sex*status*interest*country
-let allCountryGroups = Dictionary<struct(byte*byte*int64*int64),ResizeArray<int>>()
-
-// sex*status*interest*city
-let allCityGroups = Dictionary<struct(byte*byte*int64*int64),ResizeArray<int>>()
+type BirthGroup = uint16
+type JoinedGroup = uint16
+type SexGroup = byte
+type StatusGroup = byte
+type CityGroup = int64
+type CountryGroup = int64
+type InterestsGroup = int64
+type CountType = int
+ 
+let allCountryGroups = 
+    Dictionary<CountryGroup,struct(Dictionary<InterestsGroup,CountType>*Dictionary<BirthGroup,CountType>*Dictionary<JoinedGroup,CountType>*Dictionary<SexGroup,CountType>*Dictionary<StatusGroup,CountType>)>()
+let allCityGroups = 
+    Dictionary<CityGroup,struct(Dictionary<InterestsGroup,CountType>*Dictionary<BirthGroup,CountType>*Dictionary<JoinedGroup,CountType>*Dictionary<SexGroup,CountType>*Dictionary<StatusGroup,CountType>)>()
+let allSexGroups = 
+    Dictionary<SexGroup,struct(Dictionary<InterestsGroup,CountType>*Dictionary<BirthGroup,CountType>*Dictionary<JoinedGroup,CountType>*Dictionary<CityGroup,CountType>*Dictionary<CountryGroup,CountType>*Dictionary<StatusGroup,CountType>)>()
+let allStatusGroups = 
+    Dictionary<StatusGroup,struct(Dictionary<InterestsGroup,CountType>*Dictionary<BirthGroup,CountType>*Dictionary<JoinedGroup,CountType>*Dictionary<CityGroup,CountType>*Dictionary<CountryGroup,CountType>*Dictionary<SexGroup,CountType>)>()
+let allInterestsGroups = 
+    Dictionary<InterestsGroup,struct(Dictionary<BirthGroup,CountType>*Dictionary<JoinedGroup,CountType>*Dictionary<CityGroup,CountType>*Dictionary<CountryGroup,CountType>*Dictionary<SexGroup,CountType>*Dictionary<StatusGroup,CountType>)>()
+let allCountrySexGroups = 
+    Dictionary<CountryGroup*SexGroup,struct(Dictionary<InterestsGroup,CountType>*Dictionary<BirthGroup,CountType>*Dictionary<JoinedGroup,CountType>*Dictionary<StatusGroup,CountType>)>()
+let allCitySexGroups = 
+    Dictionary<CityGroup*SexGroup,struct(Dictionary<InterestsGroup,CountType>*Dictionary<BirthGroup,CountType>*Dictionary<JoinedGroup,CountType>*Dictionary<StatusGroup,CountType>)>()
+let allCountryStatusGroups = 
+    Dictionary<CountryGroup*StatusGroup,struct(Dictionary<InterestsGroup,CountType>*Dictionary<BirthGroup,CountType>*Dictionary<JoinedGroup,CountType>*Dictionary<SexGroup,CountType>)>()
+let allCityStatusGroups = 
+    Dictionary<CityGroup*StatusGroup,struct(Dictionary<InterestsGroup,CountType>*Dictionary<BirthGroup,CountType>*Dictionary<JoinedGroup,CountType>*Dictionary<SexGroup,CountType>)>()
