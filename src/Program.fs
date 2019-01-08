@@ -138,7 +138,7 @@ let customPostRoutef : HttpHandler =
 
 
 let buildBitMapIndex() =
-    Console.WriteLine("Building bitmap index")
+    Console.WriteLine("{0} Building bitmap index", DateTime.Now)
     interestsIndex <- BitmapIndex()
     getAccounts()
     |> Seq.iter (fun account ->
@@ -148,7 +148,7 @@ let buildBitMapIndex() =
             |> Seq.iter (fun interest -> interestsIndex.Set(BIKey(0,interest),account.id)))
 
 let sortGroupDictionaries() =
-    Console.WriteLine("Sorting group dictionaries")
+    Console.WriteLine("{0} Sorting group dictionaries", DateTime.Now)
     citySexGroups.[0uy] <- citySexGroups.[0uy].OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
     citySexGroups.[1uy] <- citySexGroups.[1uy].OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
     cityStatusGroups.[0uy] <- cityStatusGroups.[0uy].OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))

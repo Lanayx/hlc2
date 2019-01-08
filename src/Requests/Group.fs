@@ -181,27 +181,43 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, order
         memoryStream <- serializeGroupsInterests(interests , "interests")
     | "city,status" ->
         let groups =
-            cityStatusGroups
-            |> sortedCollectDict
-            |> seqTake order (cityStatusGroups.[0uy].Count + cityStatusGroups.[1uy].Count + cityStatusGroups.[2uy].Count) limit
+            allCityStatusGroups
+            |> Seq.map(fun kv ->
+                let struct(a,_,_,_) = kv.Value
+                kv.Key.ToTuple(), (a.Values |> Seq.sum)
+                )
+            |> seqSort order (fun (_, count) -> count)
+            |> Seq.take limit
         memoryStream <- serializeGroups2Status(groups, "city", "status")
     | "city,sex" ->
         let groups =
-            citySexGroups
-            |> sortedCollectDict
-            |> seqTake order (citySexGroups.[0uy].Count + citySexGroups.[1uy].Count) limit
+            allCitySexGroups
+            |> Seq.map(fun kv ->
+                let struct(a,_,_,_) = kv.Value
+                kv.Key.ToTuple(), (a.Values |> Seq.sum)
+                )
+            |> seqSort order (fun (_, count) -> count)
+            |> Seq.take limit
         memoryStream <- serializeGroups2Sex(groups, "city", "sex")
     | "country,sex" ->
         let groups =
-            countrySexGroups
-            |> sortedCollectDict
-            |> seqTake order (countrySexGroups.[0uy].Count + countrySexGroups.[1uy].Count) limit
+            allCountrySexGroups
+            |> Seq.map(fun kv ->
+                let struct(a,_,_,_) = kv.Value
+                kv.Key.ToTuple(), (a.Values |> Seq.sum)
+                )
+            |> seqSort order (fun (_, count) -> count)
+            |> Seq.take limit
         memoryStream <- serializeGroups2Sex(groups, "country", "sex")
     | "country,status" ->
         let groups =
-            countryStatusGroups
-            |> sortedCollectDict
-            |> seqTake order (countryStatusGroups.[0uy].Count + countryStatusGroups.[1uy].Count + countryStatusGroups.[2uy].Count) limit
+            allCountryStatusGroups
+            |> Seq.map(fun kv ->
+                let struct(a,_,_,_) = kv.Value
+                kv.Key.ToTuple(), (a.Values |> Seq.sum)
+                )
+            |> seqSort order (fun (_, count) -> count)
+            |> Seq.take limit
         memoryStream <- serializeGroups2Status(groups, "country", "status")
     | _ ->
         ()

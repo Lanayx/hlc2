@@ -84,56 +84,107 @@ let updateInterestIndex oldInterests (account: Account) (deletePrevious: bool) =
                         interestGroups.[interestWeight] <- 1
                 )
 
-let updateCityIndex oldSex oldStatus oldCity (account: Account) (deletePrevious: bool) =
+let inline increaseCounter<'T> (dict: Dictionary<'T,CountType>) (key: 'T) =
+    let mutable count = 0;
+    if dict.TryGetValue(key, &count)
+    then dict.[key] <- count + 1
+    else dict.[key] <- 1
+
+let inline decreaseCounter<'T> (dict: Dictionary<'T,CountType>) (key: 'T) =
+    let count = dict.[key];
+    if count > 1
+    then dict.[key] <- count - 1
+    else dict.Remove(key) |> ignore
+
+let updateCityIndex oldSex oldStatus oldCity oldInterests oldBirth oldJoined (account: Account) (deletePrevious: bool) =
     if deletePrevious
     then
-        let oldSexCount = citySexGroups.[oldSex].[oldCity]
-        if oldSexCount > 1
-        then
-            citySexGroups.[oldSex].[oldCity] <- oldSexCount - 1
-        else
-            citySexGroups.[oldSex].Remove(oldCity) |> ignore
+        let struct(i,b,j,st) = allCitySexGroups.[struct(oldCity,oldSex)]
+        for interest in oldInterests do
+            decreaseCounter i interest
+        decreaseCounter b oldBirth
+        decreaseCounter j oldJoined
+        decreaseCounter st oldStatus
+        let struct(i,b,j,s) = allCityStatusGroups.[struct(oldCity,oldStatus)]
+        for interest in oldInterests do
+            decreaseCounter i interest
+        decreaseCounter b oldBirth
+        decreaseCounter j oldJoined
+        decreaseCounter s oldSex
 
-        let oldStatusCount = cityStatusGroups.[oldStatus].[oldCity]
-        if oldStatusCount > 1
-        then
-            cityStatusGroups.[oldStatus].[oldCity] <- oldStatusCount - 1
-        else
-            cityStatusGroups.[oldStatus].Remove(oldCity) |> ignore
-
-    let mutable sexCount: int = 0
-    if citySexGroups.[account.sex].TryGetValue(account.city, &sexCount)
+    let mutable sexDictionaries = struct(null,null,null,null)
+    let key = struct(account.city,account.sex)
+    if allCitySexGroups.TryGetValue(key, &sexDictionaries) |> not
     then
-        citySexGroups.[account.sex].[account.city] <- sexCount + 1
-    else
-        citySexGroups.[account.sex].[account.city] <- 1
-
-    let mutable statusCount: int = 0
-    if cityStatusGroups.[account.status].TryGetValue(account.city, &statusCount)
+        sexDictionaries <- struct(Dictionary<InterestsGroup,CountType>(),Dictionary<BirthGroup,CountType>(),Dictionary<JoinedGroup,CountType>(),Dictionary<StatusGroup,CountType>())
+        allCitySexGroups.[key] <- sexDictionaries
+    let struct(i,b,j,st) = sexDictionaries
+    if account.interests |> isNotNull
     then
-        cityStatusGroups.[account.status].[account.city] <- statusCount + 1
-    else
-        cityStatusGroups.[account.status].[account.city] <- 1
+        for interest in account.interests do
+            increaseCounter i interest
+    increaseCounter b account.birthYear
+    increaseCounter j account.joinedYear
+    increaseCounter st account.status
+    let mutable statusDictionaries = struct(null,null,null,null)
+    let key = struct(account.city,account.status)
+    if allCityStatusGroups.TryGetValue(key, &statusDictionaries) |> not
+    then
+        statusDictionaries <- struct(Dictionary<InterestsGroup,CountType>(),Dictionary<BirthGroup,CountType>(),Dictionary<JoinedGroup,CountType>(),Dictionary<StatusGroup,CountType>())
+        allCityStatusGroups.[key] <- statusDictionaries
+    let struct(i,b,j,s) = statusDictionaries
+    if account.interests |> isNotNull
+    then
+        for interest in account.interests do
+            increaseCounter i interest
+    increaseCounter b account.birthYear
+    increaseCounter j account.joinedYear
+    increaseCounter s account.sex
 
-let updateCountryIndex oldSex oldStatus oldCountry (account: Account) (deletePrevious: bool) =
+let updateCountryIndex oldSex oldStatus oldCountry oldInterests oldBirth oldJoined (account: Account) (deletePrevious: bool) =
     if deletePrevious
     then
-        countrySexGroups.[oldSex].[oldCountry] <- countrySexGroups.[oldSex].[oldCountry] - 1
-        countryStatusGroups.[oldStatus].[oldCountry] <- countryStatusGroups.[oldStatus].[oldCountry] - 1
+        let struct(i,b,j,st) = allCountrySexGroups.[struct(oldCountry,oldSex)]
+        for interest in oldInterests do
+            decreaseCounter i interest
+        decreaseCounter b oldBirth
+        decreaseCounter j oldJoined
+        decreaseCounter st oldStatus
+        let struct(i,b,j,s) = allCountryStatusGroups.[struct(oldCountry,oldStatus)]
+        for interest in oldInterests do
+            decreaseCounter i interest
+        decreaseCounter b oldBirth
+        decreaseCounter j oldJoined
+        decreaseCounter s oldSex
 
-    let mutable sexCount: int = 0
-    if countrySexGroups.[account.sex].TryGetValue(account.country, &sexCount)
+    let mutable sexDictionaries = struct(null,null,null,null)
+    let key = struct(account.country,account.sex)
+    if allCountrySexGroups.TryGetValue(key, &sexDictionaries) |> not
     then
-        countrySexGroups.[account.sex].[account.country] <- sexCount + 1
-    else
-        countrySexGroups.[account.sex].[account.country] <- 1
-
-    let mutable statusCount: int = 0
-    if countryStatusGroups.[account.status].TryGetValue(account.country, &statusCount)
+        sexDictionaries <- struct(Dictionary<InterestsGroup,CountType>(),Dictionary<BirthGroup,CountType>(),Dictionary<JoinedGroup,CountType>(),Dictionary<StatusGroup,CountType>())
+        allCountrySexGroups.[key] <- sexDictionaries
+    let struct(i,b,j,st) = sexDictionaries
+    if account.interests |> isNotNull
     then
-        countryStatusGroups.[account.status].[account.country] <- statusCount + 1
-    else
-        countryStatusGroups.[account.status].[account.country] <- 1
+        for interest in account.interests do
+            increaseCounter i interest
+    increaseCounter b account.birthYear
+    increaseCounter j account.joinedYear
+    increaseCounter st account.status
+    let mutable statusDictionaries = struct(null,null,null,null)
+    let key = struct(account.country,account.status)
+    if allCountryStatusGroups.TryGetValue(key, &statusDictionaries) |> not
+    then
+        statusDictionaries <- struct(Dictionary<InterestsGroup,CountType>(),Dictionary<BirthGroup,CountType>(),Dictionary<JoinedGroup,CountType>(),Dictionary<StatusGroup,CountType>())
+        allCountryStatusGroups.[key] <- statusDictionaries
+    let struct(i,b,j,s) = statusDictionaries
+    if account.interests |> isNotNull
+    then
+        for interest in account.interests do
+            increaseCounter i interest
+    increaseCounter b account.birthYear
+    increaseCounter j account.joinedYear
+    increaseCounter s account.sex
 
 let handleCity city (account: Account) (deletePrevious: bool) =
     if deletePrevious && account.city > 0L
@@ -284,9 +335,9 @@ let createAccount (accUpd: AccountUpd): Account =
     account.premiumNow <- box accUpd.premium |> isNotNull && accUpd.premium.start <= currentTs && accUpd.premium.finish > currentTs
     account.sex <- getSex accUpd.sex
     account.birth <- accUpd.birth.Value
-    account.birthYear <- (convertToDate accUpd.birth.Value).Year
+    account.birthYear <- int16 (convertToDate accUpd.birth.Value).Year
     account.joined <- accUpd.joined.Value
-    account.joinedYear <- (convertToDate accUpd.joined.Value).Year
+    account.joinedYear <- int16 (convertToDate accUpd.joined.Value).Year
 
     // handle fields with indexes to not fill indexes on failures
     if accUpd.likes |> isNotNull
@@ -301,8 +352,8 @@ let createAccount (accUpd: AccountUpd): Account =
     if accUpd.country |> isNotNull
     then
         handleCountry accUpd.country account false
-    updateCityIndex 0uy 0uy 0L account false
-    updateCountryIndex 0uy 0uy 0L account false
+    updateCityIndex 0uy 0uy 0L [||] 0s 0s account false
+    updateCountryIndex 0uy 0uy 0L [||] 0s 0s account false
     updateInterestIndex [||] account false
     emailsDictionary.Add(account.email) |> ignore
     account
@@ -313,15 +364,17 @@ let updateExistingAccount (existing: Account, accUpd: AccountUpd) =
     let oldStatus = existing.status
     let oldSex = existing.sex
     let oldInterests = existing.interests
+    let oldJoinedYear = existing.joinedYear
+    let oldBirthYear = existing.birthYear
 
     if accUpd.birth.HasValue
     then
         existing.birth <- accUpd.birth.Value
-        existing.birthYear <- (convertToDate accUpd.birth.Value).Year
+        existing.birthYear <- int16 (convertToDate accUpd.birth.Value).Year
     if accUpd.joined.HasValue
     then
         existing.joined <- accUpd.joined.Value
-        existing.joinedYear <- (convertToDate accUpd.joined.Value).Year
+        existing.joinedYear <- int16 (convertToDate accUpd.joined.Value).Year
     if accUpd.sex |> isNotNull
     then
         if accUpd.sex.Length > 1
@@ -361,12 +414,12 @@ let updateExistingAccount (existing: Account, accUpd: AccountUpd) =
     if accUpd.country |> isNotNull
     then
         handleCountry accUpd.country existing true
-    if accUpd.city |> isNotNull || accUpd.sex |> isNotNull || accUpd.status |> isNotNull
+    if accUpd.city |> isNotNull || accUpd.sex |> isNotNull || accUpd.status |> isNotNull || accUpd.interests |> isNotNull || accUpd.joined.HasValue || accUpd.birth.HasValue
     then
-        updateCityIndex oldSex oldStatus oldCity existing true
-    if accUpd.country |> isNotNull || accUpd.sex |> isNotNull || accUpd.status |> isNotNull
+        updateCityIndex oldSex oldStatus oldCity oldInterests oldBirthYear oldJoinedYear existing true
+    if accUpd.country |> isNotNull || accUpd.sex |> isNotNull || accUpd.status |> isNotNull || accUpd.interests |> isNotNull || accUpd.joined.HasValue || accUpd.birth.HasValue
     then
-        updateCountryIndex oldSex oldStatus oldCountry existing true
+        updateCountryIndex oldSex oldStatus oldCountry oldInterests oldBirthYear oldJoinedYear existing true
     if accUpd.interests |> isNotNull
     then
         updateInterestIndex oldInterests existing true

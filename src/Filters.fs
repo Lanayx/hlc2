@@ -147,11 +147,11 @@ let birthGtFilter (value: string) =
 
 let birthYearFilter (value: string) =
     fun (acc: Account) ->
-        acc.birthYear = Int32.Parse(value)
+        acc.birthYear = Int16.Parse(value)
 
 let joinedYearFilter (value: string) =
     fun (acc: Account) ->
-        acc.joinedYear = Int32.Parse(value)
+        acc.joinedYear = Int16.Parse(value)
 
 let interestsContainsFilter (value: string) =
     fun (acc: Account) ->
