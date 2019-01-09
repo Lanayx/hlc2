@@ -100,18 +100,25 @@ let updateCityIndex oldSex oldStatus oldCity oldInterests oldBirth oldJoined (ac
     if deletePrevious
     then
         let struct(i,b,j,st) = allCitySexGroups.[struct(oldCity,oldSex)]
-        for interest in oldInterests do
-            decreaseCounter i interest
+        if oldInterests |> isNotNull
+        then
+            for interest in oldInterests do
+                decreaseCounter i interest
         decreaseCounter b oldBirth
         decreaseCounter j oldJoined
         decreaseCounter st oldStatus
+        if (i.Count = 0 && b.Count = 0 && j.Count = 0 && st.Count = 0)
+        then allCitySexGroups.Remove(struct(oldCity,oldSex)) |> ignore
         let struct(i,b,j,s) = allCityStatusGroups.[struct(oldCity,oldStatus)]
-        for interest in oldInterests do
-            decreaseCounter i interest
+        if oldInterests |> isNotNull
+        then
+            for interest in oldInterests do
+                decreaseCounter i interest
         decreaseCounter b oldBirth
         decreaseCounter j oldJoined
         decreaseCounter s oldSex
-
+        if (i.Count = 0 && b.Count = 0 && j.Count = 0 && s.Count = 0)
+        then allCityStatusGroups.Remove(struct(oldCity,oldStatus)) |> ignore
     let mutable sexDictionaries = struct(null,null,null,null)
     let key = struct(account.city,account.sex)
     if allCitySexGroups.TryGetValue(key, &sexDictionaries) |> not
@@ -152,6 +159,8 @@ let updateCountryIndex oldSex oldStatus oldCountry oldInterests oldBirth oldJoin
         decreaseCounter b oldBirth
         decreaseCounter j oldJoined
         decreaseCounter st oldStatus
+        if (i.Count = 0 && b.Count = 0 && j.Count = 0 && st.Count = 0)
+        then allCountrySexGroups.Remove(struct(oldCountry,oldSex)) |> ignore
         let struct(i,b,j,s) = allCountryStatusGroups.[struct(oldCountry,oldStatus)]
         if oldInterests |> isNotNull
         then
@@ -160,7 +169,8 @@ let updateCountryIndex oldSex oldStatus oldCountry oldInterests oldBirth oldJoin
         decreaseCounter b oldBirth
         decreaseCounter j oldJoined
         decreaseCounter s oldSex
-
+        if (i.Count = 0 && b.Count = 0 && j.Count = 0 && s.Count = 0)
+        then allCountryStatusGroups.Remove(struct(oldCountry,oldStatus)) |> ignore
     let mutable sexDictionaries = struct(null,null,null,null)
     let key = struct(account.country,account.sex)
     if allCountrySexGroups.TryGetValue(key, &sexDictionaries) |> not
