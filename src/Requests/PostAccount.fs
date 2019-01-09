@@ -96,10 +96,13 @@ let inline decreaseCounter<'T> (dict: Dictionary<'T,CountType>) (key: 'T) =
     then dict.[key] <- count - 1
     else dict.Remove(key) |> ignore
 
-let updateCityIndex oldSex oldStatus oldCity oldInterests oldBirth oldJoined (account: Account) (deletePrevious: bool) =
+let updateSexStatusIndexes
+        (groupSexIndex:Dictionary<struct(int64*SexGroup),struct(Dictionary<InterestsGroup,CountType>*Dictionary<BirthGroup,CountType>*Dictionary<JoinedGroup,CountType>*Dictionary<StatusGroup,CountType>)>)
+        (groupStatusIndex:Dictionary<struct(int64*StatusGroup),struct(Dictionary<InterestsGroup,CountType>*Dictionary<BirthGroup,CountType>*Dictionary<JoinedGroup,CountType>*Dictionary<StatusGroup,CountType>)>)
+        oldSex oldStatus oldCityOrCountry oldInterests oldBirth oldJoined newCityOrCountry (account: Account) (deletePrevious: bool) =
     if deletePrevious
     then
-        let struct(i,b,j,st) = allCitySexGroups.[struct(oldCity,oldSex)]
+        let struct(i,b,j,st) = groupSexIndex.[struct(oldCityOrCountry,oldSex)]
         if oldInterests |> isNotNull
         then
             for interest in oldInterests do
@@ -108,8 +111,8 @@ let updateCityIndex oldSex oldStatus oldCity oldInterests oldBirth oldJoined (ac
         decreaseCounter j oldJoined
         decreaseCounter st oldStatus
         if (i.Count = 0 && b.Count = 0 && j.Count = 0 && st.Count = 0)
-        then allCitySexGroups.Remove(struct(oldCity,oldSex)) |> ignore
-        let struct(i,b,j,s) = allCityStatusGroups.[struct(oldCity,oldStatus)]
+        then groupSexIndex.Remove(struct(oldCityOrCountry,oldSex)) |> ignore
+        let struct(i,b,j,s) = groupStatusIndex.[struct(oldCityOrCountry,oldStatus)]
         if oldInterests |> isNotNull
         then
             for interest in oldInterests do
@@ -118,13 +121,13 @@ let updateCityIndex oldSex oldStatus oldCity oldInterests oldBirth oldJoined (ac
         decreaseCounter j oldJoined
         decreaseCounter s oldSex
         if (i.Count = 0 && b.Count = 0 && j.Count = 0 && s.Count = 0)
-        then allCityStatusGroups.Remove(struct(oldCity,oldStatus)) |> ignore
+        then groupStatusIndex.Remove(struct(oldCityOrCountry,oldStatus)) |> ignore
     let mutable sexDictionaries = struct(null,null,null,null)
-    let key = struct(account.city,account.sex)
-    if allCitySexGroups.TryGetValue(key, &sexDictionaries) |> not
+    let key = struct(newCityOrCountry,account.sex)
+    if groupSexIndex.TryGetValue(key, &sexDictionaries) |> not
     then
         sexDictionaries <- struct(Dictionary<InterestsGroup,CountType>(),Dictionary<BirthGroup,CountType>(),Dictionary<JoinedGroup,CountType>(),Dictionary<StatusGroup,CountType>())
-        allCitySexGroups.[key] <- sexDictionaries
+        groupSexIndex.[key] <- sexDictionaries
     let struct(i,b,j,st) = sexDictionaries
     if account.interests |> isNotNull
     then
@@ -134,11 +137,11 @@ let updateCityIndex oldSex oldStatus oldCity oldInterests oldBirth oldJoined (ac
     increaseCounter j account.joinedYear
     increaseCounter st account.status
     let mutable statusDictionaries = struct(null,null,null,null)
-    let key = struct(account.city,account.status)
-    if allCityStatusGroups.TryGetValue(key, &statusDictionaries) |> not
+    let key = struct(newCityOrCountry,account.status)
+    if groupStatusIndex.TryGetValue(key, &statusDictionaries) |> not
     then
         statusDictionaries <- struct(Dictionary<InterestsGroup,CountType>(),Dictionary<BirthGroup,CountType>(),Dictionary<JoinedGroup,CountType>(),Dictionary<StatusGroup,CountType>())
-        allCityStatusGroups.[key] <- statusDictionaries
+        groupStatusIndex.[key] <- statusDictionaries
     let struct(i,b,j,s) = statusDictionaries
     if account.interests |> isNotNull
     then
@@ -148,57 +151,12 @@ let updateCityIndex oldSex oldStatus oldCity oldInterests oldBirth oldJoined (ac
     increaseCounter j account.joinedYear
     increaseCounter s account.sex
 
-let updateCountryIndex oldSex oldStatus oldCountry oldInterests oldBirth oldJoined (account: Account) (deletePrevious: bool) =
-    if deletePrevious
-    then
-        let struct(i,b,j,st) = allCountrySexGroups.[struct(oldCountry,oldSex)]
-        if oldInterests |> isNotNull
-        then
-            for interest in oldInterests do
-                decreaseCounter i interest
-        decreaseCounter b oldBirth
-        decreaseCounter j oldJoined
-        decreaseCounter st oldStatus
-        if (i.Count = 0 && b.Count = 0 && j.Count = 0 && st.Count = 0)
-        then allCountrySexGroups.Remove(struct(oldCountry,oldSex)) |> ignore
-        let struct(i,b,j,s) = allCountryStatusGroups.[struct(oldCountry,oldStatus)]
-        if oldInterests |> isNotNull
-        then
-            for interest in oldInterests do
-                decreaseCounter i interest
-        decreaseCounter b oldBirth
-        decreaseCounter j oldJoined
-        decreaseCounter s oldSex
-        if (i.Count = 0 && b.Count = 0 && j.Count = 0 && s.Count = 0)
-        then allCountryStatusGroups.Remove(struct(oldCountry,oldStatus)) |> ignore
-    let mutable sexDictionaries = struct(null,null,null,null)
-    let key = struct(account.country,account.sex)
-    if allCountrySexGroups.TryGetValue(key, &sexDictionaries) |> not
-    then
-        sexDictionaries <- struct(Dictionary<InterestsGroup,CountType>(),Dictionary<BirthGroup,CountType>(),Dictionary<JoinedGroup,CountType>(),Dictionary<StatusGroup,CountType>())
-        allCountrySexGroups.[key] <- sexDictionaries
-    let struct(i,b,j,st) = sexDictionaries
-    if account.interests |> isNotNull
-    then
-        for interest in account.interests do
-            increaseCounter i interest
-    increaseCounter b account.birthYear
-    increaseCounter j account.joinedYear
-    increaseCounter st account.status
-    let mutable statusDictionaries = struct(null,null,null,null)
-    let key = struct(account.country,account.status)
-    if allCountryStatusGroups.TryGetValue(key, &statusDictionaries) |> not
-    then
-        statusDictionaries <- struct(Dictionary<InterestsGroup,CountType>(),Dictionary<BirthGroup,CountType>(),Dictionary<JoinedGroup,CountType>(),Dictionary<StatusGroup,CountType>())
-        allCountryStatusGroups.[key] <- statusDictionaries
-    let struct(i,b,j,s) = statusDictionaries
-    if account.interests |> isNotNull
-    then
-        for interest in account.interests do
-            increaseCounter i interest
-    increaseCounter b account.birthYear
-    increaseCounter j account.joinedYear
-    increaseCounter s account.sex
+let inline updateCityIndex oldSex oldStatus oldCity oldInterests oldBirth oldJoined (account: Account) (deletePrevious: bool) =
+    updateSexStatusIndexes allCitySexGroups allCityStatusGroups oldSex oldStatus oldCity oldInterests oldBirth oldJoined account.city account deletePrevious
+
+let inline updateCountryIndex oldSex oldStatus oldCountry oldInterests oldBirth oldJoined (account: Account) (deletePrevious: bool) =
+    updateSexStatusIndexes allCountrySexGroups allCountryStatusGroups oldSex oldStatus oldCountry oldInterests oldBirth oldJoined account.country account deletePrevious
+
 
 let handleCity city (account: Account) (deletePrevious: bool) =
     if deletePrevious && account.city > 0L
