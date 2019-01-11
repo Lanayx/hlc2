@@ -159,19 +159,23 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, order
         memoryStream <- serializeGroupsStatus(groups, "status")
     | "country" ->
         let groups =
-            accs
-            |> Seq.groupBy (fun acc -> acc.country)
-            |> Seq.map (fun (key, group) -> key, group |> Seq.length)
-            |> seqSort order (fun (group,length) -> length, group)
-            |> Seq.truncate limit
+            allCountryGroups
+            |> Seq.map(fun kv ->
+                let struct(_,_,_,_,st) = kv.Value
+                kv.Key, (st.Values |> Seq.sum)
+                )
+            |> seqSort order (fun (field, count) -> count, field)
+            |> Seq.take limit
         memoryStream <- serializeGroupsCountry(groups, "country")
     | "city" ->
         let groups =
-            accs
-            |> Seq.groupBy (fun acc -> acc.city)
-            |> Seq.map (fun (key, group) -> key, group |> Seq.length)
-            |> seqSort order (fun (group,length) -> length, group)
-            |> Seq.truncate limit
+            allCityGroups
+            |> Seq.map(fun kv ->
+                let struct(_,_,_,_,st) = kv.Value
+                kv.Key, (st.Values |> Seq.sum)
+                )
+            |> seqSort order (fun (field, count) -> count, field)
+            |> Seq.take limit
         memoryStream <- serializeGroupsCity(groups, "city")
     | "interests" ->
         let groups =
