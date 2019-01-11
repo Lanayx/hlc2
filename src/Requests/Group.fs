@@ -139,17 +139,17 @@ let applyGrouping (memoryStream: byref<MemoryStream>, groupKey, order, accs: Acc
         ()
 
 let inline handleGroupFilter<'T> (dict: Dictionary<'T,CountType>) value =
-    let mutable count = null
+    let mutable count = 0
     if (dict.TryGetValue(value, &count) |> not)
     then 0
-    else count.Count
+    else count
 
 let inline handleGroupFilterWithWeight (dict: Dictionary<int64,CountType>) (weightDict: Dictionary<string,int64>) value =
-    let mutable count = null
+    let mutable count = 0
     let mutable weight = 0L
     if (weightDict.TryGetValue(value, &weight) |> not) || (dict.TryGetValue(weight, &count) |> not)
     then 0
-    else count.Count
+    else count
 
 let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, keys: string list, order, limit, ctx: HttpContext) =
     let key = if keys.IsEmpty then "" else keys.[0]
@@ -161,7 +161,7 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, keys:
                 let struct(i,b,j,ci,co,st) = kv.Value
                 if key =~ ""
                 then
-                    kv.Key, (st.Values |> Seq.sumBy (fun count -> count.Count))
+                    kv.Key, (st.Values |> Seq.sum)
                 else
                     let value = ctx.Request.Query.[key].[0]
                     let count =
@@ -176,7 +176,7 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, keys:
                             handleGroupFilterWithWeight ci citiesWeightDictionary value
                         | "country" ->
                             handleGroupFilterWithWeight co countriesWeightDictionary value
-                        | "status" -> st.[getStatus value].Count
+                        | "status" -> st.[getStatus value]
                         | _ -> failwith "Unknown sex filter"
                     kv.Key, count
                 )
@@ -191,7 +191,7 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, keys:
                 let struct(i,b,j,ci,co,s) = kv.Value
                 if key =~ ""
                 then
-                    kv.Key, (s.Values |> Seq.sumBy (fun count -> count.Count))
+                    kv.Key, (s.Values |> Seq.sum)
                 else
                     let value = ctx.Request.Query.[key].[0]
                     let count =
@@ -206,7 +206,7 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, keys:
                             handleGroupFilterWithWeight ci citiesWeightDictionary value
                         | "country" ->
                             handleGroupFilterWithWeight co countriesWeightDictionary value
-                        | "sex" -> s.[getSex value].Count
+                        | "sex" -> s.[getSex value]
                         | _ -> failwith "Unknown sex filter"
                     kv.Key, count
                 )
@@ -221,7 +221,7 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, keys:
                 let struct(i,b,j,s,st) = kv.Value
                 if key =~ ""
                 then
-                    kv.Key, (st.Values |> Seq.sumBy (fun count -> count.Count))
+                    kv.Key, (st.Values |> Seq.sum)
                 else
                     let value = ctx.Request.Query.[key].[0]
                     let count =
@@ -250,7 +250,7 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, keys:
                 let struct(i,b,j,s,st) = kv.Value
                 if key =~ ""
                 then
-                    kv.Key, (st.Values |> Seq.sumBy (fun count -> count.Count))
+                    kv.Key, (st.Values |> Seq.sum)
                 else
                     let value = ctx.Request.Query.[key].[0]
                     let count =
@@ -279,7 +279,7 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, keys:
                 let struct(b,j,ci,co,s,st) = kv.Value
                 if key =~ ""
                 then
-                    kv.Key, (s.Values |> Seq.sumBy (fun count -> count.Count))
+                    kv.Key, (s.Values |> Seq.sum)
                 else
                     let value = ctx.Request.Query.[key].[0]
                     let count =
@@ -310,7 +310,7 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, keys:
                 let struct(i,b,j,s) = kv.Value
                 if key =~ ""
                 then
-                    kv.Key.ToTuple(), (s.Values |> Seq.sumBy (fun count -> count.Count))
+                    kv.Key.ToTuple(), (s.Values |> Seq.sum)
                 else
                     let value = ctx.Request.Query.[key].[0]
                     let count =
@@ -325,7 +325,7 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, keys:
                             handleGroupFilter s (getSex value)
                         | "status" ->
                             let struct(_, status) = kv.Key
-                            if status = (getStatus value) then (s.Values |>Seq.sumBy (fun count -> count.Count)) else 0
+                            if status = (getStatus value) then (s.Values |> Seq.sum) else 0
                         | _ -> failwith "Unknown citystatus filter"
                     kv.Key.ToTuple(), count
                 )
@@ -340,7 +340,7 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, keys:
                 let struct(i,b,j,st) = kv.Value
                 if key =~ ""
                 then
-                    kv.Key.ToTuple(), (st.Values |> Seq.sumBy (fun count -> count.Count))
+                    kv.Key.ToTuple(), (st.Values |> Seq.sum)
                 else
                     let value = ctx.Request.Query.[key].[0]
                     let count =
@@ -355,7 +355,7 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, keys:
                             handleGroupFilter st (getStatus value)
                         | "sex" ->
                             let struct(_, sex) = kv.Key
-                            if sex = (getSex value) then (st.Values |> Seq.sumBy (fun count -> count.Count)) else 0
+                            if sex = (getSex value) then (st.Values |> Seq.sum) else 0
                         | _ -> failwith "Unknown citysex filter"
                     kv.Key.ToTuple(), count
                 )
@@ -370,7 +370,7 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, keys:
                 let struct(i,b,j,st) = kv.Value
                 if key =~ ""
                 then
-                    kv.Key.ToTuple(), (st.Values |> Seq.sumBy (fun count -> count.Count))
+                    kv.Key.ToTuple(), (st.Values |> Seq.sum)
                 else
                     let value = ctx.Request.Query.[key].[0]
                     let count =
@@ -385,7 +385,7 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, keys:
                             handleGroupFilter st (getStatus value)
                         | "sex" ->
                             let struct(_, sex) = kv.Key
-                            if sex = (getSex value) then (st.Values |> Seq.sumBy (fun count -> count.Count)) else 0
+                            if sex = (getSex value) then (st.Values |> Seq.sum) else 0
                         | _ -> failwith "Unknown countrysex filter"
                     kv.Key.ToTuple(), count
                 )
@@ -400,7 +400,7 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, keys:
                 let struct(i,b,j,s) = kv.Value
                 if key =~ ""
                 then
-                    kv.Key.ToTuple(), (s.Values |> Seq.sumBy (fun count -> count.Count))
+                    kv.Key.ToTuple(), (s.Values |> Seq.sum)
                 else
                     let value = ctx.Request.Query.[key].[0]
                     let count =
@@ -415,7 +415,7 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, keys:
                             handleGroupFilter s (getSex value)
                         | "status" ->
                             let struct(_, status) = kv.Key
-                            if status = (getStatus value) then (s.Values |> Seq.sumBy (fun count -> count.Count)) else 0
+                            if status = (getStatus value) then (s.Values |> Seq.sum) else 0
                         | _ -> failwith "Unknown citystatus filter"
                     kv.Key.ToTuple(), count
                 )
