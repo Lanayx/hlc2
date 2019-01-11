@@ -164,19 +164,21 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, keys:
                     kv.Key, (st.Values |> Seq.sumBy (fun count -> count.Count))
                 else
                     let value = ctx.Request.Query.[key].[0]
-                    match key with
-                    | "interests" ->
-                        kv.Key, handleGroupFilterWithWeight i interestsWeightDictionary value
-                    | "birth" ->
-                        kv.Key, handleGroupFilter b (Int16.Parse(value))
-                    | "joined" ->
-                        kv.Key, handleGroupFilter j (Int16.Parse(value))
-                    | "city" ->
-                        kv.Key, handleGroupFilterWithWeight ci citiesWeightDictionary value
-                    | "country" ->
-                        kv.Key, handleGroupFilterWithWeight co countriesWeightDictionary value
-                    | "status" -> kv.Key, st.[getStatus value].Count
-                    | _ -> failwith "Unknown sex filter"
+                    let count =
+                        match key with
+                        | "interests" ->
+                            handleGroupFilterWithWeight i interestsWeightDictionary value
+                        | "birth" ->
+                            handleGroupFilter b (Int16.Parse(value))
+                        | "joined" ->
+                            handleGroupFilter j (Int16.Parse(value))
+                        | "city" ->
+                            handleGroupFilterWithWeight ci citiesWeightDictionary value
+                        | "country" ->
+                            handleGroupFilterWithWeight co countriesWeightDictionary value
+                        | "status" -> st.[getStatus value].Count
+                        | _ -> failwith "Unknown sex filter"
+                    kv.Key, count
                 )
             |> Seq.filter (fun (_, count) -> count > 0)
             |> seqSort order (fun (field, count) -> count, field)
@@ -192,19 +194,21 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, keys:
                     kv.Key, (s.Values |> Seq.sumBy (fun count -> count.Count))
                 else
                     let value = ctx.Request.Query.[key].[0]
-                    match key with
-                    | "interests" ->
-                        kv.Key, handleGroupFilterWithWeight i interestsWeightDictionary value
-                    | "birth" ->
-                        kv.Key, handleGroupFilter b (Int16.Parse(value))
-                    | "joined" ->
-                        kv.Key, handleGroupFilter j (Int16.Parse(value))
-                    | "city" ->
-                        kv.Key, handleGroupFilterWithWeight ci citiesWeightDictionary value
-                    | "country" ->
-                        kv.Key, handleGroupFilterWithWeight co countriesWeightDictionary value
-                    | "sex" -> kv.Key, s.[getSex value].Count
-                    | _ -> failwith "Unknown sex filter"
+                    let count =
+                        match key with
+                        | "interests" ->
+                            handleGroupFilterWithWeight i interestsWeightDictionary value
+                        | "birth" ->
+                            handleGroupFilter b (Int16.Parse(value))
+                        | "joined" ->
+                            handleGroupFilter j (Int16.Parse(value))
+                        | "city" ->
+                            handleGroupFilterWithWeight ci citiesWeightDictionary value
+                        | "country" ->
+                            handleGroupFilterWithWeight co countriesWeightDictionary value
+                        | "sex" -> s.[getSex value].Count
+                        | _ -> failwith "Unknown sex filter"
+                    kv.Key, count
                 )
             |> Seq.filter (fun (_, count) -> count > 0)
             |> seqSort order (fun (field, count) -> count, field)
@@ -220,18 +224,20 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, keys:
                     kv.Key, (st.Values |> Seq.sumBy (fun count -> count.Count))
                 else
                     let value = ctx.Request.Query.[key].[0]
-                    match key with
-                    | "interests" ->
-                        kv.Key, handleGroupFilterWithWeight i interestsWeightDictionary value
-                    | "birth" ->
-                        kv.Key, handleGroupFilter b (Int16.Parse(value))
-                    | "joined" ->
-                        kv.Key, handleGroupFilter j (Int16.Parse(value))
-                    | "sex" ->
-                        kv.Key, handleGroupFilter s (getSex value)
-                    | "status" ->
-                        kv.Key, handleGroupFilter st (getStatus value)
-                    | _ -> failwith "Unknown country filter"
+                    let count =
+                        match key with
+                        | "interests" ->
+                            handleGroupFilterWithWeight i interestsWeightDictionary value
+                        | "birth" ->
+                            handleGroupFilter b (Int16.Parse(value))
+                        | "joined" ->
+                            handleGroupFilter j (Int16.Parse(value))
+                        | "sex" ->
+                            handleGroupFilter s (getSex value)
+                        | "status" ->
+                            handleGroupFilter st (getStatus value)
+                        | _ -> failwith "Unknown country filter"
+                    kv.Key, count
                 )
             |> Seq.filter (fun (_, count) -> count > 0)
             |> seqSort order (fun (field, count) -> count, field)
@@ -247,18 +253,20 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, keys:
                     kv.Key, (st.Values |> Seq.sumBy (fun count -> count.Count))
                 else
                     let value = ctx.Request.Query.[key].[0]
-                    match key with
-                    | "interests" ->
-                        kv.Key, handleGroupFilterWithWeight i interestsWeightDictionary value
-                    | "birth" ->
-                        kv.Key, handleGroupFilter b (Int16.Parse(value))
-                    | "joined" ->
-                        kv.Key, handleGroupFilter j (Int16.Parse(value))
-                    | "sex" ->
-                        kv.Key, handleGroupFilter s (getSex value)
-                    | "status" ->
-                        kv.Key, handleGroupFilter st (getStatus value)
-                    | _ -> failwith "Unknown city filter"
+                    let count =
+                        match key with
+                        | "interests" ->
+                            handleGroupFilterWithWeight i interestsWeightDictionary value
+                        | "birth" ->
+                            handleGroupFilter b (Int16.Parse(value))
+                        | "joined" ->
+                            handleGroupFilter j (Int16.Parse(value))
+                        | "sex" ->
+                            handleGroupFilter s (getSex value)
+                        | "status" ->
+                            handleGroupFilter st (getStatus value)
+                        | _ -> failwith "Unknown city filter"
+                    kv.Key, count
                 )
             |> Seq.filter (fun (_, count) -> count > 0)
             |> seqSort order (fun (field, count) -> count, field)
@@ -274,20 +282,22 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, keys:
                     kv.Key, (s.Values |> Seq.sumBy (fun count -> count.Count))
                 else
                     let value = ctx.Request.Query.[key].[0]
-                    match key with
-                    | "birth" ->
-                        kv.Key, handleGroupFilter b (Int16.Parse(value))
-                    | "joined" ->
-                        kv.Key, handleGroupFilter j (Int16.Parse(value))
-                    | "city" ->
-                        kv.Key, handleGroupFilterWithWeight ci citiesWeightDictionary value
-                    | "country" ->
-                        kv.Key, handleGroupFilterWithWeight co countriesWeightDictionary value
-                    | "sex" ->
-                        kv.Key, handleGroupFilter s (getSex value)
-                    | "status" ->
-                        kv.Key, handleGroupFilter st (getStatus value)
-                    | _ -> failwith "Unknown interests filter"
+                    let count =
+                        match key with
+                        | "birth" ->
+                            handleGroupFilter b (Int16.Parse(value))
+                        | "joined" ->
+                            handleGroupFilter j (Int16.Parse(value))
+                        | "city" ->
+                            handleGroupFilterWithWeight ci citiesWeightDictionary value
+                        | "country" ->
+                            handleGroupFilterWithWeight co countriesWeightDictionary value
+                        | "sex" ->
+                            handleGroupFilter s (getSex value)
+                        | "status" ->
+                            handleGroupFilter st (getStatus value)
+                        | _ -> failwith "Unknown interests filter"
+                    kv.Key, count
                 )
             |> Seq.filter (fun (_, count) -> count > 0)
             |> seqSort order (fun (field, count) -> count, field)
@@ -303,19 +313,21 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, keys:
                     kv.Key.ToTuple(), (s.Values |> Seq.sumBy (fun count -> count.Count))
                 else
                     let value = ctx.Request.Query.[key].[0]
-                    match key with
-                    | "interests" ->
-                        kv.Key.ToTuple(), handleGroupFilterWithWeight i interestsWeightDictionary value
-                    | "birth" ->
-                        kv.Key.ToTuple(), handleGroupFilter b (Int16.Parse(value))
-                    | "joined" ->
-                        kv.Key.ToTuple(), handleGroupFilter j (Int16.Parse(value))
-                    | "sex" ->
-                        kv.Key.ToTuple(), handleGroupFilter s (getSex value)
-                    | "status" ->
-                        let struct(_, status) = kv.Key
-                        kv.Key.ToTuple(), if status = (getStatus value) then (s.Values |>Seq.sumBy (fun count -> count.Count)) else 0
-                    | _ -> failwith "Unknown citystatus filter"
+                    let count =
+                        match key with
+                        | "interests" ->
+                            handleGroupFilterWithWeight i interestsWeightDictionary value
+                        | "birth" ->
+                            handleGroupFilter b (Int16.Parse(value))
+                        | "joined" ->
+                            handleGroupFilter j (Int16.Parse(value))
+                        | "sex" ->
+                            handleGroupFilter s (getSex value)
+                        | "status" ->
+                            let struct(_, status) = kv.Key
+                            if status = (getStatus value) then (s.Values |>Seq.sumBy (fun count -> count.Count)) else 0
+                        | _ -> failwith "Unknown citystatus filter"
+                    kv.Key.ToTuple(), count
                 )
             |> Seq.filter (fun (_, count) -> count > 0)
             |> seqSort order (fun (field, count) -> count, field)
@@ -331,19 +343,21 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, keys:
                     kv.Key.ToTuple(), (st.Values |> Seq.sumBy (fun count -> count.Count))
                 else
                     let value = ctx.Request.Query.[key].[0]
-                    match key with
-                    | "interests" ->
-                        kv.Key.ToTuple(), handleGroupFilterWithWeight i interestsWeightDictionary value
-                    | "birth" ->
-                        kv.Key.ToTuple(), handleGroupFilter b (Int16.Parse(value))
-                    | "joined" ->
-                        kv.Key.ToTuple(), handleGroupFilter j (Int16.Parse(value))
-                    | "status" ->
-                        kv.Key.ToTuple(), handleGroupFilter st (getStatus value)
-                    | "sex" ->
-                        let struct(_, sex) = kv.Key
-                        kv.Key.ToTuple(), if sex = (getSex value) then (st.Values |> Seq.sumBy (fun count -> count.Count)) else 0
-                    | _ -> failwith "Unknown citysex filter"
+                    let count =
+                        match key with
+                        | "interests" ->
+                            handleGroupFilterWithWeight i interestsWeightDictionary value
+                        | "birth" ->
+                            handleGroupFilter b (Int16.Parse(value))
+                        | "joined" ->
+                            handleGroupFilter j (Int16.Parse(value))
+                        | "status" ->
+                            handleGroupFilter st (getStatus value)
+                        | "sex" ->
+                            let struct(_, sex) = kv.Key
+                            if sex = (getSex value) then (st.Values |> Seq.sumBy (fun count -> count.Count)) else 0
+                        | _ -> failwith "Unknown citysex filter"
+                    kv.Key.ToTuple(), count
                 )
             |> Seq.filter (fun (_, count) -> count > 0)
             |> seqSort order (fun (field, count) -> count, field)
@@ -359,19 +373,21 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, keys:
                     kv.Key.ToTuple(), (st.Values |> Seq.sumBy (fun count -> count.Count))
                 else
                     let value = ctx.Request.Query.[key].[0]
-                    match key with
-                    | "interests" ->
-                        kv.Key.ToTuple(), handleGroupFilterWithWeight i interestsWeightDictionary value
-                    | "birth" ->
-                        kv.Key.ToTuple(), handleGroupFilter b (Int16.Parse(value))
-                    | "joined" ->
-                        kv.Key.ToTuple(), handleGroupFilter j (Int16.Parse(value))
-                    | "status" ->
-                        kv.Key.ToTuple(), handleGroupFilter st (getStatus value)
-                    | "sex" ->
-                        let struct(_, sex) = kv.Key
-                        kv.Key.ToTuple(), if sex = (getSex value) then (st.Values |> Seq.sumBy (fun count -> count.Count)) else 0
-                    | _ -> failwith "Unknown countrysex filter"
+                    let count =
+                        match key with
+                        | "interests" ->
+                            handleGroupFilterWithWeight i interestsWeightDictionary value
+                        | "birth" ->
+                            handleGroupFilter b (Int16.Parse(value))
+                        | "joined" ->
+                            handleGroupFilter j (Int16.Parse(value))
+                        | "status" ->
+                            handleGroupFilter st (getStatus value)
+                        | "sex" ->
+                            let struct(_, sex) = kv.Key
+                            if sex = (getSex value) then (st.Values |> Seq.sumBy (fun count -> count.Count)) else 0
+                        | _ -> failwith "Unknown countrysex filter"
+                    kv.Key.ToTuple(), count
                 )
             |> Seq.filter (fun (_, count) -> count > 0)
             |> seqSort order (fun (field, count) -> count, field)
@@ -387,19 +403,21 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, keys:
                     kv.Key.ToTuple(), (s.Values |> Seq.sumBy (fun count -> count.Count))
                 else
                     let value = ctx.Request.Query.[key].[0]
-                    match key with
-                    | "interests" ->
-                        kv.Key.ToTuple(), handleGroupFilterWithWeight i interestsWeightDictionary value
-                    | "birth" ->
-                        kv.Key.ToTuple(), handleGroupFilter b (Int16.Parse(value))
-                    | "joined" ->
-                        kv.Key.ToTuple(), handleGroupFilter j (Int16.Parse(value))
-                    | "sex" ->
-                        kv.Key.ToTuple(), handleGroupFilter s (getSex value)
-                    | "status" ->
-                        let struct(_, status) = kv.Key
-                        kv.Key.ToTuple(), if status = (getStatus value) then (s.Values |> Seq.sumBy (fun count -> count.Count)) else 0
-                    | _ -> failwith "Unknown citystatus filter"
+                    let count =
+                        match key with
+                        | "interests" ->
+                            handleGroupFilterWithWeight i interestsWeightDictionary value
+                        | "birth" ->
+                            handleGroupFilter b (Int16.Parse(value))
+                        | "joined" ->
+                            handleGroupFilter j (Int16.Parse(value))
+                        | "sex" ->
+                            handleGroupFilter s (getSex value)
+                        | "status" ->
+                            let struct(_, status) = kv.Key
+                            if status = (getStatus value) then (s.Values |> Seq.sumBy (fun count -> count.Count)) else 0
+                        | _ -> failwith "Unknown citystatus filter"
+                    kv.Key.ToTuple(), count
                 )
             |> Seq.filter (fun (_, count) -> count > 0)
             |> seqSort order (fun (field, count) -> count, field)
