@@ -96,6 +96,70 @@ let inline decreaseCounter<'T> (dict: Dictionary<'T,CountType>) (key: 'T) =
     then dict.[key] <- count - 1
     else dict.Remove(key) |> ignore
 
+let updateSexGroupIndexes
+    oldSex oldStatus oldCity oldCountry oldInterests oldBirth oldJoined (account: Account) (deletePrevious: bool) =
+    if deletePrevious
+    then
+        let struct(i,b,j,ci,co,st) = allSexGroups.[oldSex]
+        if oldInterests |> isNotNull
+        then
+            for interest in oldInterests do
+                decreaseCounter i interest
+        decreaseCounter b oldBirth
+        decreaseCounter j oldJoined
+        decreaseCounter ci oldCity
+        decreaseCounter co oldCountry
+        decreaseCounter st oldStatus
+        if (i.Count = 0 && b.Count = 0 && j.Count = 0 && ci.Count = 0 && co.Count = 0 && st.Count = 0)
+        then allSexGroups.Remove(oldSex) |> ignore
+    let mutable sexDictionaries = struct(null,null,null,null,null,null)
+    if allSexGroups.TryGetValue(account.sex, &sexDictionaries) |> not
+    then
+        sexDictionaries <- struct(Dictionary<InterestsGroup,CountType>(),Dictionary<BirthGroup,CountType>(),Dictionary<JoinedGroup,CountType>(),Dictionary<CityGroup,CountType>(),Dictionary<CountryGroup,CountType>(),Dictionary<StatusGroup,CountType>())
+        allSexGroups.[account.sex] <- sexDictionaries
+    let struct(i,b,j,ci,co,st) = sexDictionaries
+    if account.interests |> isNotNull
+    then
+        for interest in account.interests do
+            increaseCounter i interest
+    increaseCounter b account.birthYear
+    increaseCounter j account.joinedYear
+    increaseCounter ci account.city
+    increaseCounter co account.country
+    increaseCounter st account.status
+
+let updateStatusGroupIndexes
+    oldSex oldStatus oldCity oldCountry oldInterests oldBirth oldJoined (account: Account) (deletePrevious: bool) =
+    if deletePrevious
+    then
+        let struct(i,b,j,ci,co,s) = allStatusGroups.[oldStatus]
+        if oldInterests |> isNotNull
+        then
+            for interest in oldInterests do
+                decreaseCounter i interest
+        decreaseCounter b oldBirth
+        decreaseCounter j oldJoined
+        decreaseCounter ci oldCity
+        decreaseCounter co oldCountry
+        decreaseCounter s oldSex
+        if (i.Count = 0 && b.Count = 0 && j.Count = 0 && ci.Count = 0 && co.Count = 0 && s.Count = 0)
+        then allStatusGroups.Remove(oldStatus) |> ignore
+    let mutable statusDictionaries = struct(null,null,null,null,null,null)
+    if allStatusGroups.TryGetValue(account.status, &statusDictionaries) |> not
+    then
+        statusDictionaries <- struct(Dictionary<InterestsGroup,CountType>(),Dictionary<BirthGroup,CountType>(),Dictionary<JoinedGroup,CountType>(),Dictionary<CityGroup,CountType>(),Dictionary<CountryGroup,CountType>(),Dictionary<SexGroup,CountType>())
+        allStatusGroups.[account.status] <- statusDictionaries
+    let struct(i,b,j,ci,co,s) = statusDictionaries
+    if account.interests |> isNotNull
+    then
+        for interest in account.interests do
+            increaseCounter i interest
+    increaseCounter b account.birthYear
+    increaseCounter j account.joinedYear
+    increaseCounter ci account.city
+    increaseCounter co account.country
+    increaseCounter s account.sex
+
 let updateCountryGroupIndexes
     oldSex oldStatus oldCountry oldInterests oldBirth oldJoined (account: Account) (deletePrevious: bool) =
     if deletePrevious
@@ -420,7 +484,9 @@ let createAccount (accUpd: AccountUpd): Account =
     updateCountrySexStatusIndexes 0uy 0uy 0L [||] 0s 0s account false
     updateCountryGroupIndexes 0uy 0uy 0L [||] 0s 0s account false
     updateInterestIndex [||] account false
-    updateInterestsGroupIndexes  0uy 0uy 0L 0L [||] 0s 0s account false
+    updateInterestsGroupIndexes 0uy 0uy 0L 0L [||] 0s 0s account false
+    updateStatusGroupIndexes  0uy 0uy 0L 0L [||] 0s 0s account false
+    updateSexGroupIndexes  0uy 0uy 0L 0L [||] 0s 0s account false
     emailsDictionary.Add(account.email) |> ignore
     account
 
@@ -494,6 +560,8 @@ let updateExistingAccount (existing: Account, accUpd: AccountUpd) =
     if accUpd.city |> isNotNull || accUpd.country |> isNotNull || accUpd.sex |> isNotNull || accUpd.status |> isNotNull || accUpd.interests |> isNotNull || accUpd.joined.HasValue || accUpd.birth.HasValue
     then
         updateInterestsGroupIndexes oldSex oldStatus oldCity oldCountry oldInterests oldBirthYear oldJoinedYear existing true
+        updateStatusGroupIndexes oldSex oldStatus oldCity oldCountry oldInterests oldBirthYear oldJoinedYear existing true
+        updateSexGroupIndexes oldSex oldStatus oldCity oldCountry oldInterests oldBirthYear oldJoinedYear existing true
     if accUpd.email |> isNotNull
     then
         emailsDictionary.Add(accUpd.email) |> ignore

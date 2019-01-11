@@ -143,18 +143,22 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, order
     match groupKey with
     | "sex" ->
         let groups =
-            accs
-            |> Seq.groupBy (fun acc -> acc.sex)
-            |> Seq.map (fun (key, group) -> (key, group |> Seq.length))
-            |> seqSort order (fun (group,length) -> length, group)
+            allSexGroups
+            |> Seq.map(fun kv ->
+                let struct(_,_,_,_,_,st) = kv.Value
+                kv.Key, (st.Values |> Seq.sum)
+                )
+            |> seqSort order (fun (field, count) -> count, field)
             |> Seq.truncate limit
         memoryStream <- serializeGroupsSex(groups, "sex")
     | "status" ->
         let groups =
-            accs
-            |> Seq.groupBy (fun acc -> acc.status)
-            |> Seq.map (fun (key, group) -> key, group |> Seq.length)
-            |> seqSort order (fun (group,length) -> length, group)
+            allStatusGroups
+            |> Seq.map(fun kv ->
+                let struct(_,_,_,_,_,s) = kv.Value
+                kv.Key, (s.Values |> Seq.sum)
+                )
+            |> seqSort order (fun (field, count) -> count, field)
             |> Seq.truncate limit
         memoryStream <- serializeGroupsStatus(groups, "status")
     | "country" ->
@@ -165,7 +169,7 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, order
                 kv.Key, (st.Values |> Seq.sum)
                 )
             |> seqSort order (fun (field, count) -> count, field)
-            |> Seq.take limit
+            |> Seq.truncate limit
         memoryStream <- serializeGroupsCountry(groups, "country")
     | "city" ->
         let groups =
@@ -175,7 +179,7 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, order
                 kv.Key, (st.Values |> Seq.sum)
                 )
             |> seqSort order (fun (field, count) -> count, field)
-            |> Seq.take limit
+            |> Seq.truncate limit
         memoryStream <- serializeGroupsCity(groups, "city")
     | "interests" ->
         let groups =
@@ -185,7 +189,7 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, order
                 kv.Key, (st.Values |> Seq.sum)
                 )
             |> seqSort order (fun (field, count) -> count, field)
-            |> Seq.take limit
+            |> Seq.truncate limit
         memoryStream <- serializeGroupsInterests(groups , "interests")
     | "city,status" ->
         let groups =
@@ -195,7 +199,7 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, order
                 kv.Key.ToTuple(), (s.Values |> Seq.sum)
                 )
             |> seqSort order (fun (field, count) -> count, field)
-            |> Seq.take limit
+            |> Seq.truncate limit
         memoryStream <- serializeGroups2Status(groups, "city", "status")
     | "city,sex" ->
         let groups =
@@ -205,7 +209,7 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, order
                 kv.Key.ToTuple(), (s.Values |> Seq.sum)
                 )
             |> seqSort order (fun (field, count) -> count, field)
-            |> Seq.take limit
+            |> Seq.truncate limit
         memoryStream <- serializeGroups2Sex(groups, "city", "sex")
     | "country,sex" ->
         let groups =
@@ -215,7 +219,7 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, order
                 kv.Key.ToTuple(), (s.Values |> Seq.sum)
                 )
             |> seqSort order (fun (field, count) -> count, field)
-            |> Seq.take limit
+            |> Seq.truncate limit
         memoryStream <- serializeGroups2Sex(groups, "country", "sex")
     | "country,status" ->
         let groups =
@@ -225,7 +229,7 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, order
                 kv.Key.ToTuple(), (s.Values |> Seq.sum)
                 )
             |> seqSort order (fun (field, count) -> count, field)
-            |> Seq.take limit
+            |> Seq.truncate limit
         memoryStream <- serializeGroups2Status(groups, "country", "status")
     | _ ->
         ()
