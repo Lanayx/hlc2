@@ -138,16 +138,47 @@ let applyGrouping (memoryStream: byref<MemoryStream>, groupKey, order, accs: Acc
     | _ ->
         ()
 
-let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, order, limit) =
-    let accs = getAccounts()
+let inline handleGroupFilter<'T> (dict: Dictionary<'T,CountType>) value =
+    let mutable count = 0
+    if (dict.TryGetValue(value, &count) |> not)
+    then 0
+    else count
+
+let inline handleGroupFilterWithWeight (dict: Dictionary<int64,CountType>) (weightDict: Dictionary<string,int64>) value =
+    let mutable count = 0
+    let mutable weight = 0L
+    if (weightDict.TryGetValue(value, &weight) |> not) || (dict.TryGetValue(weight, &count) |> not)
+    then 0
+    else count
+
+let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, keys: string list, order, limit, ctx: HttpContext) =
+    let key = if keys.IsEmpty then "" else keys.[0]
     match groupKey with
     | "sex" ->
         let groups =
             allSexGroups
             |> Seq.map(fun kv ->
-                let struct(_,_,_,_,_,st) = kv.Value
-                kv.Key, (st.Values |> Seq.sum)
+                let struct(i,b,j,ci,co,st) = kv.Value
+                if key =~ ""
+                then
+                    kv.Key, (st.Values |> Seq.sum)
+                else
+                    let value = ctx.Request.Query.[key].[0]
+                    match key with
+                    | "interests" ->
+                        kv.Key, handleGroupFilterWithWeight i interestsWeightDictionary value
+                    | "birth" ->
+                        kv.Key, handleGroupFilter b (Int16.Parse(value))
+                    | "joined" ->
+                        kv.Key, handleGroupFilter j (Int16.Parse(value))
+                    | "city" ->
+                        kv.Key, handleGroupFilterWithWeight ci citiesWeightDictionary value
+                    | "country" ->
+                        kv.Key, handleGroupFilterWithWeight co countriesWeightDictionary value
+                    | "status" -> kv.Key, st.[getStatus value]
+                    | _ -> failwith "Unknown sex filter"
                 )
+            |> Seq.filter (fun (_, count) -> count > 0)
             |> seqSort order (fun (field, count) -> count, field)
             |> Seq.truncate limit
         memoryStream <- serializeGroupsSex(groups, "sex")
@@ -155,9 +186,27 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, order
         let groups =
             allStatusGroups
             |> Seq.map(fun kv ->
-                let struct(_,_,_,_,_,s) = kv.Value
-                kv.Key, (s.Values |> Seq.sum)
+                let struct(i,b,j,ci,co,s) = kv.Value
+                if key =~ ""
+                then
+                    kv.Key, (s.Values |> Seq.sum)
+                else
+                    let value = ctx.Request.Query.[key].[0]
+                    match key with
+                    | "interests" ->
+                        kv.Key, handleGroupFilterWithWeight i interestsWeightDictionary value
+                    | "birth" ->
+                        kv.Key, handleGroupFilter b (Int16.Parse(value))
+                    | "joined" ->
+                        kv.Key, handleGroupFilter j (Int16.Parse(value))
+                    | "city" ->
+                        kv.Key, handleGroupFilterWithWeight ci citiesWeightDictionary value
+                    | "country" ->
+                        kv.Key, handleGroupFilterWithWeight co countriesWeightDictionary value
+                    | "sex" -> kv.Key, s.[getSex value]
+                    | _ -> failwith "Unknown sex filter"
                 )
+            |> Seq.filter (fun (_, count) -> count > 0)
             |> seqSort order (fun (field, count) -> count, field)
             |> Seq.truncate limit
         memoryStream <- serializeGroupsStatus(groups, "status")
@@ -165,9 +214,26 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, order
         let groups =
             allCountryGroups
             |> Seq.map(fun kv ->
-                let struct(_,_,_,_,st) = kv.Value
-                kv.Key, (st.Values |> Seq.sum)
+                let struct(i,b,j,s,st) = kv.Value
+                if key =~ ""
+                then
+                    kv.Key, (st.Values |> Seq.sum)
+                else
+                    let value = ctx.Request.Query.[key].[0]
+                    match key with
+                    | "interests" ->
+                        kv.Key, handleGroupFilterWithWeight i interestsWeightDictionary value
+                    | "birth" ->
+                        kv.Key, handleGroupFilter b (Int16.Parse(value))
+                    | "joined" ->
+                        kv.Key, handleGroupFilter j (Int16.Parse(value))
+                    | "sex" ->
+                        kv.Key, handleGroupFilter s (getSex value)
+                    | "status" ->
+                        kv.Key, handleGroupFilter st (getStatus value)
+                    | _ -> failwith "Unknown country filter"
                 )
+            |> Seq.filter (fun (_, count) -> count > 0)
             |> seqSort order (fun (field, count) -> count, field)
             |> Seq.truncate limit
         memoryStream <- serializeGroupsCountry(groups, "country")
@@ -175,9 +241,26 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, order
         let groups =
             allCityGroups
             |> Seq.map(fun kv ->
-                let struct(_,_,_,_,st) = kv.Value
-                kv.Key, (st.Values |> Seq.sum)
+                let struct(i,b,j,s,st) = kv.Value
+                if key =~ ""
+                then
+                    kv.Key, (st.Values |> Seq.sum)
+                else
+                    let value = ctx.Request.Query.[key].[0]
+                    match key with
+                    | "interests" ->
+                        kv.Key, handleGroupFilterWithWeight i interestsWeightDictionary value
+                    | "birth" ->
+                        kv.Key, handleGroupFilter b (Int16.Parse(value))
+                    | "joined" ->
+                        kv.Key, handleGroupFilter j (Int16.Parse(value))
+                    | "sex" ->
+                        kv.Key, handleGroupFilter s (getSex value)
+                    | "status" ->
+                        kv.Key, handleGroupFilter st (getStatus value)
+                    | _ -> failwith "Unknown city filter"
                 )
+            |> Seq.filter (fun (_, count) -> count > 0)
             |> seqSort order (fun (field, count) -> count, field)
             |> Seq.truncate limit
         memoryStream <- serializeGroupsCity(groups, "city")
@@ -185,9 +268,28 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, order
         let groups =
             allInterestsGroups
             |> Seq.map(fun kv ->
-                let struct(_,_,_,_,_,st) = kv.Value
-                kv.Key, (st.Values |> Seq.sum)
+                let struct(b,j,ci,co,s,st) = kv.Value
+                if key =~ ""
+                then
+                    kv.Key, (s.Values |> Seq.sum)
+                else
+                    let value = ctx.Request.Query.[key].[0]
+                    match key with
+                    | "birth" ->
+                        kv.Key, handleGroupFilter b (Int16.Parse(value))
+                    | "joined" ->
+                        kv.Key, handleGroupFilter j (Int16.Parse(value))
+                    | "city" ->
+                        kv.Key, handleGroupFilterWithWeight ci citiesWeightDictionary value
+                    | "country" ->
+                        kv.Key, handleGroupFilterWithWeight co countriesWeightDictionary value
+                    | "sex" ->
+                        kv.Key, handleGroupFilter s (getSex value)
+                    | "status" ->
+                        kv.Key, handleGroupFilter st (getStatus value)
+                    | _ -> failwith "Unknown interests filter"
                 )
+            |> Seq.filter (fun (_, count) -> count > 0)
             |> seqSort order (fun (field, count) -> count, field)
             |> Seq.truncate limit
         memoryStream <- serializeGroupsInterests(groups , "interests")
@@ -195,9 +297,27 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, order
         let groups =
             allCityStatusGroups
             |> Seq.map(fun kv ->
-                let struct(_,_,_,s) = kv.Value
-                kv.Key.ToTuple(), (s.Values |> Seq.sum)
+                let struct(i,b,j,s) = kv.Value
+                if key =~ ""
+                then
+                    kv.Key.ToTuple(), (s.Values |> Seq.sum)
+                else
+                    let value = ctx.Request.Query.[key].[0]
+                    match key with
+                    | "interests" ->
+                        kv.Key.ToTuple(), handleGroupFilterWithWeight i interestsWeightDictionary value
+                    | "birth" ->
+                        kv.Key.ToTuple(), handleGroupFilter b (Int16.Parse(value))
+                    | "joined" ->
+                        kv.Key.ToTuple(), handleGroupFilter j (Int16.Parse(value))
+                    | "sex" ->
+                        kv.Key.ToTuple(), handleGroupFilter s (getSex value)
+                    | "status" ->
+                        let struct(_, status) = kv.Key
+                        kv.Key.ToTuple(), if status = (getStatus value) then (s.Values |> Seq.sum) else 0
+                    | _ -> failwith "Unknown citystatus filter"
                 )
+            |> Seq.filter (fun (_, count) -> count > 0)
             |> seqSort order (fun (field, count) -> count, field)
             |> Seq.truncate limit
         memoryStream <- serializeGroups2Status(groups, "city", "status")
@@ -205,9 +325,27 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, order
         let groups =
             allCitySexGroups
             |> Seq.map(fun kv ->
-                let struct(_,_,_,s) = kv.Value
-                kv.Key.ToTuple(), (s.Values |> Seq.sum)
+                let struct(i,b,j,st) = kv.Value
+                if key =~ ""
+                then
+                    kv.Key.ToTuple(), (st.Values |> Seq.sum)
+                else
+                    let value = ctx.Request.Query.[key].[0]
+                    match key with
+                    | "interests" ->
+                        kv.Key.ToTuple(), handleGroupFilterWithWeight i interestsWeightDictionary value
+                    | "birth" ->
+                        kv.Key.ToTuple(), handleGroupFilter b (Int16.Parse(value))
+                    | "joined" ->
+                        kv.Key.ToTuple(), handleGroupFilter j (Int16.Parse(value))
+                    | "status" ->
+                        kv.Key.ToTuple(), handleGroupFilter st (getStatus value)
+                    | "sex" ->
+                        let struct(_, sex) = kv.Key
+                        kv.Key.ToTuple(), if sex = (getSex value) then (st.Values |> Seq.sum) else 0
+                    | _ -> failwith "Unknown citysex filter"
                 )
+            |> Seq.filter (fun (_, count) -> count > 0)
             |> seqSort order (fun (field, count) -> count, field)
             |> Seq.truncate limit
         memoryStream <- serializeGroups2Sex(groups, "city", "sex")
@@ -215,9 +353,27 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, order
         let groups =
             allCountrySexGroups
             |> Seq.map(fun kv ->
-                let struct(_,_,_,s) = kv.Value
-                kv.Key.ToTuple(), (s.Values |> Seq.sum)
+                let struct(i,b,j,st) = kv.Value
+                if key =~ ""
+                then
+                    kv.Key.ToTuple(), (st.Values |> Seq.sum)
+                else
+                    let value = ctx.Request.Query.[key].[0]
+                    match key with
+                    | "interests" ->
+                        kv.Key.ToTuple(), handleGroupFilterWithWeight i interestsWeightDictionary value
+                    | "birth" ->
+                        kv.Key.ToTuple(), handleGroupFilter b (Int16.Parse(value))
+                    | "joined" ->
+                        kv.Key.ToTuple(), handleGroupFilter j (Int16.Parse(value))
+                    | "status" ->
+                        kv.Key.ToTuple(), handleGroupFilter st (getStatus value)
+                    | "sex" ->
+                        let struct(_, sex) = kv.Key
+                        kv.Key.ToTuple(), if sex = (getSex value) then (st.Values |> Seq.sum) else 0
+                    | _ -> failwith "Unknown countrysex filter"
                 )
+            |> Seq.filter (fun (_, count) -> count > 0)
             |> seqSort order (fun (field, count) -> count, field)
             |> Seq.truncate limit
         memoryStream <- serializeGroups2Sex(groups, "country", "sex")
@@ -225,9 +381,27 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, order
         let groups =
             allCountryStatusGroups
             |> Seq.map(fun kv ->
-                let struct(_,_,_,s) = kv.Value
-                kv.Key.ToTuple(), (s.Values |> Seq.sum)
+                let struct(i,b,j,s) = kv.Value
+                if key =~ ""
+                then
+                    kv.Key.ToTuple(), (s.Values |> Seq.sum)
+                else
+                    let value = ctx.Request.Query.[key].[0]
+                    match key with
+                    | "interests" ->
+                        kv.Key.ToTuple(), handleGroupFilterWithWeight i interestsWeightDictionary value
+                    | "birth" ->
+                        kv.Key.ToTuple(), handleGroupFilter b (Int16.Parse(value))
+                    | "joined" ->
+                        kv.Key.ToTuple(), handleGroupFilter j (Int16.Parse(value))
+                    | "sex" ->
+                        kv.Key.ToTuple(), handleGroupFilter s (getSex value)
+                    | "status" ->
+                        let struct(_, status) = kv.Key
+                        kv.Key.ToTuple(), if status = (getStatus value) then (s.Values |> Seq.sum) else 0
+                    | _ -> failwith "Unknown citystatus filter"
                 )
+            |> Seq.filter (fun (_, count) -> count > 0)
             |> seqSort order (fun (field, count) -> count, field)
             |> Seq.truncate limit
         memoryStream <- serializeGroups2Status(groups, "country", "status")
@@ -253,9 +427,9 @@ let getGroupedAccounts (next, ctx : HttpContext) =
         let order =
                 Int32.Parse(ctx.Request.Query.["order"].[0])
         let mutable memoryStream: MemoryStream = null
-        if keys.IsEmpty
+        if keys.Length = 0 || (keys.Length = 1 && keys.[0] <> "likes")
         then
-            getGroupsWithEmptyFilter(&memoryStream, groupKey, order, limit)
+            getGroupsWithEmptyFilter(&memoryStream, groupKey, keys, order, limit, ctx)
         else
             let filters =
                 keys
