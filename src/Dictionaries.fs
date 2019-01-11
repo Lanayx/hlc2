@@ -49,7 +49,7 @@ type StatusGroup = byte
 type CityGroup = int64
 type CountryGroup = int64
 type InterestsGroup = int64
-type CountType = int
+type CountType = HashSet<int>
 
 let allCountryGroups =
     Dictionary<CountryGroup,struct(Dictionary<InterestsGroup,CountType>*Dictionary<BirthGroup,CountType>*Dictionary<JoinedGroup,CountType>*Dictionary<SexGroup,CountType>*Dictionary<StatusGroup,CountType>)>()
