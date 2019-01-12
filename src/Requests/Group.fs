@@ -138,31 +138,80 @@ let applyGrouping (memoryStream: byref<MemoryStream>, groupKey, order, accs: Acc
     | _ ->
         ()
 
-let inline handleGroupFilter2<'T> (dict: Dictionary<'T,CountType>) value =
+[<Struct>]
+type FourthFieldType =
+    | NoField
+    | Birth of BirthGroup: int16
+    | Joined of JoinedGroup : int16
+
+let inline handleGroupFilter<'T> (dict: Dictionary<'T,CountType>) value =
     let mutable count = 0
     if (dict.TryGetValue(value, &count) |> not)
     then 0
     else count
 
-let inline handleGroupFilter<'T> (dict: Dictionary<'T,FourthField>) value =
+let handleFourthField (count:FourthField) fourthField =
+    let struct(cnt, b, j) = count
+    match fourthField with
+    | NoField ->
+        cnt
+    | Birth birth ->
+        let mutable birthCnt = 0
+        if b.TryGetValue(birth, &birthCnt)
+        then birthCnt
+        else 0
+    | Joined joined ->
+        let mutable joinedCnt = 0
+        if j.TryGetValue(joined, &joinedCnt)
+        then joinedCnt
+        else 0
+
+let inline handleGroupFilterFF<'T> (dict: Dictionary<'T,FourthField>) value fourthField =
     let mutable count = struct(0,null,null)
     if (dict.TryGetValue(value, &count) |> not)
     then 0
     else
-        let struct(cnt, _, _) = count
-        cnt
+        handleFourthField count fourthField
 
-let inline handleGroupFilterWithWeight (dict: Dictionary<int64,FourthField>) (weightDict: Dictionary<string,int64>) value =
+
+let inline handleGroupFilterWithWeight (dict: Dictionary<int64,FourthField>) (weightDict: Dictionary<string,int64>) value fourthField =
     let mutable count = struct(0,null,null)
     let mutable weight = 0L
     if (weightDict.TryGetValue(value, &weight) |> not) || (dict.TryGetValue(weight, &count) |> not)
     then 0
     else
-        let struct(cnt, _, _) = count
-        cnt
+        handleFourthField count fourthField
 
 let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, keys: string list, order, limit, ctx: HttpContext) =
-    let key = if keys.IsEmpty then "" else keys.[0]
+    let mutable fourthField = NoField
+    let key =
+        if keys.IsEmpty
+        then ""
+        else
+            if keys.Length = 1
+            then keys.[0]
+            else
+                if keys.Length = 2
+                then
+                    match keys.[0] with
+                    | "birth" ->
+                        fourthField <- Birth (int16 ctx.Request.Query.[keys.[0]].[0])
+                        keys.[1]
+                    | "joined" ->
+                        fourthField <- Joined (int16 ctx.Request.Query.[keys.[0]].[0])
+                        keys.[1]
+                    | _ ->
+                        match keys.[1] with
+                        | "birth" ->
+                            fourthField <- Birth (int16 ctx.Request.Query.[keys.[1]].[0])
+                            keys.[0]
+                        | "joined" ->
+                            fourthField <- Joined (int16 ctx.Request.Query.[keys.[1]].[0])
+                            keys.[0]
+                        | _ ->
+                            failwith "Unsupported filters"
+                else
+                    failwith "Unsupported number of keys"
     match groupKey with
     | "sex" ->
         let groups =
@@ -177,17 +226,17 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, keys:
                     let count =
                         match key with
                         | "interests" ->
-                            handleGroupFilterWithWeight i interestsWeightDictionary value
+                            handleGroupFilterWithWeight i interestsWeightDictionary value fourthField
                         | "birth" ->
-                            handleGroupFilter2 b (Int16.Parse(value))
+                            handleGroupFilter b (Int16.Parse(value))
                         | "joined" ->
-                            handleGroupFilter2 j (Int16.Parse(value))
+                            handleGroupFilter j (Int16.Parse(value))
                         | "city" ->
-                            handleGroupFilterWithWeight ci citiesWeightDictionary value
+                            handleGroupFilterWithWeight ci citiesWeightDictionary value fourthField
                         | "country" ->
-                            handleGroupFilterWithWeight co countriesWeightDictionary value
+                            handleGroupFilterWithWeight co countriesWeightDictionary value fourthField
                         | "status" ->
-                            handleGroupFilter st (getStatus value)
+                            handleGroupFilterFF st (getStatus value) fourthField
                         | _ -> failwith "Unknown sex filter"
                     kv.Key, count
                 )
@@ -208,17 +257,17 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, keys:
                     let count =
                         match key with
                         | "interests" ->
-                            handleGroupFilterWithWeight i interestsWeightDictionary value
+                            handleGroupFilterWithWeight i interestsWeightDictionary value fourthField
                         | "birth" ->
-                            handleGroupFilter2 b (Int16.Parse(value))
+                            handleGroupFilter b (Int16.Parse(value))
                         | "joined" ->
-                            handleGroupFilter2 j (Int16.Parse(value))
+                            handleGroupFilter j (Int16.Parse(value))
                         | "city" ->
-                            handleGroupFilterWithWeight ci citiesWeightDictionary value
+                            handleGroupFilterWithWeight ci citiesWeightDictionary value fourthField
                         | "country" ->
-                            handleGroupFilterWithWeight co countriesWeightDictionary value
+                            handleGroupFilterWithWeight co countriesWeightDictionary value fourthField
                         | "sex" ->
-                            handleGroupFilter s (getSex value)
+                            handleGroupFilterFF s (getSex value) fourthField
                         | _ -> failwith "Unknown sex filter"
                     kv.Key, count
                 )
@@ -239,15 +288,15 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, keys:
                     let count =
                         match key with
                         | "interests" ->
-                            handleGroupFilterWithWeight i interestsWeightDictionary value
+                            handleGroupFilterWithWeight i interestsWeightDictionary value fourthField
                         | "birth" ->
-                            handleGroupFilter2 b (Int16.Parse(value))
+                            handleGroupFilter b (Int16.Parse(value))
                         | "joined" ->
-                            handleGroupFilter2 j (Int16.Parse(value))
+                            handleGroupFilter j (Int16.Parse(value))
                         | "sex" ->
-                            handleGroupFilter s (getSex value)
+                            handleGroupFilterFF s (getSex value) fourthField
                         | "status" ->
-                            handleGroupFilter st (getStatus value)
+                            handleGroupFilterFF st (getStatus value) fourthField
                         | _ -> failwith "Unknown country filter"
                     kv.Key, count
                 )
@@ -268,15 +317,15 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, keys:
                     let count =
                         match key with
                         | "interests" ->
-                            handleGroupFilterWithWeight i interestsWeightDictionary value
+                            handleGroupFilterWithWeight i interestsWeightDictionary value fourthField
                         | "birth" ->
-                            handleGroupFilter2 b (Int16.Parse(value))
+                            handleGroupFilter b (Int16.Parse(value))
                         | "joined" ->
-                            handleGroupFilter2 j (Int16.Parse(value))
+                            handleGroupFilter j (Int16.Parse(value))
                         | "sex" ->
-                            handleGroupFilter s (getSex value)
+                            handleGroupFilterFF s (getSex value) fourthField
                         | "status" ->
-                            handleGroupFilter st (getStatus value)
+                            handleGroupFilterFF st (getStatus value) fourthField
                         | _ -> failwith "Unknown city filter"
                     kv.Key, count
                 )
@@ -297,17 +346,17 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, keys:
                     let count =
                         match key with
                         | "birth" ->
-                            handleGroupFilter2 b (Int16.Parse(value))
+                            handleGroupFilter b (Int16.Parse(value))
                         | "joined" ->
-                            handleGroupFilter2 j (Int16.Parse(value))
+                            handleGroupFilter j (Int16.Parse(value))
                         | "city" ->
-                            handleGroupFilterWithWeight ci citiesWeightDictionary value
+                            handleGroupFilterWithWeight ci citiesWeightDictionary value fourthField
                         | "country" ->
-                            handleGroupFilterWithWeight co countriesWeightDictionary value
+                            handleGroupFilterWithWeight co countriesWeightDictionary value fourthField
                         | "sex" ->
-                            handleGroupFilter s (getSex value)
+                            handleGroupFilterFF s (getSex value) fourthField
                         | "status" ->
-                            handleGroupFilter st (getStatus value)
+                            handleGroupFilterFF st (getStatus value) fourthField
                         | _ -> failwith "Unknown interests filter"
                     kv.Key, count
                 )
@@ -328,16 +377,31 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, keys:
                     let count =
                         match key with
                         | "interests" ->
-                            handleGroupFilterWithWeight i interestsWeightDictionary value
+                            handleGroupFilterWithWeight i interestsWeightDictionary value fourthField
                         | "birth" ->
-                            handleGroupFilter2 b (Int16.Parse(value))
+                            handleGroupFilter b (Int16.Parse(value))
                         | "joined" ->
-                            handleGroupFilter2 j (Int16.Parse(value))
+                            handleGroupFilter j (Int16.Parse(value))
                         | "sex" ->
-                            handleGroupFilter s (getSex value)
+                            handleGroupFilterFF s (getSex value) fourthField
                         | "status" ->
                             let struct(_, status) = kv.Key
-                            if status = (getStatus value) then (b.Values |> Seq.sum) else 0
+                            if status = (getStatus value)
+                            then
+                                match fourthField with
+                                | NoField ->
+                                     b.Values |> Seq.sum
+                                | Birth birth ->
+                                    let mutable birthCnt = 0
+                                    if b.TryGetValue(birth, &birthCnt)
+                                    then birthCnt
+                                    else 0
+                                | Joined joined ->
+                                    let mutable joinedCnt = 0
+                                    if j.TryGetValue(joined, &joinedCnt)
+                                    then joinedCnt
+                                    else 0
+                            else 0
                         | _ -> failwith "Unknown citystatus filter"
                     kv.Key.ToTuple(), count
                 )
@@ -358,16 +422,31 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, keys:
                     let count =
                         match key with
                         | "interests" ->
-                            handleGroupFilterWithWeight i interestsWeightDictionary value
+                            handleGroupFilterWithWeight i interestsWeightDictionary value fourthField
                         | "birth" ->
-                            handleGroupFilter2 b (Int16.Parse(value))
+                            handleGroupFilter b (Int16.Parse(value))
                         | "joined" ->
-                            handleGroupFilter2 j (Int16.Parse(value))
+                            handleGroupFilter j (Int16.Parse(value))
                         | "status" ->
-                            handleGroupFilter st (getStatus value)
+                            handleGroupFilterFF st (getStatus value) fourthField
                         | "sex" ->
                             let struct(_, sex) = kv.Key
-                            if sex = (getSex value) then (b.Values |> Seq.sum) else 0
+                            if sex = (getSex value)
+                            then
+                                match fourthField with
+                                | NoField ->
+                                     b.Values |> Seq.sum
+                                | Birth birth ->
+                                    let mutable birthCnt = 0
+                                    if b.TryGetValue(birth, &birthCnt)
+                                    then birthCnt
+                                    else 0
+                                | Joined joined ->
+                                    let mutable joinedCnt = 0
+                                    if j.TryGetValue(joined, &joinedCnt)
+                                    then joinedCnt
+                                    else 0
+                            else 0
                         | _ -> failwith "Unknown citysex filter"
                     kv.Key.ToTuple(), count
                 )
@@ -388,16 +467,31 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, keys:
                     let count =
                         match key with
                         | "interests" ->
-                            handleGroupFilterWithWeight i interestsWeightDictionary value
+                            handleGroupFilterWithWeight i interestsWeightDictionary value fourthField
                         | "birth" ->
-                            handleGroupFilter2 b (Int16.Parse(value))
+                            handleGroupFilter b (Int16.Parse(value))
                         | "joined" ->
-                            handleGroupFilter2 j (Int16.Parse(value))
+                            handleGroupFilter j (Int16.Parse(value))
                         | "status" ->
-                            handleGroupFilter st (getStatus value)
+                            handleGroupFilterFF st (getStatus value) fourthField
                         | "sex" ->
                             let struct(_, sex) = kv.Key
-                            if sex = (getSex value) then (b.Values |> Seq.sum) else 0
+                            if sex = (getSex value)
+                            then
+                                match fourthField with
+                                | NoField ->
+                                     b.Values |> Seq.sum
+                                | Birth birth ->
+                                    let mutable birthCnt = 0
+                                    if b.TryGetValue(birth, &birthCnt)
+                                    then birthCnt
+                                    else 0
+                                | Joined joined ->
+                                    let mutable joinedCnt = 0
+                                    if j.TryGetValue(joined, &joinedCnt)
+                                    then joinedCnt
+                                    else 0
+                            else 0
                         | _ -> failwith "Unknown countrysex filter"
                     kv.Key.ToTuple(), count
                 )
@@ -418,16 +512,31 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, keys:
                     let count =
                         match key with
                         | "interests" ->
-                            handleGroupFilterWithWeight i interestsWeightDictionary value
+                            handleGroupFilterWithWeight i interestsWeightDictionary value fourthField
                         | "birth" ->
-                            handleGroupFilter2 b (Int16.Parse(value))
+                            handleGroupFilter b (Int16.Parse(value))
                         | "joined" ->
-                            handleGroupFilter2 j (Int16.Parse(value))
+                            handleGroupFilter j (Int16.Parse(value))
                         | "sex" ->
-                            handleGroupFilter s (getSex value)
+                            handleGroupFilterFF s (getSex value) fourthField
                         | "status" ->
                             let struct(_, status) = kv.Key
-                            if status = (getStatus value) then (b.Values |> Seq.sum) else 0
+                            if status = (getStatus value)
+                            then
+                                match fourthField with
+                                | NoField ->
+                                     b.Values |> Seq.sum
+                                | Birth birth ->
+                                    let mutable birthCnt = 0
+                                    if b.TryGetValue(birth, &birthCnt)
+                                    then birthCnt
+                                    else 0
+                                | Joined joined ->
+                                    let mutable joinedCnt = 0
+                                    if j.TryGetValue(joined, &joinedCnt)
+                                    then joinedCnt
+                                    else 0
+                            else 0
                         | _ -> failwith "Unknown citystatus filter"
                     kv.Key.ToTuple(), count
                 )
@@ -457,7 +566,7 @@ let getGroupedAccounts (next, ctx : HttpContext) =
         let order =
                 Int32.Parse(ctx.Request.Query.["order"].[0])
         let mutable memoryStream: MemoryStream = null
-        if keys.Length = 0 || (keys.Length = 1 && keys.[0] <> "likes")
+        if keys.Length = 0 || (keys |> List.contains "likes" |> not)
         then
             getGroupsWithEmptyFilter(&memoryStream, groupKey, keys, order, limit, ctx)
         else
