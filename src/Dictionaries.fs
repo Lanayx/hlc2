@@ -50,22 +50,23 @@ type CityGroup = int64
 type CountryGroup = int64
 type InterestsGroup = int64
 type CountType = int
+type FourthField = (struct(CountType*Dictionary<JoinedGroup,CountType>*Dictionary<BirthGroup,CountType>))
 
 let allCountryGroups =
-    Dictionary<CountryGroup,struct(Dictionary<InterestsGroup,CountType>*Dictionary<BirthGroup,CountType>*Dictionary<JoinedGroup,CountType>*Dictionary<SexGroup,CountType>*Dictionary<StatusGroup,CountType>)>()
+    Dictionary<CountryGroup,struct(Dictionary<InterestsGroup,FourthField>*Dictionary<BirthGroup,CountType>*Dictionary<JoinedGroup,CountType>*Dictionary<SexGroup,FourthField>*Dictionary<StatusGroup,FourthField>)>()
 let allCityGroups =
-    Dictionary<CityGroup,struct(Dictionary<InterestsGroup,CountType>*Dictionary<BirthGroup,CountType>*Dictionary<JoinedGroup,CountType>*Dictionary<SexGroup,CountType>*Dictionary<StatusGroup,CountType>)>()
+    Dictionary<CityGroup,struct(Dictionary<InterestsGroup,FourthField>*Dictionary<BirthGroup,CountType>*Dictionary<JoinedGroup,CountType>*Dictionary<SexGroup,FourthField>*Dictionary<StatusGroup,FourthField>)>()
 let allSexGroups =
-    Dictionary<SexGroup,struct(Dictionary<InterestsGroup,CountType>*Dictionary<BirthGroup,CountType>*Dictionary<JoinedGroup,CountType>*Dictionary<CityGroup,CountType>*Dictionary<CountryGroup,CountType>*Dictionary<StatusGroup,CountType>)>()
+    Dictionary<SexGroup,struct(Dictionary<InterestsGroup,FourthField>*Dictionary<BirthGroup,CountType>*Dictionary<JoinedGroup,CountType>*Dictionary<CityGroup,FourthField>*Dictionary<CountryGroup,FourthField>*Dictionary<StatusGroup,FourthField>)>()
 let allStatusGroups =
-    Dictionary<StatusGroup,struct(Dictionary<InterestsGroup,CountType>*Dictionary<BirthGroup,CountType>*Dictionary<JoinedGroup,CountType>*Dictionary<CityGroup,CountType>*Dictionary<CountryGroup,CountType>*Dictionary<SexGroup,CountType>)>()
+    Dictionary<StatusGroup,struct(Dictionary<InterestsGroup,FourthField>*Dictionary<BirthGroup,CountType>*Dictionary<JoinedGroup,CountType>*Dictionary<CityGroup,FourthField>*Dictionary<CountryGroup,FourthField>*Dictionary<SexGroup,FourthField>)>()
 let allInterestsGroups =
-    Dictionary<InterestsGroup,struct(Dictionary<BirthGroup,CountType>*Dictionary<JoinedGroup,CountType>*Dictionary<CityGroup,CountType>*Dictionary<CountryGroup,CountType>*Dictionary<SexGroup,CountType>*Dictionary<StatusGroup,CountType>)>()
+    Dictionary<InterestsGroup,struct(Dictionary<BirthGroup,CountType>*Dictionary<JoinedGroup,CountType>*Dictionary<CityGroup,FourthField>*Dictionary<CountryGroup,FourthField>*Dictionary<SexGroup,FourthField>*Dictionary<StatusGroup,FourthField>)>()
 let allCountrySexGroups =
-    Dictionary<struct(CountryGroup*SexGroup),struct(Dictionary<InterestsGroup,CountType>*Dictionary<BirthGroup,CountType>*Dictionary<JoinedGroup,CountType>*Dictionary<StatusGroup,CountType>)>()
+    Dictionary<struct(CountryGroup*SexGroup),struct(Dictionary<InterestsGroup,FourthField>*Dictionary<BirthGroup,CountType>*Dictionary<JoinedGroup,CountType>*Dictionary<StatusGroup,FourthField>)>()
 let allCitySexGroups =
-    Dictionary<struct(CityGroup*SexGroup),struct(Dictionary<InterestsGroup,CountType>*Dictionary<BirthGroup,CountType>*Dictionary<JoinedGroup,CountType>*Dictionary<StatusGroup,CountType>)>()
+    Dictionary<struct(CityGroup*SexGroup),struct(Dictionary<InterestsGroup,FourthField>*Dictionary<BirthGroup,CountType>*Dictionary<JoinedGroup,CountType>*Dictionary<StatusGroup,FourthField>)>()
 let allCountryStatusGroups =
-    Dictionary<struct(CountryGroup*StatusGroup),struct(Dictionary<InterestsGroup,CountType>*Dictionary<BirthGroup,CountType>*Dictionary<JoinedGroup,CountType>*Dictionary<SexGroup,CountType>)>()
+    Dictionary<struct(CountryGroup*StatusGroup),struct(Dictionary<InterestsGroup,FourthField>*Dictionary<BirthGroup,CountType>*Dictionary<JoinedGroup,CountType>*Dictionary<SexGroup,FourthField>)>()
 let allCityStatusGroups =
-    Dictionary<struct(CityGroup*StatusGroup),struct(Dictionary<InterestsGroup,CountType>*Dictionary<BirthGroup,CountType>*Dictionary<JoinedGroup,CountType>*Dictionary<SexGroup,CountType>)>()
+    Dictionary<struct(CityGroup*StatusGroup),struct(Dictionary<InterestsGroup,FourthField>*Dictionary<BirthGroup,CountType>*Dictionary<JoinedGroup,CountType>*Dictionary<SexGroup,FourthField>)>()
