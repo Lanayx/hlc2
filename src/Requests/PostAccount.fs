@@ -45,10 +45,27 @@ let getStringWeight (str: string) =
         multiplier <- multiplier / divisor
     result
 
+let inline addNewItem (dict: Dictionary<string,'T>) (serializeDict: byte[][]) (city: string) (cast: int -> 'T) =
+    let nextCity =
+        dict
+        |> Seq.sortBy (fun kv -> kv.Key)
+        |> Seq.find (fun kv -> kv.Key > city)
+    let cityIndex = nextCity.Value - (cast 1)
+    dict.Add(city, cityIndex)
+    if serializeDict |> isNotNull
+    then serializeDict.[int cityIndex] <- utf8 city
+    cityIndex
+
 let inline handleInterests (interests: string[]) (account: Account) =
     account.interests <-
         interests
-        |> Array.map(fun interest -> interestsWeightDictionary.[interest]
+        |> Array.map(fun interest ->         
+            let mutable interestIndex = 0uy
+            if interestsWeightDictionary.TryGetValue(interest, &interestIndex)
+            then
+                interestIndex
+            else 
+                addNewItem interestsWeightDictionary null interest byte
             )
 
 let inline increaseCounter<'T> (dict: Dictionary<'T,CountType>) (key: 'T) =
@@ -307,8 +324,13 @@ let inline updateCountrySexStatusIndexes oldSex oldStatus oldCountry oldInterest
 let handleCity city (account: Account) (deletePrevious: bool) =
     if deletePrevious
     then
-        citiesIndex.[account.city].Remove(account.id) |> ignore
-    account.city <- citiesWeightDictionary.[city]
+        citiesIndex.[account.city].Remove(account.id) |> ignore    
+    let mutable cityIndex = 0s
+    if citiesWeightDictionary.TryGetValue(city, &cityIndex)
+    then
+        account.city <- cityIndex
+    else 
+        account.city <- addNewItem citiesWeightDictionary citiesSerializeDictionary city int16
     let mutable cityUsers: SortedSet<Int32> = null
     if citiesIndex.TryGetValue(account.city, &cityUsers)
     then
@@ -322,7 +344,12 @@ let handleCountry country (account: Account) (deletePrevious: bool) =
     if deletePrevious
     then
         countriesIndex.[account.country].Remove(account.id) |> ignore
-    account.country <- countriesWeightDictionary.[country]
+    let mutable countryIndex = 0uy
+    if countriesWeightDictionary.TryGetValue(country, &countryIndex)
+    then
+        account.country <- countryIndex
+    else 
+        account.country <- addNewItem countriesWeightDictionary countriesSerializeDictionary country byte
     let mutable countryUsers: SortedSet<Int32> = null
     if countriesIndex.TryGetValue(account.country, &countryUsers)
     then
@@ -336,6 +363,12 @@ let inline handleFirstName (fname: string) (account: Account) (deletePrevious: b
     if deletePrevious
     then
         fnamesIndex.[account.fname].Remove(account.id) |> ignore
+    let mutable fnameIndex = 0uy
+    if fnamesWeightDictionary.TryGetValue(fname, &fnameIndex)
+    then
+        account.fname <- fnameIndex
+    else 
+        account.fname <- addNewItem fnamesWeightDictionary countriesSerializeDictionary fname byte
     account.fname <- fnamesWeightDictionary.[fname]
     let mutable fnameUsers: SortedSet<Int32> = null
     if fnamesIndex.TryGetValue(account.fname, &fnameUsers)
@@ -347,7 +380,12 @@ let inline handleFirstName (fname: string) (account: Account) (deletePrevious: b
         fnamesIndex.[account.fname] <- fnameUsers
 
 let inline handleSecondName (sname: string) (account: Account) =
-    account.sname <- snamesWeightDictionary.[sname]
+    let mutable snameIndex = 0s
+    if snamesWeightDictionary.TryGetValue(sname, &snameIndex)
+    then
+        account.sname <- snameIndex
+    else 
+        account.sname <- addNewItem snamesWeightDictionary countriesSerializeDictionary sname int16
 
 let inline handleEmail (email: string) (account: Account) =
     let atIndex = email.IndexOf('@', StringComparison.Ordinal)

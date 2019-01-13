@@ -161,22 +161,22 @@ let fillDictionaries (initialDict: HashSet<string>) (dict: Dictionary<string,'T>
     initialDict
     |> Seq.sort
     |> Seq.iteri (fun i s ->
-        let j = i+1
+        let j = (i+1) * 2
         dict.Add(s, cast j)
         serializeDict.[j] <- utf8 s
         )
 
 let handleWeightDictionaries () =
-    namesSerializeDictionary <- Array.zeroCreate (fnamesInitialDictionary.Count + 1)
+    namesSerializeDictionary <- Array.zeroCreate <| 2 * (fnamesInitialDictionary.Count + 1)
     fillDictionaries fnamesInitialDictionary fnamesWeightDictionary namesSerializeDictionary byte
-    snamesSerializeDictionary <- Array.zeroCreate (snamesInitialDictionary.Count + 1)
+    snamesSerializeDictionary <- Array.zeroCreate <| 2 * (snamesInitialDictionary.Count + 1)
     fillDictionaries snamesInitialDictionary snamesWeightDictionary snamesSerializeDictionary int16
     snamesWeightDictionaryReverse <- snamesWeightDictionary.ToDictionary((fun kv -> kv.Value),(fun kv -> kv.Key))
-    citiesSerializeDictionary <- Array.zeroCreate (citiesInitialDictionary.Count + 1)
+    citiesSerializeDictionary <- Array.zeroCreate <| 2 * (citiesInitialDictionary.Count + 1)
     fillDictionaries citiesInitialDictionary citiesWeightDictionary citiesSerializeDictionary int16
-    countriesSerializeDictionary <- Array.zeroCreate (countriesInitialDictionary.Count + 1)
+    countriesSerializeDictionary <- Array.zeroCreate <| 2 * (countriesInitialDictionary.Count + 1)
     fillDictionaries countriesInitialDictionary countriesWeightDictionary countriesSerializeDictionary byte
-    interestsSerializeDictionary <- Array.zeroCreate (interestsInitialDictionary.Count + 1)
+    interestsSerializeDictionary <- Array.zeroCreate <| 2 * (interestsInitialDictionary.Count + 1)
     fillDictionaries interestsInitialDictionary interestsWeightDictionary interestsSerializeDictionary byte
 
 
