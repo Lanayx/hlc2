@@ -72,20 +72,6 @@ let inline decreaseCounter<'T> (dict: Dictionary<'T,CountType>) (key: 'T) =
     then dict.[key] <- count - 1
     else dict.Remove(key) |> ignore
 
-let updateInterestIndex oldInterests (account: Account) (deletePrevious: bool) =
-    if deletePrevious && oldInterests |> isNotNull
-    then
-        oldInterests
-        |> Array.iter(fun oldInterestWeight ->
-                decreaseCounter interestGroups oldInterestWeight
-            )
-    if account.interests |> isNotNull
-    then
-        account.interests
-            |> Array.iter(fun interestWeight ->
-                    increaseCounter interestGroups interestWeight
-                )
-
 let inline increaseCounterFF<'T> (dict: Dictionary<'T,FourthField>) (key: 'T) birth joined =
     let mutable count = struct(0,null,null)
     if dict.TryGetValue(key, &count)
@@ -497,7 +483,6 @@ let createAccount (accUpd: AccountUpd): Account =
     updateCityGroupIndexes 0uy 0uy 0L [||] 0s 0s account false
     updateCountrySexStatusIndexes 0uy 0uy 0L [||] 0s 0s account false
     updateCountryGroupIndexes 0uy 0uy 0L [||] 0s 0s account false
-    updateInterestIndex [||] account false
     updateInterestsGroupIndexes 0uy 0uy 0L 0L [||] 0s 0s account false
     updateStatusGroupIndexes  0uy 0uy 0L 0L [||] 0s 0s account false
     updateSexGroupIndexes  0uy 0uy 0L 0L [||] 0s 0s account false
@@ -568,9 +553,6 @@ let updateExistingAccount (existing: Account, accUpd: AccountUpd) =
     then
         updateCountrySexStatusIndexes oldSex oldStatus oldCountry oldInterests oldBirthYear oldJoinedYear existing true
         updateCountryGroupIndexes oldSex oldStatus oldCountry oldInterests oldBirthYear oldJoinedYear existing true
-    if accUpd.interests |> isNotNull
-    then
-        updateInterestIndex oldInterests existing true
     if accUpd.city |> isNotNull || accUpd.country |> isNotNull || accUpd.sex |> isNotNull || accUpd.status |> isNotNull || accUpd.interests |> isNotNull || accUpd.joined.HasValue || accUpd.birth.HasValue
     then
         updateInterestsGroupIndexes oldSex oldStatus oldCity oldCountry oldInterests oldBirthYear oldJoinedYear existing true

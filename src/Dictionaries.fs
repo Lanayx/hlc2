@@ -24,24 +24,6 @@ let countriesIndex = Dictionary<int64, SortedSet<int>>()
 let fnamesIndex = Dictionary<int64, SortedSet<int>>()
 let emailsDictionary = HashSet<string>()
 
-// key is sex, value is dict of key=city, value=Count
-let mutable citySexGroups = Dictionary<byte, Dictionary<int64,int>>()
-citySexGroups.[0uy] <- Dictionary<int64,int>()
-citySexGroups.[1uy] <- Dictionary<int64,int>()
-let mutable cityStatusGroups = Dictionary<byte, Dictionary<int64,int>>()
-cityStatusGroups.[0uy] <- Dictionary<int64,int>()
-cityStatusGroups.[1uy] <- Dictionary<int64,int>()
-cityStatusGroups.[2uy] <- Dictionary<int64,int>()
-let mutable countrySexGroups = Dictionary<byte, Dictionary<int64,int>>()
-countrySexGroups.[0uy] <- Dictionary<int64,int>()
-countrySexGroups.[1uy] <- Dictionary<int64,int>()
-let mutable countryStatusGroups = Dictionary<byte, Dictionary<int64,int>>()
-countryStatusGroups.[0uy] <- Dictionary<int64,int>()
-countryStatusGroups.[1uy] <- Dictionary<int64,int>()
-countryStatusGroups.[2uy] <- Dictionary<int64,int>()
-
-// key is interest value is Count
-let mutable interestGroups = Dictionary<int64,int>()
 type BirthGroup = int16
 type JoinedGroup = int16
 type SexGroup = byte

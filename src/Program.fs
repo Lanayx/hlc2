@@ -146,28 +146,13 @@ let buildBitMapIndex() =
         then
             account.interests
             |> Seq.iter (fun interest -> interestsIndex.Set(BIKey(0,interest),account.id)))
-
-let sortGroupDictionaries() =
-    Console.WriteLine("{0} Sorting group dictionaries", DateTime.Now)
-    citySexGroups.[0uy] <- citySexGroups.[0uy].OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
-    citySexGroups.[1uy] <- citySexGroups.[1uy].OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
-    cityStatusGroups.[0uy] <- cityStatusGroups.[0uy].OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
-    cityStatusGroups.[1uy] <- cityStatusGroups.[1uy].OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
-    cityStatusGroups.[2uy] <- cityStatusGroups.[2uy].OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
-    countrySexGroups.[0uy] <- countrySexGroups.[0uy].OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
-    countrySexGroups.[1uy] <- countrySexGroups.[1uy].OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
-    countryStatusGroups.[0uy] <- countryStatusGroups.[0uy].OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
-    countryStatusGroups.[1uy] <- countryStatusGroups.[1uy].OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
-    countryStatusGroups.[2uy] <- countryStatusGroups.[2uy].OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
-
-    interestGroups <- interestGroups.OrderBy(fun kv -> kv.Value, kv.Key).ToDictionary((fun k -> k.Key), (fun v -> v.Value))
+    Console.WriteLine("{0} Finished building bitmap index", DateTime.Now)
 
 let indexesRebuild() =
     try
         buildBitMapIndex()
-        sortGroupDictionaries()
     with
-    | :? Exception as ex -> Console.WriteLine("Exception whild building index" + ex.ToString())
+    | ex -> Console.WriteLine("Exception whild building index" + ex.ToString())
 
 let webApp =
     choose [
