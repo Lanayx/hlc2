@@ -56,7 +56,7 @@ let statusNeqFilter (value: string) =
 
 let firstNameEqFilter (value: string) =
     fun (acc: Account) ->
-        let mutable name = 0L
+        let mutable name = 0uy
         fnamesWeightDictionary.TryGetValue(value, &name) && acc.fname = name
 
 let firstNameAnyFilter (value: string) =
@@ -66,32 +66,32 @@ let firstNameAnyFilter (value: string) =
 let firstNameNullFilter (value: string) =
     fun (acc: Account) ->
         if value.[0] = '1'
-        then acc.fname = 0L
-        else acc.fname <> 0L
+        then acc.fname = 0uy
+        else acc.fname <> 0uy
 
 let surnameEqFilter (value: string) =
     fun (acc: Account) ->
-        if acc.sname = 0L
+        if acc.sname = 0s
         then
             false
         else
-            let mutable sname = 0L
+            let mutable sname = 0s
             snamesWeightDictionary.TryGetValue(value, &sname) && acc.sname = sname
 
 let surnameStartsFilter (value: string) =
     fun (acc: Account) ->
-        if acc.sname = 0L
+        if acc.sname = 0s
         then
             false
         else
-            let struct(strSname, _) = snamesSerializeDictionary.[acc.sname]
+            let strSname = snamesWeightDictionaryReverse.[acc.sname]
             strSname.StartsWith(value,StringComparison.Ordinal)
 
 let surnameNullFilter (value: string) =
     fun (acc: Account) ->
         if value.[0] = '1'
-        then acc.sname = 0L
-        else acc.sname <> 0L
+        then acc.sname = 0s
+        else acc.sname <> 0s
 
 let phoneCodeFilter (value: string) =
     fun (acc: Account) ->
@@ -110,32 +110,32 @@ let phoneNullFilter (value: string) =
 
 let countryEqFilter (value: string) =
     fun (acc: Account) ->
-        let mutable country = 0L
+        let mutable country = 0uy
         countriesWeightDictionary.TryGetValue(value, &country) && acc.country = country
 
 let countryNullFilter (value: string) =
     fun (acc: Account) ->
         if value.[0] = '1'
-        then acc.country = 0L
-        else acc.country <> 0L
+        then acc.country = 0uy
+        else acc.country <> 0uy
 
 let cityEqFilter (value: string) =
     fun (acc: Account) ->
-        let mutable city = 0L
+        let mutable city = 0s
         citiesWeightDictionary.TryGetValue(value, &city) && acc.city = city
 
 let cityAnyFilter (value: string) =
     fun (acc: Account) ->
         value.Split(',') |> Array.exists (fun el ->
-            let mutable cityWeight = 0L
+            let mutable cityWeight = 0s
             citiesWeightDictionary.TryGetValue(el, &cityWeight) && cityWeight = acc.city
         )
 
 let cityNullFilter (value: string) =
     fun (acc: Account) ->
         if value.[0] = '1'
-        then acc.city = 0L
-        else acc.city <> 0L
+        then acc.city = 0s
+        else acc.city <> 0s
 
 let birthLtFilter (value: string) =
     fun (acc: Account) ->

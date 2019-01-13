@@ -215,17 +215,16 @@ let writeField (field_predicate: string, acc: Account, output: MemoryStream) =
     match fieldType with
     | AccountField.Email -> ()
     | AccountField.Firstname ->
-        if acc.fname <> 0L
+        if acc.fname <> 0uy
         then
             writeArray output ``,"fname":"``
-            writeArray output (namesSerializeDictionary.[acc.fname])
+            writeArray output (namesSerializeDictionary.[int acc.fname])
             writeChar output '"'
     | AccountField.Surname ->
-        if acc.sname <> 0L
+        if acc.sname <> 0s
         then
             writeArray output ``,"sname":"``
-            let struct(_, bytes) = snamesSerializeDictionary.[acc.sname]
-            writeArray output bytes
+            writeArray output (snamesSerializeDictionary.[int acc.sname])
             writeChar output '"'
     | AccountField.Interests ->
         ()
@@ -258,16 +257,16 @@ let writeField (field_predicate: string, acc: Account, output: MemoryStream) =
         writeArray output ``,"birth":``
         writeInt32x output acc.birth
     | AccountField.City ->
-        if acc.city <> 0L
+        if acc.city <> 0s
         then
             writeArray output ``,"city":"``
-            writeArray output (citiesSerializeDictionary.[acc.city])
+            writeArray output (citiesSerializeDictionary.[int acc.city])
             writeChar output '"'
     | AccountField.Country ->
-        if acc.country <> 0L
+        if acc.country <> 0uy
         then
             writeArray output ``,"country":"``
-            writeArray output (countriesSerializeDictionary.[acc.country])
+            writeArray output (countriesSerializeDictionary.[int acc.country])
             writeChar output '"'
     | _ -> ()
 
@@ -321,39 +320,39 @@ let serializeGroups<'T> (groups: ('T*int) seq, writeGroupAndValue): MemoryStream
     writeArray output ``]}``
     output
 
-let serializeGroupsCity (groups: (int64*int) seq, groupName: string): MemoryStream =
+let serializeGroupsCity (groups: (int16*int) seq, groupName: string): MemoryStream =
     let writeValue output value =
-        if value <> 0L
+        if value <> 0s
         then
             writeChar output '"'
             writeString output groupName
             writeArray output ``":``
             writeChar output '"'
-            writeArray output (citiesSerializeDictionary.[value])
+            writeArray output (citiesSerializeDictionary.[int value])
             writeChar output '"'
             writeChar output ','
     serializeGroups (groups, writeValue)
 
-let serializeGroupsInterests (groups: (int64*int) seq, groupName: string): MemoryStream =
+let serializeGroupsInterests (groups: (byte*int) seq, groupName: string): MemoryStream =
     let writeValue output value =
         writeChar output '"'
         writeString output groupName
         writeArray output ``":``
         writeChar output '"'
-        writeArray output (interestsSerializeDictionary.[value])
+        writeArray output (interestsSerializeDictionary.[int value])
         writeChar output '"'
         writeChar output ','
     serializeGroups (groups, writeValue)
 
-let serializeGroupsCountry (groups: (int64*int) seq, groupName: string): MemoryStream =
+let serializeGroupsCountry (groups: (byte*int) seq, groupName: string): MemoryStream =
     let writeValue output value =
-        if value <> 0L
+        if value <> 0uy
         then
             writeChar output '"'
             writeString output groupName
             writeArray output ``":``
             writeChar output '"'
-            writeArray output (countriesSerializeDictionary.[value])
+            writeArray output (countriesSerializeDictionary.[int value])
             writeChar output '"'
             writeChar output ','
     serializeGroups (groups, writeValue)
@@ -380,7 +379,7 @@ let serializeGroupsStatus (groups: (byte*int) seq, groupName: string): MemoryStr
         writeChar output ','
     serializeGroups (groups, writeValue)
 
-let serializeGroups2<'T> (groups: ((int64*'T)*int) seq, writeValue1, writeValue2): MemoryStream =
+let serializeGroups2 (groups: (('T1*'T2)*int) seq, writeValue1, writeValue2): MemoryStream =
     let array = ArrayPool.Shared.Rent (50 + 80 * (groups |> Seq.length))
     let output = stream array
     writeArray output ``{"groups":[``
@@ -401,19 +400,19 @@ let serializeGroups2<'T> (groups: ((int64*'T)*int) seq, writeValue1, writeValue2
     writeArray output ``]}``
     output
 
-let serializeGroups2Sex (groups: ((int64*byte)*int) seq, groupName1: string, groupName2: string): MemoryStream =
+let serializeGroups2Sex (groups: (('T*byte)*int) seq, groupName1: string, groupName2: string, cast): MemoryStream =
     let dictionary =
         if (groupName1 =~ "country")
         then countriesSerializeDictionary
         else citiesSerializeDictionary
     let writeValue1 output value =
-        if value <> 0L
+        if value <> Unchecked.defaultof<'T>
         then
             writeChar output '"'
             writeString output groupName1
             writeArray output ``":``
             writeChar output '"'
-            writeArray output (dictionary.[value])
+            writeArray output (dictionary.[cast value])
             writeArray output ``",``
     let writeValue2 output value =
         writeChar output '"'
@@ -424,19 +423,19 @@ let serializeGroups2Sex (groups: ((int64*byte)*int) seq, groupName1: string, gro
         writeArray output ``",``
     serializeGroups2 (groups, writeValue1, writeValue2)
 
-let serializeGroups2Status (groups: ((int64*byte)*int) seq, groupName1: string, groupName2: string): MemoryStream =
+let serializeGroups2Status (groups: (('T*byte)*int) seq, groupName1: string, groupName2: string, cast): MemoryStream =
     let dictionary =
         if (groupName1 =~ "country")
         then countriesSerializeDictionary
         else citiesSerializeDictionary
     let writeValue1 output value =
-        if value <> 0L
+        if value <> Unchecked.defaultof<'T>
         then
             writeChar output '"'
             writeString output groupName1
             writeArray output ``":``
             writeChar output '"'
-            writeArray output (dictionary.[value])
+            writeArray output (dictionary.[cast value])
             writeArray output ``",``
     let writeValue2 output value =
         writeChar output '"'

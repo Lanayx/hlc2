@@ -110,7 +110,7 @@ let applyGrouping (memoryStream: byref<MemoryStream>, groupKey, order, accs: Acc
             |> Seq.map (fun (key, group) -> key, group |> Seq.length)
             |> seqSort order (fun (group,length) -> length, group)
             |> Seq.truncate limit
-        memoryStream <- serializeGroups2Status(groups, "city", "status")
+        memoryStream <- serializeGroups2Status(groups, "city", "status", int)
     | "city,sex" ->
         let groups =
             accs
@@ -118,7 +118,7 @@ let applyGrouping (memoryStream: byref<MemoryStream>, groupKey, order, accs: Acc
             |> Seq.map (fun (key, group) -> key, group |> Seq.length)
             |> seqSort order (fun (group,length) -> length, group)
             |> Seq.truncate limit
-        memoryStream <- serializeGroups2Sex(groups, "city", "sex")
+        memoryStream <- serializeGroups2Sex(groups, "city", "sex", int)
     | "country,sex" ->
         let groups =
             accs
@@ -126,7 +126,7 @@ let applyGrouping (memoryStream: byref<MemoryStream>, groupKey, order, accs: Acc
             |> Seq.map (fun (key, group) -> key, group |> Seq.length)
             |> seqSort order (fun (group,length) -> length, group)
             |> Seq.truncate limit
-        memoryStream <- serializeGroups2Sex(groups, "country", "sex")
+        memoryStream <- serializeGroups2Sex(groups, "country", "sex", int)
     | "country,status" ->
         let groups =
             accs
@@ -134,7 +134,7 @@ let applyGrouping (memoryStream: byref<MemoryStream>, groupKey, order, accs: Acc
             |> Seq.map (fun (key, group) -> key, group |> Seq.length)
             |> seqSort order (fun (group,length) -> length, group)
             |> Seq.truncate limit
-        memoryStream <- serializeGroups2Status(groups, "country", "status")
+        memoryStream <- serializeGroups2Status(groups, "country", "status", int)
     | _ ->
         ()
 
@@ -174,9 +174,9 @@ let inline handleGroupFilterFF<'T> (dict: Dictionary<'T,FourthField>) value four
         handleFourthField count fourthField
 
 
-let inline handleGroupFilterWithWeight (dict: Dictionary<int64,FourthField>) (weightDict: Dictionary<string,int64>) value fourthField =
+let inline handleGroupFilterWithWeight (dict: Dictionary<'T,FourthField>) (weightDict: Dictionary<string,'T>) value fourthField =
     let mutable count = struct(0,null,null)
-    let mutable weight = 0L
+    let mutable weight = Unchecked.defaultof<'T>
     if (weightDict.TryGetValue(value, &weight) |> not) || (dict.TryGetValue(weight, &count) |> not)
     then 0
     else
@@ -408,7 +408,7 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, keys:
             |> Seq.filter (fun (_, count) -> count > 0)
             |> seqSort order (fun (field, count) -> count, field)
             |> Seq.truncate limit
-        memoryStream <- serializeGroups2Status(groups, "city", "status")
+        memoryStream <- serializeGroups2Status(groups, "city", "status", int)
     | "city,sex" ->
         let groups =
             allCitySexGroups
@@ -453,7 +453,7 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, keys:
             |> Seq.filter (fun (_, count) -> count > 0)
             |> seqSort order (fun (field, count) -> count, field)
             |> Seq.truncate limit
-        memoryStream <- serializeGroups2Sex(groups, "city", "sex")
+        memoryStream <- serializeGroups2Sex(groups, "city", "sex", int)
     | "country,sex" ->
         let groups =
             allCountrySexGroups
@@ -498,7 +498,7 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, keys:
             |> Seq.filter (fun (_, count) -> count > 0)
             |> seqSort order (fun (field, count) -> count, field)
             |> Seq.truncate limit
-        memoryStream <- serializeGroups2Sex(groups, "country", "sex")
+        memoryStream <- serializeGroups2Sex(groups, "country", "sex", int)
     | "country,status" ->
         let groups =
             allCountryStatusGroups
@@ -543,7 +543,7 @@ let getGroupsWithEmptyFilter (memoryStream: byref<MemoryStream>, groupKey, keys:
             |> Seq.filter (fun (_, count) -> count > 0)
             |> seqSort order (fun (field, count) -> count, field)
             |> Seq.truncate limit
-        memoryStream <- serializeGroups2Status(groups, "country", "status")
+        memoryStream <- serializeGroups2Status(groups, "country", "status", int)
     | _ ->
         ()
 

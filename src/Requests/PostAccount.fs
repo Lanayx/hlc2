@@ -48,16 +48,7 @@ let getStringWeight (str: string) =
 let inline handleInterests (interests: string[]) (account: Account) =
     account.interests <-
         interests
-        |> Array.map(fun interest ->
-                let mutable weight = 0L
-                if interestsWeightDictionary.TryGetValue(interest, &weight)
-                then
-                    weight
-                else
-                    weight <- getStringWeight interest
-                    interestsWeightDictionary.Add(interest, weight)
-                    interestsSerializeDictionary.Add(weight, utf8 interest)
-                    weight
+        |> Array.map(fun interest -> interestsWeightDictionary.[interest]
             )
 
 let inline increaseCounter<'T> (dict: Dictionary<'T,CountType>) (key: 'T) =
@@ -253,8 +244,8 @@ let updateInterestsGroupIndexes
             increaseCounterFF st account.status account.birthYear account.joinedYear
 
 let updateSexStatusIndexes
-        (groupSexIndex:Dictionary<struct(int64*SexGroup),struct(Dictionary<InterestsGroup,FourthField>*Dictionary<BirthGroup,CountType>*Dictionary<JoinedGroup,CountType>*Dictionary<StatusGroup,FourthField>)>)
-        (groupStatusIndex:Dictionary<struct(int64*StatusGroup),struct(Dictionary<InterestsGroup,FourthField>*Dictionary<BirthGroup,CountType>*Dictionary<JoinedGroup,CountType>*Dictionary<SexGroup,FourthField>)>)
+        (groupSexIndex:Dictionary<struct('T*SexGroup),struct(Dictionary<InterestsGroup,FourthField>*Dictionary<BirthGroup,CountType>*Dictionary<JoinedGroup,CountType>*Dictionary<StatusGroup,FourthField>)>)
+        (groupStatusIndex:Dictionary<struct('T*StatusGroup),struct(Dictionary<InterestsGroup,FourthField>*Dictionary<BirthGroup,CountType>*Dictionary<JoinedGroup,CountType>*Dictionary<SexGroup,FourthField>)>)
         oldSex oldStatus oldCityOrCountry oldInterests oldBirth oldJoined newCityOrCountry (account: Account) (deletePrevious: bool) =
     if deletePrevious
     then
@@ -314,18 +305,10 @@ let inline updateCountrySexStatusIndexes oldSex oldStatus oldCountry oldInterest
     updateSexStatusIndexes allCountrySexGroups allCountryStatusGroups oldSex oldStatus oldCountry oldInterests oldBirth oldJoined account.country account deletePrevious
 
 let handleCity city (account: Account) (deletePrevious: bool) =
-    if deletePrevious && account.city > 0L
+    if deletePrevious
     then
         citiesIndex.[account.city].Remove(account.id) |> ignore
-    let mutable weight = 0L
-    if citiesWeightDictionary.TryGetValue(city, &weight)
-    then
-        account.city <- weight
-    else
-        weight <- getStringWeight city
-        citiesWeightDictionary.Add(city, weight)
-        citiesSerializeDictionary.Add(weight, utf8 city)
-        account.city <- weight
+    account.city <- citiesWeightDictionary.[city]
     let mutable cityUsers: SortedSet<Int32> = null
     if citiesIndex.TryGetValue(account.city, &cityUsers)
     then
@@ -335,66 +318,36 @@ let handleCity city (account: Account) (deletePrevious: bool) =
         cityUsers.Add(account.id) |> ignore
         citiesIndex.[account.city] <- cityUsers
 
-let inline handleCountry country (account: Account) (deletePrevious: bool) =
-    if deletePrevious && account.country > 0L
+let handleCountry country (account: Account) (deletePrevious: bool) =
+    if deletePrevious
     then
         countriesIndex.[account.country].Remove(account.id) |> ignore
-    let mutable weight = 0L
-    if countriesWeightDictionary.TryGetValue(country, &weight)
+    account.country <- countriesWeightDictionary.[country]
+    let mutable countryUsers: SortedSet<Int32> = null
+    if countriesIndex.TryGetValue(account.country, &countryUsers)
     then
-        account.country <- weight
+        countryUsers.Add(account.id) |> ignore
     else
-        weight <- getStringWeight country
-        countriesWeightDictionary.Add(country, weight)
-        countriesSerializeDictionary.Add(weight, utf8 country)
-        account.country <- weight
-
-    if account.country > 0L
-    then
-        let mutable countryUsers: SortedSet<Int32> = null
-        if countriesIndex.TryGetValue(account.country, &countryUsers)
-        then
-            countryUsers.Add(account.id) |> ignore
-        else
-            countryUsers <- SortedSet(intReverseComparer)
-            countryUsers.Add(account.id) |> ignore
-            countriesIndex.[account.country] <- countryUsers
+        countryUsers <- SortedSet(intReverseComparer)
+        countryUsers.Add(account.id) |> ignore
+        countriesIndex.[account.country] <- countryUsers
 
 let inline handleFirstName (fname: string) (account: Account) (deletePrevious: bool) =
-    if deletePrevious && account.fname > 0L
+    if deletePrevious
     then
         fnamesIndex.[account.fname].Remove(account.id) |> ignore
-    let mutable weight = 0L
-    if fnamesWeightDictionary.TryGetValue(fname, &weight)
+    account.fname <- fnamesWeightDictionary.[fname]
+    let mutable fnameUsers: SortedSet<Int32> = null
+    if fnamesIndex.TryGetValue(account.fname, &fnameUsers)
     then
-        account.fname <- weight
+        fnameUsers.Add(account.id) |> ignore
     else
-        weight <- getStringWeight fname
-        fnamesWeightDictionary.Add(fname, weight)
-        namesSerializeDictionary.Add(weight, utf8 fname)
-        account.fname <- weight
-
-    if account.fname > 0L
-    then
-        let mutable fnameUsers: SortedSet<Int32> = null
-        if fnamesIndex.TryGetValue(account.fname, &fnameUsers)
-        then
-            fnameUsers.Add(account.id) |> ignore
-        else
-            fnameUsers <- SortedSet(intReverseComparer)
-            fnameUsers.Add(account.id) |> ignore
-            fnamesIndex.[account.fname] <- fnameUsers
+        fnameUsers <- SortedSet(intReverseComparer)
+        fnameUsers.Add(account.id) |> ignore
+        fnamesIndex.[account.fname] <- fnameUsers
 
 let inline handleSecondName (sname: string) (account: Account) =
-    let mutable weight = 0L
-    if snamesWeightDictionary.TryGetValue(sname, &weight)
-    then
-        account.sname <- weight
-    else
-        weight <- getStringWeight sname
-        snamesWeightDictionary.Add(sname, weight)
-        snamesSerializeDictionary.Add(weight, struct(sname,utf8 sname))
-        account.sname <- weight
+    account.sname <- snamesWeightDictionary.[sname]
 
 let inline handleEmail (email: string) (account: Account) =
     let atIndex = email.IndexOf('@', StringComparison.Ordinal)
@@ -479,13 +432,13 @@ let createAccount (accUpd: AccountUpd): Account =
     if accUpd.country |> isNotNull
     then
         handleCountry accUpd.country account false
-    updateCitySexStatusIndexes 0uy 0uy 0L [||] 0s 0s account false
-    updateCityGroupIndexes 0uy 0uy 0L [||] 0s 0s account false
-    updateCountrySexStatusIndexes 0uy 0uy 0L [||] 0s 0s account false
-    updateCountryGroupIndexes 0uy 0uy 0L [||] 0s 0s account false
-    updateInterestsGroupIndexes 0uy 0uy 0L 0L [||] 0s 0s account false
-    updateStatusGroupIndexes  0uy 0uy 0L 0L [||] 0s 0s account false
-    updateSexGroupIndexes  0uy 0uy 0L 0L [||] 0s 0s account false
+    updateCitySexStatusIndexes 0uy 0uy 0s [||] 0s 0s account false
+    updateCityGroupIndexes 0uy 0uy 0s [||] 0s 0s account false
+    updateCountrySexStatusIndexes 0uy 0uy 0uy [||] 0s 0s account false
+    updateCountryGroupIndexes 0uy 0uy 0uy [||] 0s 0s account false
+    updateInterestsGroupIndexes 0uy 0uy 0s 0uy [||] 0s 0s account false
+    updateStatusGroupIndexes  0uy 0uy 0s 0uy [||] 0s 0s account false
+    updateSexGroupIndexes  0uy 0uy 0s 0uy [||] 0s 0s account false
     emailsDictionary.Add(account.email) |> ignore
     account
 

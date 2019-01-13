@@ -16,7 +16,7 @@ open Giraffe
 open System.IO
 open HCup.Models
 
-let inline intersectTwoArraysCount (first: int64[]) (second: int64[]) =
+let inline intersectTwoArraysCount (first: byte[]) (second: byte[]) =
     let mutable count = 0
     let mutable i = 0
     let mutable j = 0

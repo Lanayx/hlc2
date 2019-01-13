@@ -140,7 +140,7 @@ let getLikesContainsAccounts (value: string) =
         getLikesContainsAccount value
 
 let getCityEqAccounts (value: string) =
-    let mutable weight = 0L
+    let mutable weight = 0s
     if citiesWeightDictionary.TryGetValue(value, &weight)
     then
         citiesIndex.[weight]
@@ -149,7 +149,7 @@ let getCityEqAccounts (value: string) =
         Seq.empty
 
 let getCountryEqAccounts (value: string) =
-    let mutable weight = 0L
+    let mutable weight = 0uy
     if countriesWeightDictionary.TryGetValue(value, &weight)
     then
         countriesIndex.[weight]

@@ -136,6 +136,49 @@ let customPostRoutef : HttpHandler =
             else
                 setStatusCode 404 next ctx
 
+let fnamesInitialDictionary = HashSet<string>()
+let snamesInitialDictionary = HashSet<string>()
+let citiesInitialDictionary = HashSet<string>()
+let countriesInitialDictionary = HashSet<string>()
+let interestsInitialDictionary = HashSet<string>()
+
+let fillInitialDictionaries (accUpd: AccountUpd) =
+    if accUpd.fname |> isNotNull
+    then fnamesInitialDictionary.Add(accUpd.fname) |> ignore
+    if accUpd.sname |> isNotNull
+    then snamesInitialDictionary.Add(accUpd.sname) |> ignore
+    if accUpd.city |> isNotNull
+    then citiesInitialDictionary.Add(accUpd.city) |> ignore
+    if accUpd.country |> isNotNull
+    then countriesInitialDictionary.Add(accUpd.country) |> ignore
+    if accUpd.interests |> isNotNull
+    then
+        for interest in accUpd.interests do
+            interestsInitialDictionary.Add(interest) |> ignore
+    ()
+
+let fillDictionaries (initialDict: HashSet<string>) (dict: Dictionary<string,'T>) (serializeDict: byte[][]) cast =
+    initialDict
+    |> Seq.sort
+    |> Seq.iteri (fun i s ->
+        let j = i+1
+        dict.Add(s, cast j)
+        serializeDict.[j] <- utf8 s
+        )
+
+let handleWeightDictionaries () =
+    namesSerializeDictionary <- Array.zeroCreate (fnamesInitialDictionary.Count + 1)
+    fillDictionaries fnamesInitialDictionary fnamesWeightDictionary namesSerializeDictionary byte
+    snamesSerializeDictionary <- Array.zeroCreate (snamesInitialDictionary.Count + 1)
+    fillDictionaries snamesInitialDictionary snamesWeightDictionary snamesSerializeDictionary int16
+    snamesWeightDictionaryReverse <- snamesWeightDictionary.ToDictionary((fun kv -> kv.Value),(fun kv -> kv.Key))
+    citiesSerializeDictionary <- Array.zeroCreate (citiesInitialDictionary.Count + 1)
+    fillDictionaries citiesInitialDictionary citiesWeightDictionary citiesSerializeDictionary int16
+    countriesSerializeDictionary <- Array.zeroCreate (countriesInitialDictionary.Count + 1)
+    fillDictionaries countriesInitialDictionary countriesWeightDictionary countriesSerializeDictionary byte
+    interestsSerializeDictionary <- Array.zeroCreate (interestsInitialDictionary.Count + 1)
+    fillDictionaries interestsInitialDictionary interestsWeightDictionary interestsSerializeDictionary byte
+
 
 let buildBitMapIndex() =
     Console.WriteLine("{0} Building bitmap index", DateTime.Now)
@@ -197,20 +240,24 @@ let loadData folder =
                 |> Seq.iteri (fun i accsUpd ->
                         accsUpd.accounts
                         |> Seq.iter (fun acc ->
-                            accounts.[acc.id.Value] <- PostAccount.createAccount acc
+                            fillInitialDictionaries acc
                             Interlocked.Increment(&accountsNumber) |> ignore
+                        )
+                        GC.Collect(2, GCCollectionMode.Forced, true, true)
+                    )
+    handleWeightDictionaries()
+    Directory.EnumerateFiles(folder, "accounts_*.json")
+                |> Seq.map (File.ReadAllText >> deserializeObjectUnsafe<AccountsUpd>)
+                |> Seq.iteri (fun i accsUpd ->
+                        accsUpd.accounts
+                        |> Seq.iter (fun acc ->
+                            accounts.[acc.id.Value] <- PostAccount.createAccount acc
                         )
                         GC.Collect(2, GCCollectionMode.Forced, true, true)
                         Console.Write("{0}){1}mb:{2}s ", i, Process.GetCurrentProcess().PrivateMemorySize64/MB, sw.Elapsed.TotalSeconds)
                     )
     sw.Stop()
     Console.WriteLine()
-
-    namesSerializeDictionary <- fnamesWeightDictionary.ToDictionary((fun kv -> kv.Value), (fun kv -> utf8 kv.Key))
-    snamesSerializeDictionary <- snamesWeightDictionary.ToDictionary((fun kv -> kv.Value), (fun kv -> struct(kv.Key, utf8 kv.Key)))
-    citiesSerializeDictionary <- citiesWeightDictionary.ToDictionary((fun kv -> kv.Value), (fun kv -> utf8 kv.Key))
-    countriesSerializeDictionary <- countriesWeightDictionary.ToDictionary((fun kv -> kv.Value), (fun kv -> utf8 kv.Key))
-    interestsSerializeDictionary <- interestsWeightDictionary.ToDictionary((fun kv -> kv.Value), (fun kv -> utf8 kv.Key))
 
     indexesRebuild() |> ignore
 

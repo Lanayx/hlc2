@@ -4,35 +4,42 @@ open System.Collections.Generic
 open HCup.Models
 open System
 
-let fnamesWeightDictionary = Dictionary<string, int64>()
-let snamesWeightDictionary = Dictionary<string, int64>()
-let citiesWeightDictionary = Dictionary<string, int64>()
-let countriesWeightDictionary = Dictionary<string, int64>()
-let interestsWeightDictionary = Dictionary<string, int64>()
-
-let mutable namesSerializeDictionary = Dictionary<int64, byte[]>()
-let mutable snamesSerializeDictionary = Dictionary<int64, struct(string*byte[])>()
-let mutable citiesSerializeDictionary = Dictionary<int64, byte[]>()
-let mutable countriesSerializeDictionary = Dictionary<int64, byte[]>()
-let mutable interestsSerializeDictionary = Dictionary<int64, byte[]>()
-
-// key is likeId,  value is dict of key=userId, value=sumOfTs*tsCount
-let likesIndex: SortedList<int, struct(single*byte)>[] = Array.zeroCreate(1400000)
-// key is cityWeight, value is usersId's set
-let citiesIndex = Dictionary<int64, SortedSet<int>>()
-let countriesIndex = Dictionary<int64, SortedSet<int>>()
-let fnamesIndex = Dictionary<int64, SortedSet<int>>()
-let emailsDictionary = HashSet<string>()
-
+type FnameGroup = byte
+type SnameGroup = int16
 type BirthGroup = int16
 type JoinedGroup = int16
 type SexGroup = byte
 type StatusGroup = byte
-type CityGroup = int64
-type CountryGroup = int64
-type InterestsGroup = int64
+type CityGroup = int16
+type CountryGroup = byte
+type InterestsGroup = byte
 type CountType = int
 type FourthField = (struct(CountType*Dictionary<JoinedGroup,CountType>*Dictionary<BirthGroup,CountType>))
+
+
+let fnamesWeightDictionary = Dictionary<string, byte>()
+let snamesWeightDictionary = Dictionary<string, int16>()
+let mutable snamesWeightDictionaryReverse = Dictionary<int16, string>()
+let citiesWeightDictionary = Dictionary<string, int16>()
+let countriesWeightDictionary = Dictionary<string, byte>()
+let interestsWeightDictionary = Dictionary<string, byte>()
+
+let mutable namesSerializeDictionary : byte[][] = null
+let mutable snamesSerializeDictionary : byte[][] = null
+let mutable citiesSerializeDictionary : byte[][] = null
+let mutable countriesSerializeDictionary : byte[][] = null
+let mutable interestsSerializeDictionary : byte[][] = null
+
+// key is likeId,  value is dict of key=userId, value=sumOfTs*tsCount
+let likesIndex: SortedList<int, struct(single*byte)>[] = Array.zeroCreate(1400000)
+// key is cityWeight, value is usersId's set
+let citiesIndex = Dictionary<CityGroup, SortedSet<int>>()
+let countriesIndex = Dictionary<CountryGroup, SortedSet<int>>()
+let fnamesIndex = Dictionary<FnameGroup, SortedSet<int>>()
+let emailsDictionary = HashSet<string>()
+
+// GROUPING
+
 
 let allCountryGroups =
     Dictionary<CountryGroup,struct(Dictionary<InterestsGroup,FourthField>*Dictionary<BirthGroup,CountType>*Dictionary<JoinedGroup,CountType>*Dictionary<SexGroup,FourthField>*Dictionary<StatusGroup,FourthField>)>()
