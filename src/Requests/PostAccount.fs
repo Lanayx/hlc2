@@ -45,20 +45,19 @@ let getStringWeight (str: string) =
         multiplier <- multiplier / divisor
     result
 
-let inline addNewItem (dict: Dictionary<string,'T>) (serializeDict: byte[][]) (city: string) (cast: int -> 'T) =
-    let nextCityKey =
+let inline addNewItem (dict: Dictionary<string,'T>) (serializeDict: byte[][]) (value: string) (cast: int -> 'T) =
+    let nextDictKey =
         dict.Keys
         |> Seq.sort
-        |> Seq.find (fun c -> c > city)
+        |> Seq.find (fun c -> c > value)
 
-    let nextCityValue = dict.[nextCityKey]
-    let cityIndex = nextCityValue - (cast 1)
-    dict.Add(city, cityIndex)
+    let nextDictValue = dict.[nextDictKey]
+    let valueIndex = nextDictValue - (cast 1)
+    dict.Add(value, valueIndex)
     if serializeDict |> isNotNull
     then
-        serializeDict.[int cityIndex] <- utf8 city
-    cityIndex
-    // Unchecked.defaultof<'T>
+        serializeDict.[int valueIndex] <- utf8 value
+    valueIndex
 
 let inline handleInterests (interests: string[]) (account: Account) =
     account.interests <-
@@ -348,12 +347,7 @@ let handleCountry country (account: Account) (deletePrevious: bool) =
     if deletePrevious && account.country > 0uy
     then
         countriesIndex.[account.country].Remove(account.id) |> ignore
-    let mutable countryIndex = 0uy
-    if countriesWeightDictionary.TryGetValue(country, &countryIndex)
-    then
-        account.country <- countryIndex
-    else
-        account.country <- addNewItem countriesWeightDictionary countriesSerializeDictionary country byte
+    account.country <- countriesWeightDictionary.[country]
     let mutable countryUsers: SortedSet<Int32> = null
     if countriesIndex.TryGetValue(account.country, &countryUsers)
     then
@@ -367,12 +361,6 @@ let inline handleFirstName (fname: string) (account: Account) (deletePrevious: b
     if deletePrevious && account.fname > 0uy
     then
         fnamesIndex.[account.fname].Remove(account.id) |> ignore
-    let mutable fnameIndex = 0uy
-    if fnamesWeightDictionary.TryGetValue(fname, &fnameIndex)
-    then
-        account.fname <- fnameIndex
-    else
-        account.fname <- addNewItem fnamesWeightDictionary countriesSerializeDictionary fname byte
     account.fname <- fnamesWeightDictionary.[fname]
     let mutable fnameUsers: SortedSet<Int32> = null
     if fnamesIndex.TryGetValue(account.fname, &fnameUsers)

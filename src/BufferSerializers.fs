@@ -218,7 +218,7 @@ let writeField (field_predicate: string, acc: Account, output: MemoryStream) =
         if acc.fname <> 0uy
         then
             writeArray output ``,"fname":"``
-            writeArray output (namesSerializeDictionary.[int acc.fname])
+            writeArray output (fnamesSerializeDictionary.[int acc.fname])
             writeChar output '"'
     | AccountField.Surname ->
         if acc.sname <> 0s

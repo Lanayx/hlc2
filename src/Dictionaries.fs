@@ -24,7 +24,7 @@ let citiesWeightDictionary = Dictionary<string, int16>()
 let countriesWeightDictionary = Dictionary<string, byte>()
 let interestsWeightDictionary = Dictionary<string, byte>()
 
-let mutable namesSerializeDictionary : byte[][] = null
+let mutable fnamesSerializeDictionary : byte[][] = null
 let mutable snamesSerializeDictionary : byte[][] = null
 let mutable citiesSerializeDictionary : byte[][] = null
 let mutable countriesSerializeDictionary : byte[][] = null
@@ -39,7 +39,6 @@ let fnamesIndex = Dictionary<FnameGroup, SortedSet<int>>()
 let emailsDictionary = HashSet<string>()
 
 // GROUPING
-
 
 let allCountryGroups =
     Dictionary<CountryGroup,struct(Dictionary<InterestsGroup,FourthField>*Dictionary<BirthGroup,CountType>*Dictionary<JoinedGroup,CountType>*Dictionary<SexGroup,FourthField>*Dictionary<StatusGroup,FourthField>)>()
