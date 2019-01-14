@@ -46,25 +46,29 @@ let getStringWeight (str: string) =
     result
 
 let inline addNewItem (dict: Dictionary<string,'T>) (serializeDict: byte[][]) (city: string) (cast: int -> 'T) =
-    let nextCity =
-        dict
-        |> Seq.sortBy (fun kv -> kv.Key)
-        |> Seq.find (fun kv -> kv.Key > city)
-    let cityIndex = nextCity.Value - (cast 1)
+    let nextCityKey =
+        dict.Keys
+        |> Seq.sort
+        |> Seq.find (fun c -> c > city)
+
+    let nextCityValue = dict.[nextCityKey]
+    let cityIndex = nextCityValue - (cast 1)
     dict.Add(city, cityIndex)
     if serializeDict |> isNotNull
-    then serializeDict.[int cityIndex] <- utf8 city
+    then
+        serializeDict.[int cityIndex] <- utf8 city
     cityIndex
+    // Unchecked.defaultof<'T>
 
 let inline handleInterests (interests: string[]) (account: Account) =
     account.interests <-
         interests
-        |> Array.map(fun interest ->         
+        |> Array.map(fun interest ->
             let mutable interestIndex = 0uy
             if interestsWeightDictionary.TryGetValue(interest, &interestIndex)
             then
                 interestIndex
-            else 
+            else
                 addNewItem interestsWeightDictionary null interest byte
             )
 
@@ -322,14 +326,14 @@ let inline updateCountrySexStatusIndexes oldSex oldStatus oldCountry oldInterest
     updateSexStatusIndexes allCountrySexGroups allCountryStatusGroups oldSex oldStatus oldCountry oldInterests oldBirth oldJoined account.country account deletePrevious
 
 let handleCity city (account: Account) (deletePrevious: bool) =
-    if deletePrevious
+    if deletePrevious && account.city > 0s
     then
-        citiesIndex.[account.city].Remove(account.id) |> ignore    
+        citiesIndex.[account.city].Remove(account.id) |> ignore
     let mutable cityIndex = 0s
     if citiesWeightDictionary.TryGetValue(city, &cityIndex)
     then
         account.city <- cityIndex
-    else 
+    else
         account.city <- addNewItem citiesWeightDictionary citiesSerializeDictionary city int16
     let mutable cityUsers: SortedSet<Int32> = null
     if citiesIndex.TryGetValue(account.city, &cityUsers)
@@ -341,14 +345,14 @@ let handleCity city (account: Account) (deletePrevious: bool) =
         citiesIndex.[account.city] <- cityUsers
 
 let handleCountry country (account: Account) (deletePrevious: bool) =
-    if deletePrevious
+    if deletePrevious && account.country > 0uy
     then
         countriesIndex.[account.country].Remove(account.id) |> ignore
     let mutable countryIndex = 0uy
     if countriesWeightDictionary.TryGetValue(country, &countryIndex)
     then
         account.country <- countryIndex
-    else 
+    else
         account.country <- addNewItem countriesWeightDictionary countriesSerializeDictionary country byte
     let mutable countryUsers: SortedSet<Int32> = null
     if countriesIndex.TryGetValue(account.country, &countryUsers)
@@ -360,14 +364,14 @@ let handleCountry country (account: Account) (deletePrevious: bool) =
         countriesIndex.[account.country] <- countryUsers
 
 let inline handleFirstName (fname: string) (account: Account) (deletePrevious: bool) =
-    if deletePrevious
+    if deletePrevious && account.fname > 0uy
     then
         fnamesIndex.[account.fname].Remove(account.id) |> ignore
     let mutable fnameIndex = 0uy
     if fnamesWeightDictionary.TryGetValue(fname, &fnameIndex)
     then
         account.fname <- fnameIndex
-    else 
+    else
         account.fname <- addNewItem fnamesWeightDictionary countriesSerializeDictionary fname byte
     account.fname <- fnamesWeightDictionary.[fname]
     let mutable fnameUsers: SortedSet<Int32> = null
@@ -384,8 +388,8 @@ let inline handleSecondName (sname: string) (account: Account) =
     if snamesWeightDictionary.TryGetValue(sname, &snameIndex)
     then
         account.sname <- snameIndex
-    else 
-        account.sname <- addNewItem snamesWeightDictionary countriesSerializeDictionary sname int16
+    else
+        account.sname <- addNewItem snamesWeightDictionary null sname int16
 
 let inline handleEmail (email: string) (account: Account) =
     let atIndex = email.IndexOf('@', StringComparison.Ordinal)
