@@ -389,7 +389,8 @@ let inline handleSecondName (sname: string) (account: Account) =
     then
         account.sname <- snameIndex
     else
-        account.sname <- addNewItem snamesWeightDictionary null sname int16
+        account.sname <- addNewItem snamesWeightDictionary snamesSerializeDictionary sname int16
+        snamesWeightDictionaryReverse.[account.sname] <- sname
 
 let inline handleEmail (email: string) (account: Account) =
     let atIndex = email.IndexOf('@', StringComparison.Ordinal)
