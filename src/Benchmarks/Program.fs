@@ -12,6 +12,6 @@ open Benchmarks
 
 [<EntryPoint>]
 let main argv =
-    BenchmarkRunner.Run<DictionaryBenchmarks>()
+    BenchmarkRunner.Run<IntersectBenchmarks>()
     // BenchmarkRunner.Run<RouteBenchmarks>()
     0
