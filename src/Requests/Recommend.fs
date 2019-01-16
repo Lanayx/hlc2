@@ -20,16 +20,17 @@ let inline intersectTwoArraysCount (first: byte[]) (second: byte[]) =
     let mutable count = 0
     let mutable i = 0
     let mutable j = 0
-    while i < first.Length do
-        j <- 0
-        while j < second.Length do
-            if first.[i] = second.[j]
-            then
-                count <- count + 1
-                j <- second.Length
-            else
-                j <- j + 1
-        i <- i + 1
+    while i < first.Length && j < second.Length do        
+        if first.[i] = second.[j]
+        then
+            count <- count + 1
+            j <- j + 1
+            i <- i + 1
+        else if first.[i] < second.[j]
+        then
+            i <- i + 1
+        else
+            j <- j + 1        
     count
 
 let getCompatibility (target: Account) (acc: Account)  =
@@ -41,12 +42,8 @@ let getCompatibility (target: Account) (acc: Account)  =
     then
         None
     else
-        let statusrank =
-            match acc.status with
-            | Common.freeStatus -> 2
-            | Common.complexStatus -> 1
-            | Common.occupiedStatus -> 0
-            | _ -> failwith "Invalid status"
+        let status = acc.status
+        let statusrank = (status >>> 1) + ((status &&& 1uy) ^^^ 1uy) // 2 -> 2 , 1 -> 0, 0 -> 1
         let yearsDifference = 100 - (Math.Abs (acc.birth - target.birth))
         Some (acc.premiumNow, statusrank, commonInterestsCount, yearsDifference, -acc.id)
        
@@ -147,9 +144,8 @@ let getRecommendedAccounts (id, next, ctx : HttpContext) =
                     getRecommendUsers target.sex city country
                 let accs =
                     accounts
-                    |> Seq.map (fun acc -> acc, getCompatibility target acc)
-                    |> Seq.filter (fun (acc, compat) -> compat.IsSome)
-                    |> Seq.sortByDescending (fun (acc, comp) -> comp.Value)
+                    |> Seq.choose (fun acc -> getCompatibility target acc |> Option.map (fun comp -> (acc, comp)))
+                    |> Seq.sortByDescending (fun (acc, comp) -> comp)
                     |> Seq.map (fun (acc, comp) -> acc)
                     |> Seq.truncate limit
                 let memoryStream = serializeAccounts (accs, recommendationFields)

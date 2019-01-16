@@ -282,7 +282,7 @@ let groupFilters: IDictionary<string, Filter> =
         "joined", joinedYearFilter
     ]
 
-let recommendFilters: IDictionary<string, Filter> =
+let suggestFilters: IDictionary<string, Filter> =
     dict [
         "country", countryEqFilter
         "city", cityEqFilter

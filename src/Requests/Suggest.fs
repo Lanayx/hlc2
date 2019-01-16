@@ -62,7 +62,7 @@ let getSuggestedAccounts (id, next, ctx : HttpContext) =
             else
                 let filters =
                     keys
-                    |> Seq.map (fun (key, value) -> recommendFilters.[key] value)
+                    |> Seq.map (fun (key, value) -> suggestFilters.[key] value)
                 let similaritiesWithUsers = Dictionary<int, single>()
                 for likeId in target.likes do
                     getSimilarityNew target.id (likesIndex.[likeId]) similaritiesWithUsers

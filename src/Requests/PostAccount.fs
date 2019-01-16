@@ -62,7 +62,7 @@ let inline addNewItem (dict: Dictionary<string,'T>) (serializeDict: byte[][]) (v
 let inline handleInterests (interests: string[]) (account: Account) =
     account.interests <-
         interests
-        |> Array.map(fun interest ->
+        |> Seq.map(fun interest ->
             let mutable interestIndex = 0uy
             if interestsWeightDictionary.TryGetValue(interest, &interestIndex)
             then
@@ -70,6 +70,8 @@ let inline handleInterests (interests: string[]) (account: Account) =
             else
                 addNewItem interestsWeightDictionary null interest byte
             )
+        |> Seq.sort
+        |> Seq.toArray
 
 let inline increaseCounter<'T> (dict: Dictionary<'T,CountType>) (key: 'T) =
     let mutable count = 0
