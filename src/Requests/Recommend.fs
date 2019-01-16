@@ -79,8 +79,7 @@ let getRecommendedAccounts (id, next, ctx : HttpContext) =
                     keys
                     |> Seq.map (fun (key, value) -> recommendFilters.[key] value)
                 let accounts =
-                    getAccounts()
-                    |> Seq.filter(fun acc -> acc.sex <> target.sex)
+                    getRecommendUsers target.sex
                 let accs =
                     filters
                     |> Seq.fold (fun acc f -> acc |> Seq.filter f) accounts

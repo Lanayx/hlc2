@@ -58,3 +58,39 @@ let allCountryStatusGroups =
     Dictionary<struct(CountryGroup*StatusGroup),struct(Dictionary<InterestsGroup,FourthField>*Dictionary<BirthGroup,CountType>*Dictionary<JoinedGroup,CountType>*Dictionary<SexGroup,FourthField>)>()
 let allCityStatusGroups =
     Dictionary<struct(CityGroup*StatusGroup),struct(Dictionary<InterestsGroup,FourthField>*Dictionary<BirthGroup,CountType>*Dictionary<JoinedGroup,CountType>*Dictionary<SexGroup,FourthField>)>()
+
+// RECOMMEND
+
+let mutable bestMaleUsers = ResizeArray<Account>()
+let mutable bestMaleUsers2 = ResizeArray<Account>()
+let mutable bestMaleUsers3 = ResizeArray<Account>()
+let mutable bestSimpleMaleUsers = ResizeArray<Account>()
+let mutable bestSimpleMaleUsers2 = ResizeArray<Account>()
+let mutable bestSimpleMaleUsers3 = ResizeArray<Account>()
+let mutable bestFemaleUsers = ResizeArray<Account>()
+let mutable bestFemaleUsers2 = ResizeArray<Account>()
+let mutable bestFemaleUsers3 = ResizeArray<Account>()
+let mutable bestSimpleFemaleUsers = ResizeArray<Account>()
+let mutable bestSimpleFemaleUsers2 = ResizeArray<Account>()
+let mutable bestSimpleFemaleUsers3 = ResizeArray<Account>()
+
+let getRecommendUsers sex =
+    if sex = Common.female
+    then
+        seq {
+            yield! bestFemaleUsers
+            yield! bestFemaleUsers2
+            yield! bestFemaleUsers3
+            yield! bestSimpleFemaleUsers
+            yield! bestSimpleFemaleUsers2
+            yield! bestSimpleFemaleUsers3
+        }
+    else
+        seq {
+            yield! bestMaleUsers
+            yield! bestMaleUsers2
+            yield! bestMaleUsers3
+            yield! bestSimpleMaleUsers
+            yield! bestSimpleMaleUsers2
+            yield! bestSimpleMaleUsers3
+        }

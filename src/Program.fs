@@ -191,9 +191,47 @@ let buildBitMapIndex() =
             |> Seq.iter (fun interest -> interestsIndex.Set(BIKey(0,interest),account.id)))
     Console.WriteLine("{0} Finished building bitmap index", DateTime.Now)
 
+let buildRecommendIndexes() =
+    getAccounts()
+    |> Seq.iter (fun acc ->
+        if acc.status = Common.freeStatus
+        then
+            if acc.premiumNow
+            then
+                if acc.sex = Common.female
+                then bestFemaleUsers.Add(acc)
+                else bestMaleUsers.Add(acc)
+            else
+                if acc.sex = Common.female
+                then bestSimpleFemaleUsers.Add(acc)
+                else bestSimpleMaleUsers.Add(acc)
+        else if acc.status = Common.complexStatus
+        then
+            if acc.premiumNow
+            then
+                if acc.sex = Common.female
+                then bestFemaleUsers2.Add(acc)
+                else bestMaleUsers2.Add(acc)
+            else
+                if acc.sex = Common.female
+                then bestSimpleFemaleUsers2.Add(acc)
+                else bestSimpleMaleUsers2.Add(acc)
+        else
+            if acc.premiumNow
+            then
+                if acc.sex = Common.female
+                then bestFemaleUsers3.Add(acc)
+                else bestMaleUsers3.Add(acc)
+            else
+                if acc.sex = Common.female
+                then bestSimpleFemaleUsers3.Add(acc)
+                else bestSimpleMaleUsers3.Add(acc)
+            )
+
 let indexesRebuild() =
     try
         buildBitMapIndex()
+
     with
     | ex -> Console.WriteLine("Exception whild building index" + ex.ToString())
 
