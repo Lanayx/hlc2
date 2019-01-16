@@ -191,6 +191,17 @@ let buildBitMapIndex() =
             |> Seq.iter (fun interest -> interestsIndex.Set(BIKey(0,interest),account.id)))
     Console.WriteLine("{0} Finished building bitmap index", DateTime.Now)
 
+
+let addAccToDict (dict: Dictionary<'T,ResizeArray<Account>>) key acc =
+    let mutable resizeArr = null
+    if dict.TryGetValue(key, &resizeArr)
+    then resizeArr.Add(acc)
+    else 
+        let resizeArray = ResizeArray()
+        resizeArray.Add(acc)
+        dict.Add(key, resizeArray)
+
+
 let buildRecommendIndexes() =
     getAccounts()
     |> Seq.iter (fun acc ->
@@ -199,39 +210,63 @@ let buildRecommendIndexes() =
             if acc.premiumNow
             then
                 if acc.sex = Common.female
-                then bestFemaleUsers.Add(acc)
-                else bestMaleUsers.Add(acc)
+                then 
+                    addAccToDict bestFemaleUsersCity acc.city acc
+                    addAccToDict bestFemaleUsersCountry acc.country acc
+                else 
+                    addAccToDict bestMaleUsersCity acc.city acc
+                    addAccToDict bestMaleUsersCountry acc.country acc
             else
                 if acc.sex = Common.female
-                then bestSimpleFemaleUsers.Add(acc)
-                else bestSimpleMaleUsers.Add(acc)
+                then 
+                    addAccToDict bestSimpleFemaleUsersCity acc.city acc
+                    addAccToDict bestSimpleFemaleUsersCountry acc.country acc
+                else 
+                    addAccToDict bestSimpleMaleUsersCity acc.city acc
+                    addAccToDict bestSimpleMaleUsersCountry acc.country acc
         else if acc.status = Common.complexStatus
         then
             if acc.premiumNow
             then
                 if acc.sex = Common.female
-                then bestFemaleUsers2.Add(acc)
-                else bestMaleUsers2.Add(acc)
+                then 
+                    addAccToDict bestFemaleUsers2City acc.city acc
+                    addAccToDict bestFemaleUsers2Country acc.country acc
+                else 
+                    addAccToDict bestMaleUsers2City acc.city acc
+                    addAccToDict bestMaleUsers2Country acc.country acc
             else
                 if acc.sex = Common.female
-                then bestSimpleFemaleUsers2.Add(acc)
-                else bestSimpleMaleUsers2.Add(acc)
+                then 
+                    addAccToDict bestSimpleFemaleUsers2City acc.city acc
+                    addAccToDict bestSimpleFemaleUsers2Country acc.country acc
+                else 
+                    addAccToDict bestSimpleMaleUsers2City acc.city acc
+                    addAccToDict bestSimpleMaleUsers2Country acc.country acc
         else
             if acc.premiumNow
             then
                 if acc.sex = Common.female
-                then bestFemaleUsers3.Add(acc)
-                else bestMaleUsers3.Add(acc)
+                then 
+                    addAccToDict bestFemaleUsers3City acc.city acc
+                    addAccToDict bestFemaleUsers3Country acc.country acc
+                else 
+                    addAccToDict bestMaleUsers3City acc.city acc
+                    addAccToDict bestMaleUsers3Country acc.country acc
             else
                 if acc.sex = Common.female
-                then bestSimpleFemaleUsers3.Add(acc)
-                else bestSimpleMaleUsers3.Add(acc)
-            )
+                then 
+                    addAccToDict bestSimpleFemaleUsers3City acc.city acc
+                    addAccToDict bestSimpleFemaleUsers3Country acc.country acc
+                else 
+                    addAccToDict bestSimpleMaleUsers3City acc.city acc
+                    addAccToDict bestSimpleMaleUsers3Country acc.country acc
+    )
 
 let indexesRebuild() =
     try
         buildBitMapIndex()
-
+        buildRecommendIndexes()
     with
     | ex -> Console.WriteLine("Exception whild building index" + ex.ToString())
 

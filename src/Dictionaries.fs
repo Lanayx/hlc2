@@ -61,36 +61,30 @@ let allCityStatusGroups =
 
 // RECOMMEND
 
-let mutable bestMaleUsers = ResizeArray<Account>()
-let mutable bestMaleUsers2 = ResizeArray<Account>()
-let mutable bestMaleUsers3 = ResizeArray<Account>()
-let mutable bestSimpleMaleUsers = ResizeArray<Account>()
-let mutable bestSimpleMaleUsers2 = ResizeArray<Account>()
-let mutable bestSimpleMaleUsers3 = ResizeArray<Account>()
-let mutable bestFemaleUsers = ResizeArray<Account>()
-let mutable bestFemaleUsers2 = ResizeArray<Account>()
-let mutable bestFemaleUsers3 = ResizeArray<Account>()
-let mutable bestSimpleFemaleUsers = ResizeArray<Account>()
-let mutable bestSimpleFemaleUsers2 = ResizeArray<Account>()
-let mutable bestSimpleFemaleUsers3 = ResizeArray<Account>()
+let mutable bestMaleUsersCity = Dictionary<CityGroup, ResizeArray<Account>>()
+let mutable bestMaleUsersCountry = Dictionary<CountryGroup, ResizeArray<Account>>()
+let mutable bestMaleUsers2City = Dictionary<CityGroup, ResizeArray<Account>>()
+let mutable bestMaleUsers2Country = Dictionary<CountryGroup, ResizeArray<Account>>()
+let mutable bestMaleUsers3City = Dictionary<CityGroup, ResizeArray<Account>>()
+let mutable bestMaleUsers3Country = Dictionary<CountryGroup, ResizeArray<Account>>()
 
-let getRecommendUsers sex =
-    if sex = Common.female
-    then
-        seq {
-            yield! bestFemaleUsers
-            yield! bestFemaleUsers2
-            yield! bestFemaleUsers3
-            yield! bestSimpleFemaleUsers
-            yield! bestSimpleFemaleUsers2
-            yield! bestSimpleFemaleUsers3
-        }
-    else
-        seq {
-            yield! bestMaleUsers
-            yield! bestMaleUsers2
-            yield! bestMaleUsers3
-            yield! bestSimpleMaleUsers
-            yield! bestSimpleMaleUsers2
-            yield! bestSimpleMaleUsers3
-        }
+let mutable bestSimpleMaleUsersCity = Dictionary<CityGroup, ResizeArray<Account>>()
+let mutable bestSimpleMaleUsersCountry = Dictionary<CountryGroup, ResizeArray<Account>>()
+let mutable bestSimpleMaleUsers2City = Dictionary<CityGroup, ResizeArray<Account>>()
+let mutable bestSimpleMaleUsers2Country = Dictionary<CountryGroup, ResizeArray<Account>>()
+let mutable bestSimpleMaleUsers3City = Dictionary<CityGroup, ResizeArray<Account>>()
+let mutable bestSimpleMaleUsers3Country = Dictionary<CountryGroup, ResizeArray<Account>>()
+
+let mutable bestFemaleUsersCity = Dictionary<CityGroup, ResizeArray<Account>>()
+let mutable bestFemaleUsersCountry = Dictionary<CountryGroup, ResizeArray<Account>>()
+let mutable bestFemaleUsers2City = Dictionary<CityGroup, ResizeArray<Account>>()
+let mutable bestFemaleUsers2Country = Dictionary<CountryGroup, ResizeArray<Account>>()
+let mutable bestFemaleUsers3City = Dictionary<CityGroup, ResizeArray<Account>>()
+let mutable bestFemaleUsers3Country = Dictionary<CountryGroup, ResizeArray<Account>>()
+
+let mutable bestSimpleFemaleUsersCity = Dictionary<CityGroup, ResizeArray<Account>>()
+let mutable bestSimpleFemaleUsersCountry = Dictionary<CountryGroup, ResizeArray<Account>>()
+let mutable bestSimpleFemaleUsers2City = Dictionary<CityGroup, ResizeArray<Account>>()
+let mutable bestSimpleFemaleUsers2Country = Dictionary<CountryGroup, ResizeArray<Account>>()
+let mutable bestSimpleFemaleUsers3City = Dictionary<CityGroup, ResizeArray<Account>>()
+let mutable bestSimpleFemaleUsers3Country = Dictionary<CountryGroup, ResizeArray<Account>>()

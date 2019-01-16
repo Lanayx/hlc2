@@ -49,6 +49,70 @@ let getCompatibility (target: Account) (acc: Account)  =
             | _ -> failwith "Invalid status"
         let yearsDifference = 100 - (Math.Abs (acc.birth - target.birth))
         Some (acc.premiumNow, statusrank, commonInterestsCount, yearsDifference, -acc.id)
+       
+
+let cityFemaleOrder = [| bestFemaleUsersCity; bestFemaleUsers2City; bestFemaleUsers3City; bestSimpleFemaleUsersCity; bestSimpleFemaleUsers2City; bestSimpleFemaleUsers3City |]
+let countryFemaleOrder = [| bestFemaleUsersCountry; bestFemaleUsers2Country; bestFemaleUsers3Country; bestSimpleFemaleUsersCountry; bestSimpleFemaleUsers2Country; bestSimpleFemaleUsers3Country |]
+let cityMaleOrder = [| bestMaleUsersCity; bestMaleUsers2City; bestMaleUsers3City; bestSimpleMaleUsersCity; bestSimpleMaleUsers2City; bestSimpleMaleUsers3City |]
+let countryMaleOrder = [| bestMaleUsersCountry; bestMaleUsers2Country; bestMaleUsers3Country; bestSimpleMaleUsersCountry; bestSimpleMaleUsers2Country; bestSimpleMaleUsers3Country |]
+
+let emptyArray = ResizeArray<Account>()
+let getDictionaryValue (dict: Dictionary<'K, ResizeArray<Account>>) (key: 'K) =
+    if dict.ContainsKey(key)
+    then dict.[key]
+    else emptyArray
+
+let getRecommendUsers sex city country =
+    if city |> isNotNull
+    then
+        let mutable cityId = 0s
+        if citiesWeightDictionary.TryGetValue(city, &cityId)
+        then
+            if sex = Common.male
+            then
+                seq {
+                    for dict in cityFemaleOrder do    
+                       yield! getDictionaryValue dict cityId
+                }
+            else
+                seq {
+                    for dict in cityMaleOrder do    
+                       yield! getDictionaryValue dict cityId
+            }
+        else 
+            Seq.empty
+    else if country |> isNotNull
+    then
+        let mutable countryId = 0uy
+        if countriesWeightDictionary.TryGetValue(country, &countryId)
+        then
+            if sex = Common.male
+            then
+                seq {
+                    for dict in countryFemaleOrder do    
+                       yield! getDictionaryValue dict countryId
+                }
+            else
+                seq {
+                    for dict in countryMaleOrder do    
+                       yield! getDictionaryValue dict countryId
+                }
+        else
+            Seq.empty
+    else
+        if sex = Common.male
+        then            
+            seq {
+                for dict in countryFemaleOrder do 
+                   for kv in dict do 
+                       yield! kv.Value
+            }
+        else
+            seq {
+                for dict in countryMaleOrder do 
+                   for kv in dict do 
+                       yield! kv.Value
+            }
 
 let recommendationFields = [| "status_eq"; "fname_eq"; "sname_eq"; "birth_year"; "premium_now" |]
 let getRecommendedAccounts (id, next, ctx : HttpContext) =
@@ -69,20 +133,20 @@ let getRecommendedAccounts (id, next, ctx : HttpContext) =
                         then raise (KeyNotFoundException("Unknown value of get parameter"))
                         (key, value)
                     )
-                |> Seq.toArray
+                |> dict
             let limit = Int32.Parse(ctx.Request.Query.["limit"].[0])
             if limit <= 0 || limit > 20
             then
                 setStatusCode 400 next ctx
             else
-                let filters =
-                    keys
-                    |> Seq.map (fun (key, value) -> recommendFilters.[key] value)
+                let mutable city = null
+                let mutable country = null
+                keys.TryGetValue("city", &city) |> ignore
+                keys.TryGetValue("country", &country) |> ignore
                 let accounts =
-                    getRecommendUsers target.sex
+                    getRecommendUsers target.sex city country
                 let accs =
-                    filters
-                    |> Seq.fold (fun acc f -> acc |> Seq.filter f) accounts
+                    accounts
                     |> Seq.map (fun acc -> acc, getCompatibility target acc)
                     |> Seq.filter (fun (acc, compat) -> compat.IsSome)
                     |> Seq.sortByDescending (fun (acc, comp) -> comp.Value)
