@@ -203,6 +203,13 @@ let addAccToDict (dict: Dictionary<'T,ResizeArray<Account>>) key acc =
 
 
 let buildRecommendIndexes() =
+    bestFemaleUsersCity.Clear();bestFemaleUsersCountry.Clear();bestMaleUsersCity.Clear();bestMaleUsersCountry.Clear();   
+    bestSimpleFemaleUsersCity.Clear();bestSimpleFemaleUsersCountry.Clear();bestSimpleMaleUsersCity.Clear();bestSimpleMaleUsersCountry.Clear();
+    bestFemaleUsers2City.Clear();bestFemaleUsers2Country.Clear();bestMaleUsers2City.Clear();bestMaleUsers2Country.Clear();   
+    bestSimpleFemaleUsers2City.Clear();bestSimpleFemaleUsers2Country.Clear();bestSimpleMaleUsers2City.Clear();bestSimpleMaleUsers2Country.Clear();
+    bestFemaleUsers3City.Clear();bestFemaleUsers3Country.Clear();bestMaleUsers3City.Clear();bestMaleUsers3Country.Clear();   
+    bestSimpleFemaleUsers3City.Clear();bestSimpleFemaleUsers3Country.Clear();bestSimpleMaleUsers3City.Clear();bestSimpleMaleUsers3Country.Clear();
+
     getAccounts()
     |> Seq.iter (fun acc ->
         if acc.status = Common.freeStatus
