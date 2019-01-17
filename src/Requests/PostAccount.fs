@@ -18,6 +18,7 @@ open HCup.Models
 open HCup.Requests
 open FSharp.Control.Tasks.V2.ContextInsensitive
 open Utf8Json
+open System.Collections.Generic
 
 let getStringWeight (str: string) =
     let strChars = str |> Seq.truncate 11
@@ -404,22 +405,37 @@ let inline handlePhone (phone: string) (account: Account) =
 
 let inline addLikeToDictionary liker likee likeTs =
     if likesIndex.[likee] |> isNull
-    then likesIndex.[likee] <- SortedList<int, struct(single*byte)>(intReverseComparer)
+    then likesIndex.[likee] <- HashSet<int>()
     let likers = likesIndex.[likee]
-    if likers.ContainsKey(liker)
-    then
-        let struct(ts, count) = likers.[liker]
-        likers.[liker] <- struct(ts + (single)likeTs, count+1uy)
-    else
-        likers.[liker] <- struct((single)likeTs, 1uy)
+    likers.Add(liker)
+
+    //if likers.ContainsKey(liker)
+    //then
+    //    let struct(ts, count) = likers.[liker]
+    //    likers.[liker] <- struct(ts + (single)likeTs, count+1uy)
+    //else
+    //    likers.[liker] <- struct((single)likeTs, 1uy)
+
+type LikeComparer() =
+    interface IComparer<SmartLike> with
+        member this.Compare(x,y) =
+            if x.likee > y.likee
+            then -1
+            else
+                if x.likee < y.likee
+                then 1
+                else 0
+let likeComparer = new LikeComparer()
 
 let handleLikes (likes: Like[]) (account: Account) (deletePrevious: bool) =
     if deletePrevious
     then
-        for likeId in account.likes do
-            let likers = likesIndex.[likeId]
+        for like in account.likes do
+            let likers = likesIndex.[like.likee]
             likers.Remove(account.id) |> ignore
     for like in likes do
+        let smartLike = { likee = like.id; sumOfTs = (single) like.ts; tsCount = 1uy }
+        let index = account.likes.BinarySearch(smartLike, likeComparer)
         addLikeToDictionary account.id like.id like.ts
 
     account.likes <-

@@ -97,6 +97,14 @@ type AccountUpd() =
         [<DefaultValue>]val mutable city: string
         [<DefaultValue>]val mutable country: string
 
+[<Struct>]
+type SmartLike =
+    {
+        likee: int
+        sumOfTs: single
+        tsCount: byte
+    }
+
 type Account() =
         [<DefaultValue>]val mutable id: int
         [<DefaultValue>]val mutable fname : byte
@@ -113,7 +121,7 @@ type Account() =
         [<DefaultValue>]val mutable phoneCode: int
         [<DefaultValue>]val mutable birth: int
         [<DefaultValue>]val mutable birthYear: int16
-        [<DefaultValue>]val mutable likes: ResizeArray<int>
+        [<DefaultValue>]val mutable likes: ResizeArray<SmartLike>
         [<DefaultValue>]val mutable joined: int
         [<DefaultValue>]val mutable joinedYear: int16
         [<DefaultValue>]val mutable city: int16

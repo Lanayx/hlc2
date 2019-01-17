@@ -17,7 +17,7 @@ open System.IO
 open HCup.Models
 open HCup.Requests
 
-let getSimilarityNew targetId (likers: SortedList<int,struct(single*byte)>) (results:Dictionary<int,single>) =
+let getSimilarityNew targetId (likers: int[]) (results:Dictionary<int,single>) =
     let struct(targTsSum, count) = likers.[targetId]
     let targTs = targTsSum / (single) count
     for liker in likers do
@@ -65,7 +65,7 @@ let getSuggestedAccounts (id, next, ctx : HttpContext) =
                     |> Seq.map (fun (key, value) -> suggestFilters.[key] value)
                 let similaritiesWithUsers = Dictionary<int, single>()
                 for likeId in target.likes do
-                    getSimilarityNew target.id (likesIndex.[likeId]) similaritiesWithUsers
+                    getSimilarityNew target (likesIndex.[likeId]) similaritiesWithUsers
                 let similarAccounts =
                     similaritiesWithUsers.Keys
                     |> Seq.map (fun id -> accounts.[id])
