@@ -82,3 +82,19 @@ let inline getAccounts() =
     accounts
     |> Seq.skip 1
     |> Seq.take accountsNumber
+
+type LikeReverseComparer() =
+    interface IComparer<SmartLike> with
+        member this.Compare(x,y) =
+            if x.likee > y.likee
+            then -1
+            else
+                if x.likee < y.likee
+                then 1
+                else 0
+let likeReverseComparer = new LikeReverseComparer()
+
+let findLikeIndex (likes: ResizeArray<SmartLike>) likee =
+    let likeToSearch = { likee = likee; sumOfTs = 0.0f; tsCount = 1uy }
+    likes.BinarySearch(likeToSearch, likeReverseComparer)
+

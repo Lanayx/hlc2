@@ -403,29 +403,11 @@ let inline handlePhone (phone: string) (account: Account) =
     account.phone <- phone
     account.phoneCode <- phoneCode
 
-let inline addLikeToDictionary liker likee likeTs =
+let inline addLikeToDictionary liker likee =
     if likesIndex.[likee] |> isNull
     then likesIndex.[likee] <- HashSet<int>()
     let likers = likesIndex.[likee]
-    likers.Add(liker)
-
-    //if likers.ContainsKey(liker)
-    //then
-    //    let struct(ts, count) = likers.[liker]
-    //    likers.[liker] <- struct(ts + (single)likeTs, count+1uy)
-    //else
-    //    likers.[liker] <- struct((single)likeTs, 1uy)
-
-type LikeComparer() =
-    interface IComparer<SmartLike> with
-        member this.Compare(x,y) =
-            if x.likee > y.likee
-            then -1
-            else
-                if x.likee < y.likee
-                then 1
-                else 0
-let likeComparer = new LikeComparer()
+    likers.Add(liker) |> ignore
 
 let handleLikes (likes: Like[]) (account: Account) (deletePrevious: bool) =
     if deletePrevious
@@ -433,17 +415,21 @@ let handleLikes (likes: Like[]) (account: Account) (deletePrevious: bool) =
         for like in account.likes do
             let likers = likesIndex.[like.likee]
             likers.Remove(account.id) |> ignore
-    for like in likes do
-        let smartLike = { likee = like.id; sumOfTs = (single) like.ts; tsCount = 1uy }
-        let index = account.likes.BinarySearch(smartLike, likeComparer)
-        addLikeToDictionary account.id like.id like.ts
-
     account.likes <-
         likes
-        |> Array.map(fun like -> like.id)
-        |> Array.distinct
-        |> Array.sortDescending
-        |> ResizeArray
+        |> Seq.groupBy (fun like -> like.id)
+        |> Seq.sortByDescending (fun (id, _) -> id)
+        |> Seq.map (fun (likee, gr) -> 
+            let smartLike =
+                { 
+                    likee = likee
+                    sumOfTs= gr |> Seq.sumBy (fun like -> single like.ts)
+                    tsCount = gr |> Seq.length |> byte 
+                }
+            addLikeToDictionary account.id smartLike.likee
+            smartLike
+            )
+        |> ResizeArray    
 
 let createAccount (accUpd: AccountUpd): Account =
     let account = Account()

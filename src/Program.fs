@@ -53,7 +53,7 @@ let findUser (next, ctx : HttpContext) =
         accounts
         |> Seq.filter(fun acc -> (box acc) |> isNotNull)
         |> Seq.filter(fun acc -> acc.likes |> isNotNull)
-        |> Seq.filter(fun acc -> acc.likes.Intersect(likeIds).Count() >= likeIds.Length)
+        |> Seq.filter(fun acc -> (acc.likes |> Seq.map (fun like -> like.likee)).Intersect(likeIds).Count() >= likeIds.Length)
     json users next ctx
 
 let private accountsFilterString = "/accounts/filter/"

@@ -17,18 +17,17 @@ open System.IO
 open HCup.Models
 open HCup.Requests
 
-let getSimilarityNew targetId (likers: int[]) (results:Dictionary<int,single>) =
-    let struct(targTsSum, count) = likers.[targetId]
-    let targTs = targTsSum / (single) count
+let getSimilarityNew targetId (targetLike: SmartLike) (likers: HashSet<int>) (results:Dictionary<int,single>) =
+    let targetTs = targetLike.sumOfTs / (single)targetLike.tsCount
     for liker in likers do
-        if liker.Key <> targetId
-        then
-            let struct(likerTsSum, count) = liker.Value
-            let likerTs = likerTsSum / (single) count
-            let currrentSimilarity = 1.0f / Math.Abs(targTs - likerTs)
-            if (results.ContainsKey(liker.Key))
-            then results.[liker.Key] <- results.[liker.Key] + currrentSimilarity
-            else results.[liker.Key] <- currrentSimilarity
+        if liker <> targetId
+        then            
+            let smartLike = accounts.[liker].likes.[findLikeIndex accounts.[liker].likes targetLike.likee]
+            let likerTs = smartLike.sumOfTs / (single)smartLike.tsCount
+            let currrentSimilarity = 1.0f / Math.Abs(targetTs - likerTs)
+            if (results.ContainsKey(liker))
+            then results.[liker] <- results.[liker] + currrentSimilarity
+            else results.[liker] <- currrentSimilarity
 
 let suggestionFields = [| "status_eq"; "fname_eq"; "sname_eq"; |]
 let getSuggestedAccounts (id, next, ctx : HttpContext) =
@@ -64,8 +63,8 @@ let getSuggestedAccounts (id, next, ctx : HttpContext) =
                     keys
                     |> Seq.map (fun (key, value) -> suggestFilters.[key] value)
                 let similaritiesWithUsers = Dictionary<int, single>()
-                for likeId in target.likes do
-                    getSimilarityNew target (likesIndex.[likeId]) similaritiesWithUsers
+                for targetLike in target.likes do
+                    getSimilarityNew target.id targetLike (likesIndex.[targetLike.likee]) similaritiesWithUsers
                 let similarAccounts =
                     similaritiesWithUsers.Keys
                     |> Seq.map (fun id -> accounts.[id])
@@ -75,8 +74,8 @@ let getSuggestedAccounts (id, next, ctx : HttpContext) =
                     |> Seq.fold (fun acc f -> acc |> Seq.filter f) similarAccounts
                     |> Seq.sortByDescending (fun acc -> similaritiesWithUsers.[acc.id])
                     |> Seq.collect(fun acc -> acc.likes)
-                    |> Seq.filter (fun likeId -> target.likes.Contains(likeId) |> not)
-                    |> Seq.map (fun likeId -> accounts.[likeId])
+                    |> Seq.filter (fun like -> target.likes.Contains(like) |> not)
+                    |> Seq.map (fun like -> accounts.[like.likee])
                     |> Seq.truncate limit
                 let memoryStream = serializeAccounts (accs, suggestionFields)
                 writeResponse memoryStream next ctx

@@ -26,14 +26,19 @@ let addLikes (next, ctx : HttpContext) =
             | None ->
                 for like in likes.likes do
                     let acc = accounts.[like.liker]
+                    let smartLike = { likee = like.likee; sumOfTs = (single)like.ts; tsCount = 1uy }
                     if (acc.likes |> isNull)
-                    then acc.likes <- ResizeArray(seq { yield like.likee })
+                    then acc.likes <- ResizeArray(seq { yield smartLike })
                     else
-                        if (acc.likes.Contains(like.likee) |> not)
+                        let likeIndex = findLikeIndex acc.likes like.likee
+                        if (likeIndex > 0)
                         then
-                            acc.likes.Add(like.likee)
-                            acc.likes.Sort(intReverseComparer)
-                    addLikeToDictionary like.liker like.likee like.ts
+                            let existingLike = acc.likes.[likeIndex]
+                            acc.likes.[likeIndex] <- { existingLike with sumOfTs = existingLike.sumOfTs + (single) like.ts; tsCount = existingLike.tsCount + 1uy  }
+                        else
+                            acc.likes.Add(smartLike)
+                            acc.likes.Sort(likeReverseComparer)
+                    addLikeToDictionary like.liker like.likee
                 return! writePostResponse 202 next ctx
         with
         | :? JsonParsingException ->
