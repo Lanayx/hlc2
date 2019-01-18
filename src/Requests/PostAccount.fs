@@ -405,7 +405,7 @@ let inline handlePhone (phone: string) (account: Account) =
 
 let inline addLikeToDictionary liker likee =
     if likesIndex.[likee] |> isNull
-    then likesIndex.[likee] <- SortedSet<int>(intReverseComparer)
+    then likesIndex.[likee] <- ResizeArray<int>()
     let likers = likesIndex.[likee]
     likers.Add(liker) |> ignore
 

@@ -115,14 +115,15 @@ let inline getLikesContainsAccount value =
     let key = Int32.Parse(value)
     if likesIndex.[key] |> isNotNull
     then
-        seq likesIndex.[key]
+        seqBack likesIndex.[key]
+        |> Seq.sortDescending
     else
         Seq.empty
     |> Seq.map (fun id -> accounts.[id])
 
 let getLikesContainsAccounts (value: string) =
     let values = value.Split(',')
-    if (value.Length <> 1)
+    if (values.Length <> 1)
     then
         let keys =
             values
@@ -130,7 +131,8 @@ let getLikesContainsAccounts (value: string) =
             |> Seq.cache
         if Seq.forall (fun key -> likesIndex.[key] |> isNotNull) keys
         then
-            Seq.collect (fun key -> likesIndex.[key]) keys
+            Seq.collect (fun key -> seqBack likesIndex.[key]) keys
+            |> Seq.sortDescending
         else
             Seq.empty
         |> Seq.countBy id

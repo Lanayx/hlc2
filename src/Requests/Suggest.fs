@@ -17,7 +17,7 @@ open System.IO
 open HCup.Models
 open HCup.Requests
 
-let getSimilarityNew targetId (targetLike: SmartLike) (likers: SortedSet<int>) (results:Dictionary<int,single>) =
+let getSimilarityNew targetId (targetLike: SmartLike) (likers: ResizeArray<int>) (results:Dictionary<int,single>) =
     let targetTs = targetLike.sumOfTs / (single)targetLike.tsCount
     for liker in likers do
         if liker <> targetId

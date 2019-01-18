@@ -102,8 +102,8 @@ let inline findLikeIndex (likes: ResizeArray<SmartLike>) likee =
     let likeToSearch = { likee = likee; sumOfTs = 0.0f; tsCount = 1uy }
     findLikeIndex2 likes likeToSearch
 
-let inline seqBack (array: 'T[]) =
+let inline seqBack (array: ResizeArray<'T>) =
     seq {
-        for i = array.Length-1 downto 0 do  
+        for i = array.Count-1 downto 0 do  
             yield array.[i]
     }

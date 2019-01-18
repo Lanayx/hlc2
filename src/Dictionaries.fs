@@ -31,7 +31,7 @@ let mutable countriesSerializeDictionary : byte[][] = null
 let mutable interestsSerializeDictionary : byte[][] = null
 
 // array by likees, value is dict of key=userId, value=sumOfTs*tsCount
-let likesIndex: SortedSet<int>[] = Array.zeroCreate(1400000)
+let likesIndex: ResizeArray<int>[] = Array.zeroCreate(1400000)
 // key is cityWeight, value is usersId's set
 let citiesIndex = Dictionary<CityGroup, SortedSet<int>>()
 let countriesIndex = Dictionary<CountryGroup, SortedSet<int>>()
