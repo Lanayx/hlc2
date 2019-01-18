@@ -102,7 +102,6 @@ type SmartLike =
     {
         likee: int
         sumOfTs: single
-        tsCount: byte
     }
 
 type Account() =

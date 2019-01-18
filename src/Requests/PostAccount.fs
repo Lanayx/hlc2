@@ -424,7 +424,6 @@ let handleLikes (likes: Like[]) (account: Account) (deletePrevious: bool) =
                 { 
                     likee = likee
                     sumOfTs= gr |> Seq.sumBy (fun like -> single like.ts)
-                    tsCount = gr |> Seq.length |> byte 
                 }
             addLikeToDictionary account.id smartLike.likee
             smartLike

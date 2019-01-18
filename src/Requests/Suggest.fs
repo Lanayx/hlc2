@@ -17,13 +17,16 @@ open System.IO
 open HCup.Models
 open HCup.Requests
 
+let inline getTsCount sumOfTs = 
+    single (Math.Round(float (sumOfTs / 1500000000.0f)))
+
 let getSimilarityNew targetId (targetLike: SmartLike) (likers: ResizeArray<int>) (results:Dictionary<int,single>) =
-    let targetTs = targetLike.sumOfTs / (single)targetLike.tsCount
+    let targetTs = targetLike.sumOfTs / getTsCount targetLike.sumOfTs
     for liker in likers do
         if liker <> targetId
         then            
             let smartLike = accounts.[liker].likes.[findLikeIndex accounts.[liker].likes targetLike.likee]
-            let likerTs = smartLike.sumOfTs / (single)smartLike.tsCount
+            let likerTs = smartLike.sumOfTs / getTsCount smartLike.sumOfTs
             let currrentSimilarity = 1.0f / Math.Abs(targetTs - likerTs)
             if (results.ContainsKey(liker))
             then results.[liker] <- results.[liker] + currrentSimilarity

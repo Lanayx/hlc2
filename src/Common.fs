@@ -99,7 +99,7 @@ let inline findLikeIndex2 (likes: ResizeArray<SmartLike>) likeToSearch =
     likes.BinarySearch(likeToSearch, likeReverseComparer)
 
 let inline findLikeIndex (likes: ResizeArray<SmartLike>) likee =
-    let likeToSearch = { likee = likee; sumOfTs = 0.0f; tsCount = 1uy }
+    let likeToSearch = { likee = likee; sumOfTs = 0.0f; }
     findLikeIndex2 likes likeToSearch
 
 let inline seqBack (array: ResizeArray<'T>) =
