@@ -84,7 +84,7 @@ let inline getAccounts() =
     |> Seq.take accountsNumber
 
 [<Literal>]
-let divisor = 10000000000.0f
+let divisor = 10000000000.0
 
 type LikeReverseComparer() =
     interface IComparer<SmartLike> with
@@ -92,16 +92,16 @@ type LikeReverseComparer() =
             let xLikee = x / divisor
             let yLikee = y / divisor
             let diff = xLikee - yLikee
-            if diff > 1.0f
+            if diff > 1.0
             then -1
             else
-                if diff < -1.0f
+                if diff < -1.0
                 then 1
                 else 0
 let likeReverseComparer = new LikeReverseComparer()
 
 let getLikee (smartLike: SmartLike) =
-    smartLike / divisor |> int
+    Math.Round((float)smartLike / (float)divisor) |> int
 
 let inline findLikeIndexSmart (likes: ResizeArray<SmartLike>) smartLike =
     likes.BinarySearch(smartLike, likeReverseComparer)

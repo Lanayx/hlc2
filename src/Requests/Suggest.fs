@@ -18,9 +18,9 @@ open HCup.Models
 open HCup.Requests
 
 let inline getTsCount sumOfTs = 
-    single (Math.Round(float (sumOfTs / 1500000000.0f)))
+    Math.Round(sumOfTs / 1500000000.0)
 
-let getSimilarityNew targetId (targetLike: SmartLike) (likers: ResizeArray<int>) (results:Dictionary<int,single>) =
+let getSimilarityNew targetId (targetLike: SmartLike) (likers: ResizeArray<int>) (results:Dictionary<int,SmartLike>) =
     let targetSumOfTs = targetLike % divisor
     let targetTs = targetSumOfTs / getTsCount targetSumOfTs
     for liker in likers do
@@ -29,7 +29,7 @@ let getSimilarityNew targetId (targetLike: SmartLike) (likers: ResizeArray<int>)
             let smartLike = accounts.[liker].likes.[findLikeIndexSmart accounts.[liker].likes targetLike]
             let likerSumOfTs = smartLike % divisor
             let likerTs = likerSumOfTs / getTsCount likerSumOfTs
-            let currrentSimilarity = 1.0f / Math.Abs(targetTs - likerTs)
+            let currrentSimilarity = 1.0 / Math.Abs(targetTs - likerTs)
             if (results.ContainsKey(liker))
             then results.[liker] <- results.[liker] + currrentSimilarity
             else results.[liker] <- currrentSimilarity
@@ -67,7 +67,7 @@ let getSuggestedAccounts (id, next, ctx : HttpContext) =
                 let filters =
                     keys
                     |> Seq.map (fun (key, value) -> suggestFilters.[key] value)
-                let similaritiesWithUsers = Dictionary<int, single>()
+                let similaritiesWithUsers = Dictionary<int, SmartLike>()
                 for targetLike in target.likes do
                     getSimilarityNew target.id targetLike (likesIndex.[getLikee targetLike]) similaritiesWithUsers
                 let similarAccounts =

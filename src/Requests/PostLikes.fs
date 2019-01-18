@@ -26,12 +26,12 @@ let addLikes (next, ctx : HttpContext) =
             | None ->
                 for like in likes.likes do
                     let acc = accounts.[like.liker]
-                    let ts = (single)like.ts
-                    let smartLike = (single like.likee * divisor) + ts
+                    let ts = (double)like.ts
+                    let smartLike = (double like.likee * divisor) + ts
                     if (acc.likes |> isNull)
                     then acc.likes <- ResizeArray(seq { yield smartLike })
                     else
-                        let likeIndex = findLikeIndex acc.likes (single like.likee)
+                        let likeIndex = findLikeIndex acc.likes (double like.likee)
                         if (likeIndex >= 0)
                         then
                             let existingLike = acc.likes.[likeIndex]

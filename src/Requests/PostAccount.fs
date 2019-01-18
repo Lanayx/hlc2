@@ -420,7 +420,7 @@ let handleLikes (likes: Like[]) (account: Account) (deletePrevious: bool) =
         |> Seq.groupBy (fun like -> like.id)
         |> Seq.sortByDescending (fun (id, _) -> id)
         |> Seq.map (fun (likee, gr) -> 
-            let smartLike = ((single)likee * divisor) + (gr |> Seq.sumBy (fun like -> single like.ts))               
+            let smartLike = ((double)likee * divisor) + (gr |> Seq.sumBy (fun like -> double like.ts))               
             addLikeToDictionary account.id likee
             smartLike
             )

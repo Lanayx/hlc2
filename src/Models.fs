@@ -98,7 +98,7 @@ type AccountUpd() =
         [<DefaultValue>]val mutable country: string
 
 
-type SmartLike = single
+type SmartLike = double
 
 type Account() =
         [<DefaultValue>]val mutable id: int
