@@ -27,18 +27,17 @@ let addLikes (next, ctx : HttpContext) =
                 for like in likes.likes do
                     let acc = accounts.[like.liker]
                     let ts = (single)like.ts
-                    let smartLike = { likee = like.likee; sumOfTs = ts }
+                    let smartLike = (single like.likee * divisor) + ts
                     if (acc.likes |> isNull)
                     then acc.likes <- ResizeArray(seq { yield smartLike })
                     else
-                        let likeIndex = findLikeIndex acc.likes like.likee
+                        let likeIndex = findLikeIndex acc.likes (single like.likee)
                         if (likeIndex >= 0)
                         then
                             let existingLike = acc.likes.[likeIndex]
-                            acc.likes.[likeIndex] <- { existingLike with sumOfTs = existingLike.sumOfTs + ts }
+                            acc.likes.[likeIndex] <- existingLike + ts
                         else
                             acc.likes.Add(smartLike)
-                            acc.likes.Sort(likeReverseComparer)
                     addLikeToDictionary like.liker like.likee
                 return! writePostResponse 202 next ctx
         with

@@ -97,12 +97,8 @@ type AccountUpd() =
         [<DefaultValue>]val mutable city: string
         [<DefaultValue>]val mutable country: string
 
-[<Struct>]
-type SmartLike =
-    {
-        likee: int
-        sumOfTs: single
-    }
+
+type SmartLike = single
 
 type Account() =
         [<DefaultValue>]val mutable id: int

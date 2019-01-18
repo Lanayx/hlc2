@@ -21,12 +21,14 @@ let inline getTsCount sumOfTs =
     single (Math.Round(float (sumOfTs / 1500000000.0f)))
 
 let getSimilarityNew targetId (targetLike: SmartLike) (likers: ResizeArray<int>) (results:Dictionary<int,single>) =
-    let targetTs = targetLike.sumOfTs / getTsCount targetLike.sumOfTs
+    let targetSumOfTs = targetLike % divisor
+    let targetTs = targetSumOfTs / getTsCount targetSumOfTs
     for liker in likers do
         if liker <> targetId
         then            
-            let smartLike = accounts.[liker].likes.[findLikeIndex accounts.[liker].likes targetLike.likee]
-            let likerTs = smartLike.sumOfTs / getTsCount smartLike.sumOfTs
+            let smartLike = accounts.[liker].likes.[findLikeIndexSmart accounts.[liker].likes targetLike]
+            let likerSumOfTs = smartLike % divisor
+            let likerTs = likerSumOfTs / getTsCount likerSumOfTs
             let currrentSimilarity = 1.0f / Math.Abs(targetTs - likerTs)
             if (results.ContainsKey(liker))
             then results.[liker] <- results.[liker] + currrentSimilarity
@@ -67,7 +69,7 @@ let getSuggestedAccounts (id, next, ctx : HttpContext) =
                     |> Seq.map (fun (key, value) -> suggestFilters.[key] value)
                 let similaritiesWithUsers = Dictionary<int, single>()
                 for targetLike in target.likes do
-                    getSimilarityNew target.id targetLike (likesIndex.[targetLike.likee]) similaritiesWithUsers
+                    getSimilarityNew target.id targetLike (likesIndex.[getLikee targetLike]) similaritiesWithUsers
                 let similarAccounts =
                     similaritiesWithUsers.Keys
                     |> Seq.map (fun id -> accounts.[id])
@@ -77,8 +79,8 @@ let getSuggestedAccounts (id, next, ctx : HttpContext) =
                     |> Seq.fold (fun acc f -> acc |> Seq.filter f) similarAccounts
                     |> Seq.sortByDescending (fun acc -> similaritiesWithUsers.[acc.id])
                     |> Seq.collect(fun acc -> acc.likes)
-                    |> Seq.filter (fun like -> findLikeIndex2 target.likes like < 0)
-                    |> Seq.map (fun like -> accounts.[like.likee])
+                    |> Seq.filter (fun like -> findLikeIndexSmart target.likes like < 0)
+                    |> Seq.map (fun like -> accounts.[getLikee like])
                     |> Seq.truncate limit
                 let memoryStream = serializeAccounts (accs, suggestionFields)
                 writeResponse memoryStream next ctx

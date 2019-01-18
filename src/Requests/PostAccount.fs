@@ -413,19 +413,15 @@ let handleLikes (likes: Like[]) (account: Account) (deletePrevious: bool) =
     if deletePrevious
     then
         for like in account.likes do
-            let likers = likesIndex.[like.likee]
+            let likers = likesIndex.[getLikee like]
             likers.Remove(account.id) |> ignore
     account.likes <-
         likes
         |> Seq.groupBy (fun like -> like.id)
         |> Seq.sortByDescending (fun (id, _) -> id)
         |> Seq.map (fun (likee, gr) -> 
-            let smartLike =
-                { 
-                    likee = likee
-                    sumOfTs= gr |> Seq.sumBy (fun like -> single like.ts)
-                }
-            addLikeToDictionary account.id smartLike.likee
+            let smartLike = ((single)likee * divisor) + (gr |> Seq.sumBy (fun like -> single like.ts))               
+            addLikeToDictionary account.id likee
             smartLike
             )
         |> ResizeArray    
