@@ -17,7 +17,7 @@ open System.IO
 open HCup.Models
 open HCup.Requests
 
-let getSimilarityNew targetId (targetLike: SmartLike) (likers: HashSet<int>) (results:Dictionary<int,single>) =
+let getSimilarityNew targetId (targetLike: SmartLike) (likers: SortedSet<int>) (results:Dictionary<int,single>) =
     let targetTs = targetLike.sumOfTs / (single)targetLike.tsCount
     for liker in likers do
         if liker <> targetId
@@ -74,7 +74,7 @@ let getSuggestedAccounts (id, next, ctx : HttpContext) =
                     |> Seq.fold (fun acc f -> acc |> Seq.filter f) similarAccounts
                     |> Seq.sortByDescending (fun acc -> similaritiesWithUsers.[acc.id])
                     |> Seq.collect(fun acc -> acc.likes)
-                    |> Seq.filter (fun like -> target.likes.Contains(like) |> not)
+                    |> Seq.filter (fun like -> findLikeIndex2 target.likes like < 0)
                     |> Seq.map (fun like -> accounts.[like.likee])
                     |> Seq.truncate limit
                 let memoryStream = serializeAccounts (accs, suggestionFields)

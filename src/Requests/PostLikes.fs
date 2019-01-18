@@ -31,7 +31,7 @@ let addLikes (next, ctx : HttpContext) =
                     then acc.likes <- ResizeArray(seq { yield smartLike })
                     else
                         let likeIndex = findLikeIndex acc.likes like.likee
-                        if (likeIndex > 0)
+                        if (likeIndex >= 0)
                         then
                             let existingLike = acc.likes.[likeIndex]
                             acc.likes.[likeIndex] <- { existingLike with sumOfTs = existingLike.sumOfTs + (single) like.ts; tsCount = existingLike.tsCount + 1uy  }

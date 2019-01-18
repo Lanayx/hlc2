@@ -94,7 +94,16 @@ type LikeReverseComparer() =
                 else 0
 let likeReverseComparer = new LikeReverseComparer()
 
-let findLikeIndex (likes: ResizeArray<SmartLike>) likee =
-    let likeToSearch = { likee = likee; sumOfTs = 0.0f; tsCount = 1uy }
+
+let inline findLikeIndex2 (likes: ResizeArray<SmartLike>) likeToSearch =
     likes.BinarySearch(likeToSearch, likeReverseComparer)
 
+let inline findLikeIndex (likes: ResizeArray<SmartLike>) likee =
+    let likeToSearch = { likee = likee; sumOfTs = 0.0f; tsCount = 1uy }
+    findLikeIndex2 likes likeToSearch
+
+let inline seqBack (array: 'T[]) =
+    seq {
+        for i = array.Length-1 downto 0 do  
+            yield array.[i]
+    }

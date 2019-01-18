@@ -175,12 +175,12 @@ let interestsAnyFilter (value: string) =
 let likesContainsFilter (value: string) =
     fun (acc: Account) ->
         acc.likes |> isNotNull
-            && value.Split(',') |> Array.forall (fun id -> findLikeIndex acc.likes (Int32.Parse(id)) > 0)
+            && value.Split(',') |> Array.forall (fun id -> findLikeIndex acc.likes (Int32.Parse(id)) >= 0)
 
 let likesContainsOneFilter (value: string) =
     fun (acc: Account) ->
         acc.likes |> isNotNull
-            && findLikeIndex acc.likes (Int32.Parse(value)) > 0
+            && findLikeIndex acc.likes (Int32.Parse(value)) >= 0
 
 let premiumNowFilter (value: string) =
     fun (acc: Account) ->
