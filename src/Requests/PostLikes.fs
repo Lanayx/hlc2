@@ -29,7 +29,9 @@ let addLikes (next, ctx : HttpContext) =
                     let ts = (single)like.ts
                     let smartLike = { likee = like.likee; sumOfTs = ts }
                     if (acc.likes |> isNull)
-                    then acc.likes <- ResizeArray(seq { yield smartLike })
+                    then
+                        acc.likes <- ResizeArray(seq { yield smartLike })
+                        addLikeToDictionary like.liker like.likee
                     else
                         let likeIndex = findLikeIndex acc.likes like.likee
                         if (likeIndex >= 0)
@@ -39,7 +41,7 @@ let addLikes (next, ctx : HttpContext) =
                         else
                             acc.likes.Add(smartLike)
                             acc.likes.Sort(likeReverseComparer)
-                    addLikeToDictionary like.liker like.likee
+                            addLikeToDictionary like.liker like.likee
                 return! writePostResponse 202 next ctx
         with
         | :? JsonParsingException ->
