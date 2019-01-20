@@ -10,6 +10,7 @@ open HCup.MethodCounter
 open HCup.Filters
 open HCup.BufferSerializers
 open Giraffe
+open BitsetsNET
 
 
 let arrayMaxWithInd (arr: int[]) =
@@ -88,12 +89,13 @@ let getInterestContainsAccounts (str: string) =
         then
             resultBitmap <- interestsIndex.[int interest]
         else
-            resultBitmap <- resultBitmap &&& interestsIndex.[int interest]
-    let reverse = resultBitmap |> Seq.rev
+            resultBitmap.AndWith(interestsIndex.[int interest])
     seq{
-        for i in reverse do
+        for i in resultBitmap do
             yield accounts.[i]
     }
+    |> Seq.rev
+
 
 let getInterestAnyAccounts (str: string) =
     let mutable resultBitmap = null
@@ -103,12 +105,12 @@ let getInterestAnyAccounts (str: string) =
         then
             resultBitmap <- interestsIndex.[int interest]
         else
-            resultBitmap <- resultBitmap ||| interestsIndex.[int interest]
-    let reverse = resultBitmap |> Seq.rev
+            resultBitmap.AndWith(interestsIndex.[int interest])
     seq{
-        for i in reverse do
+        for i in resultBitmap do
             yield accounts.[i]
     }
+    |> Seq.rev
 
 let inline getLikesContainsAccount value =
     let key = Int32.Parse(value)

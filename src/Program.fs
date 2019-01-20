@@ -35,6 +35,7 @@ open System.Diagnostics
 open System.Collections.ObjectModel
 open System.Runtime
 open Collections.Special
+open BitsetsNET
 
 // ---------------------------------
 // Web app
@@ -184,7 +185,7 @@ let buildBitMapIndex() =
     Console.WriteLine("{0} Building bitmap index", DateTime.Now)
     let interestsCount = interestsSerializeDictionary.Length
     let tempIndex = Array.create interestsCount (HashSet<int>())
-    getAccounts()
+    getRevAccounts()
     |> Seq.iter (fun account ->
         if account.interests |> isNotNull
         then
@@ -194,7 +195,7 @@ let buildBitMapIndex() =
             with
             | ex -> ()
         )
-    interestsIndex <- Array.init interestsCount (fun i -> RoaringBitmap.Create(tempIndex.[i]))
+    interestsIndex <- Array.init interestsCount (fun i -> RoaringBitset.Create(tempIndex.[i].ToArray()))
     Console.WriteLine("{0} Finished building bitmap index", DateTime.Now)
 
 
