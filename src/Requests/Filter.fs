@@ -89,12 +89,11 @@ let getInterestContainsAccounts (str: string) =
         then
             resultBitmap <- interestsIndex.[int interest]
         else
-            resultBitmap.And(interestsIndex.[int interest]) |> ignore
+            resultBitmap<- resultBitmap.And(interestsIndex.[int interest])
+    let results = resultBitmap.GetPositions()
     seq {
-        for i = resultBitmap.Length-1 downto 1 do
-            if resultBitmap.[i]
-            then
-                yield accounts.[i]
+        for i= results.Count-1 downto 1 do
+            yield accounts.[results.[i]]
     }
 
 
@@ -106,12 +105,11 @@ let getInterestAnyAccounts (str: string) =
         then
             resultBitmap <- interestsIndex.[int interest]
         else
-            resultBitmap.Or(interestsIndex.[int interest]) |> ignore
+            resultBitmap<- resultBitmap.Or(interestsIndex.[int interest])
+    let results = resultBitmap.GetPositions()
     seq {
-        for i = resultBitmap.Length-1 downto 1 do
-            if resultBitmap.[i]
-            then
-                yield accounts.[i]
+        for i= results.Count-1 downto 1 do
+            yield accounts.[results.[i]]
     }
 
 let inline getLikesContainsAccount value =

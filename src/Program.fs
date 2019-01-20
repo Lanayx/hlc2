@@ -37,6 +37,7 @@ open System.Runtime
 open BitsetsNET
 open CRoaring
 open System.Collections
+open Ewah
 
 // ---------------------------------
 // Web app
@@ -186,7 +187,7 @@ let buildBitMapIndex() =
     Console.WriteLine("{0} Building bitmap index", DateTime.Now)
     let interestsCount = interestsSerializeDictionary.Length
     let tempIndex = Array.create interestsCount (HashSet<int>())
-    getRevAccounts()
+    getAccounts()
     |> Seq.iter (fun account ->
         if account.interests |> isNotNull
         then
@@ -196,10 +197,7 @@ let buildBitMapIndex() =
             with
             | ex -> ()
         )
-    interestsIndex <- Array.init interestsCount (fun i ->
-        let ba = BitArray(accountsNumber + 1)
-        tempIndex.[i] |> Seq.iter (fun id -> ba.Set(id, true))
-        ba
+    interestsIndex <- Array.init interestsCount (fun i -> EwahCompressedBitArray.BitmapOf(tempIndex.[i])
         )
     Console.WriteLine("{0} Finished building bitmap index", DateTime.Now)
 

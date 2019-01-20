@@ -43,6 +43,9 @@
     <PackageReference Include="RoaringBitmap" Version="0.0.9" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="EWAH\EWAH.csproj" />
+  </ItemGroup>
+  <ItemGroup>
     <Reference Include="CRoaring.Net">
       <HintPath>libs\CRoaring.Net.dll</HintPath>
     </Reference>

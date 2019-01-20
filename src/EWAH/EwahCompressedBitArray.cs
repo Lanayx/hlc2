@@ -1540,7 +1540,7 @@ namespace Ewah
 
         #region Class Methods
 
-        public static EwahCompressedBitArray BitmapOf(params int[] setbits)
+        public static EwahCompressedBitArray BitmapOf(IEnumerable<int> setbits)
         {
             EwahCompressedBitArray a = new EwahCompressedBitArray();
             foreach (int k in setbits)
