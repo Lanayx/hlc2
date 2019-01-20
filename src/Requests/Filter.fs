@@ -92,7 +92,7 @@ let getInterestContainsAccounts (str: string) =
             resultBitmap<- resultBitmap.And(interestsIndex.[int interest])
     let results = resultBitmap.GetPositions()
     seq {
-        for i= results.Count-1 downto 1 do
+        for i= results.Count-1 downto 0 do
             yield accounts.[results.[i]]
     }
 
@@ -108,7 +108,7 @@ let getInterestAnyAccounts (str: string) =
             resultBitmap<- resultBitmap.Or(interestsIndex.[int interest])
     let results = resultBitmap.GetPositions()
     seq {
-        for i= results.Count-1 downto 1 do
+        for i= results.Count-1 downto 0 do
             yield accounts.[results.[i]]
     }
 

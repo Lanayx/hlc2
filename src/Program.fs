@@ -186,19 +186,15 @@ let handleWeightDictionaries () =
 let buildBitMapIndex() =
     Console.WriteLine("{0} Building bitmap index", DateTime.Now)
     let interestsCount = interestsSerializeDictionary.Length
-    let tempIndex = Array.create interestsCount (HashSet<int>())
+    let tempIndex = Array.init interestsCount (fun i -> HashSet<int>())
     getAccounts()
     |> Seq.iter (fun account ->
         if account.interests |> isNotNull
         then
-            try
-                account.interests
-                |> Seq.iter (fun interest -> tempIndex.[int interest].Add(account.id) |> ignore)
-            with
-            | ex -> ()
+            account.interests
+            |> Seq.iter (fun interest -> tempIndex.[int interest].Add(account.id) |> ignore)
         )
-    interestsIndex <- Array.init interestsCount (fun i -> EwahCompressedBitArray.BitmapOf(tempIndex.[i])
-        )
+    interestsIndex <- Array.init interestsCount (fun i -> EwahCompressedBitArray.BitmapOf(tempIndex.[i]))
     Console.WriteLine("{0} Finished building bitmap index", DateTime.Now)
 
 
