@@ -3,7 +3,6 @@
 open HCup.Dictionaries
 open HCup.Common
 open Microsoft.AspNetCore.Http
-open BitmapIndex
 open System
 open System.Collections.Generic
 open System.Threading
@@ -82,33 +81,33 @@ let getFnameAnyAccounts (value: string) =
             |> Seq.map (fun id -> accounts.[id])
 
 let getInterestContainsAccounts (str: string) =
-    let mutable criteria = Unchecked.defaultof<BICriteria>
+    let mutable resultBitmap = null
     for value in str.Split(',') do
         let interest = interestsWeightDictionary.[value]
-        if criteria |> isNull
+        if resultBitmap |> isNull
         then
-            criteria <- BICriteria.equals(BIKey(0, interest))
+            resultBitmap <- interestsIndex.[int interest]
         else
-            criteria <- criteria.``and``(BICriteria.equals(BIKey(0, interest)))
-    let result = interestsIndex.query(criteria).GetPositions()
+            resultBitmap <- resultBitmap &&& interestsIndex.[int interest]
+    let reverse = resultBitmap |> Seq.rev
     seq{
-        for i = result.Count-1 downto 0 do
-            yield accounts.[result.[i]]
+        for i in reverse do
+            yield accounts.[i]
     }
 
 let getInterestAnyAccounts (str: string) =
-    let mutable criteria = Unchecked.defaultof<BICriteria>
+    let mutable resultBitmap = null
     for value in str.Split(',') do
         let interest = interestsWeightDictionary.[value]
-        if criteria |> isNull
+        if resultBitmap |> isNull
         then
-            criteria <- BICriteria.equals(BIKey(0, interest))
+            resultBitmap <- interestsIndex.[int interest]
         else
-            criteria <- criteria.``or``(BICriteria.equals(BIKey(0, interest)))
-    let result = interestsIndex.query(criteria).GetPositions()
+            resultBitmap <- resultBitmap ||| interestsIndex.[int interest]
+    let reverse = resultBitmap |> Seq.rev
     seq{
-        for i = result.Count-1 downto 0 do
-            yield accounts.[result.[i]]
+        for i in reverse do
+            yield accounts.[i]
     }
 
 let inline getLikesContainsAccount value =

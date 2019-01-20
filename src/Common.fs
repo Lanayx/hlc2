@@ -1,7 +1,6 @@
 ﻿module HCup.Common
 
 open System
-open BitmapIndex
 open System.Collections.Generic
 open HCup.Models
 open Utf8Json
@@ -70,7 +69,6 @@ let inline deserializeObjectUnsafe<'a> (str: string) =
 
 let accounts: Account[] = Array.zeroCreate(1400000)
 let mutable accountsNumber = 0
-let mutable interestsIndex = BitmapIndex()
 
 let inline getRevAccounts() =
     seq {
@@ -104,6 +102,6 @@ let inline findLikeIndex (likes: ResizeArray<SmartLike>) likee =
 
 let inline seqBack (array: ResizeArray<'T>) =
     seq {
-        for i = array.Count-1 downto 0 do  
+        for i = array.Count-1 downto 0 do
             yield array.[i]
     }

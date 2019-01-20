@@ -4,7 +4,6 @@ open HCup.Dictionaries
 open HCup
 open HCup.Common
 open Microsoft.AspNetCore.Http
-open BitmapIndex
 open System
 open System.Collections.Generic
 open System.Threading
@@ -419,16 +418,16 @@ let handleLikes (likes: Like[]) (account: Account) (deletePrevious: bool) =
         likes
         |> Seq.groupBy (fun like -> like.id)
         |> Seq.sortByDescending (fun (id, _) -> id)
-        |> Seq.map (fun (likee, gr) -> 
+        |> Seq.map (fun (likee, gr) ->
             let smartLike =
-                { 
+                {
                     likee = likee
                     sumOfTs= gr |> Seq.sumBy (fun like -> single like.ts)
                 }
             addLikeToDictionary account.id smartLike.likee
             smartLike
             )
-        |> ResizeArray    
+        |> ResizeArray
 
 let createAccount (accUpd: AccountUpd): Account =
     let account = Account()

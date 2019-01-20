@@ -39,9 +39,7 @@
     <PackageReference Include="Giraffe" Version="3.4.0" />
     <PackageReference Include="Microsoft.AspNetCore.Hosting" Version="2.2.0" />
     <PackageReference Include="Microsoft.AspNetCore.Server.Kestrel" Version="2.2.0" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="BitmapIndex\BitmapIndex.csproj" />
+    <PackageReference Include="RoaringBitmap" Version="0.0.9" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Update="FSharp.Core" Version="4.5.4" />

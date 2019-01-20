@@ -32,9 +32,9 @@ open Filters
 open Microsoft.Extensions.DependencyInjection
 open System.Text.RegularExpressions
 open System.Diagnostics
-open BitmapIndex
 open System.Collections.ObjectModel
 open System.Runtime
+open Collections.Special
 
 // ---------------------------------
 // Web app
@@ -182,13 +182,19 @@ let handleWeightDictionaries () =
 
 let buildBitMapIndex() =
     Console.WriteLine("{0} Building bitmap index", DateTime.Now)
-    interestsIndex <- BitmapIndex()
+    let interestsCount = interestsSerializeDictionary.Length
+    let tempIndex = Array.create interestsCount (HashSet<int>())
     getAccounts()
     |> Seq.iter (fun account ->
         if account.interests |> isNotNull
         then
-            account.interests
-            |> Seq.iter (fun interest -> interestsIndex.Set(BIKey(0,interest),account.id)))
+            try
+                account.interests
+                |> Seq.iter (fun interest -> tempIndex.[int interest].Add(account.id) |> ignore)
+            with
+            | ex -> ()
+        )
+    interestsIndex <- Array.init interestsCount (fun i -> RoaringBitmap.Create(tempIndex.[i]))
     Console.WriteLine("{0} Finished building bitmap index", DateTime.Now)
 
 
@@ -196,18 +202,18 @@ let addAccToDict (dict: Dictionary<'T,ResizeArray<Account>>) key acc =
     let mutable resizeArr = null
     if dict.TryGetValue(key, &resizeArr)
     then resizeArr.Add(acc)
-    else 
+    else
         let resizeArray = ResizeArray()
         resizeArray.Add(acc)
         dict.Add(key, resizeArray)
 
 
 let buildRecommendIndexes() =
-    bestFemaleUsersCity.Clear();bestFemaleUsersCountry.Clear();bestMaleUsersCity.Clear();bestMaleUsersCountry.Clear();   
+    bestFemaleUsersCity.Clear();bestFemaleUsersCountry.Clear();bestMaleUsersCity.Clear();bestMaleUsersCountry.Clear();
     bestSimpleFemaleUsersCity.Clear();bestSimpleFemaleUsersCountry.Clear();bestSimpleMaleUsersCity.Clear();bestSimpleMaleUsersCountry.Clear();
-    bestFemaleUsers2City.Clear();bestFemaleUsers2Country.Clear();bestMaleUsers2City.Clear();bestMaleUsers2Country.Clear();   
+    bestFemaleUsers2City.Clear();bestFemaleUsers2Country.Clear();bestMaleUsers2City.Clear();bestMaleUsers2Country.Clear();
     bestSimpleFemaleUsers2City.Clear();bestSimpleFemaleUsers2Country.Clear();bestSimpleMaleUsers2City.Clear();bestSimpleMaleUsers2Country.Clear();
-    bestFemaleUsers3City.Clear();bestFemaleUsers3Country.Clear();bestMaleUsers3City.Clear();bestMaleUsers3Country.Clear();   
+    bestFemaleUsers3City.Clear();bestFemaleUsers3Country.Clear();bestMaleUsers3City.Clear();bestMaleUsers3Country.Clear();
     bestSimpleFemaleUsers3City.Clear();bestSimpleFemaleUsers3Country.Clear();bestSimpleMaleUsers3City.Clear();bestSimpleMaleUsers3Country.Clear();
 
     getAccounts()
@@ -217,18 +223,18 @@ let buildRecommendIndexes() =
             if acc.premiumNow
             then
                 if acc.sex = Common.female
-                then 
+                then
                     addAccToDict bestFemaleUsersCity acc.city acc
                     addAccToDict bestFemaleUsersCountry acc.country acc
-                else 
+                else
                     addAccToDict bestMaleUsersCity acc.city acc
                     addAccToDict bestMaleUsersCountry acc.country acc
             else
                 if acc.sex = Common.female
-                then 
+                then
                     addAccToDict bestSimpleFemaleUsersCity acc.city acc
                     addAccToDict bestSimpleFemaleUsersCountry acc.country acc
-                else 
+                else
                     addAccToDict bestSimpleMaleUsersCity acc.city acc
                     addAccToDict bestSimpleMaleUsersCountry acc.country acc
         else if acc.status = Common.complexStatus
@@ -236,36 +242,36 @@ let buildRecommendIndexes() =
             if acc.premiumNow
             then
                 if acc.sex = Common.female
-                then 
+                then
                     addAccToDict bestFemaleUsers2City acc.city acc
                     addAccToDict bestFemaleUsers2Country acc.country acc
-                else 
+                else
                     addAccToDict bestMaleUsers2City acc.city acc
                     addAccToDict bestMaleUsers2Country acc.country acc
             else
                 if acc.sex = Common.female
-                then 
+                then
                     addAccToDict bestSimpleFemaleUsers2City acc.city acc
                     addAccToDict bestSimpleFemaleUsers2Country acc.country acc
-                else 
+                else
                     addAccToDict bestSimpleMaleUsers2City acc.city acc
                     addAccToDict bestSimpleMaleUsers2Country acc.country acc
         else
             if acc.premiumNow
             then
                 if acc.sex = Common.female
-                then 
+                then
                     addAccToDict bestFemaleUsers3City acc.city acc
                     addAccToDict bestFemaleUsers3Country acc.country acc
-                else 
+                else
                     addAccToDict bestMaleUsers3City acc.city acc
                     addAccToDict bestMaleUsers3Country acc.country acc
             else
                 if acc.sex = Common.female
-                then 
+                then
                     addAccToDict bestSimpleFemaleUsers3City acc.city acc
                     addAccToDict bestSimpleFemaleUsers3Country acc.country acc
-                else 
+                else
                     addAccToDict bestSimpleMaleUsers3City acc.city acc
                     addAccToDict bestSimpleMaleUsers3Country acc.country acc
     )

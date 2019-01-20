@@ -4,7 +4,6 @@ open HCup.Dictionaries
 open HCup
 open HCup.Common
 open Microsoft.AspNetCore.Http
-open BitmapIndex
 open System
 open System.Collections.Generic
 open System.Threading
@@ -20,7 +19,7 @@ let inline intersectTwoArraysCount (first: byte[]) (second: byte[]) =
     let mutable count = 0
     let mutable i = 0
     let mutable j = 0
-    while i < first.Length && j < second.Length do        
+    while i < first.Length && j < second.Length do
         if first.[i] = second.[j]
         then
             count <- count + 1
@@ -30,7 +29,7 @@ let inline intersectTwoArraysCount (first: byte[]) (second: byte[]) =
         then
             i <- i + 1
         else
-            j <- j + 1        
+            j <- j + 1
     count
 
 let getCompatibility (target: Account) (acc: Account)  =
@@ -46,7 +45,7 @@ let getCompatibility (target: Account) (acc: Account)  =
         let statusrank = (status >>> 1) + ((status &&& 1uy) ^^^ 1uy) // 2 -> 2 , 1 -> 0, 0 -> 1
         let yearsDifference = 100 - (Math.Abs (acc.birth - target.birth))
         Some (acc.premiumNow, statusrank, commonInterestsCount, yearsDifference, -acc.id)
-       
+
 
 let cityFemaleOrder = [| bestFemaleUsersCity; bestFemaleUsers2City; bestFemaleUsers3City; bestSimpleFemaleUsersCity; bestSimpleFemaleUsers2City; bestSimpleFemaleUsers3City |]
 let countryFemaleOrder = [| bestFemaleUsersCountry; bestFemaleUsers2Country; bestFemaleUsers3Country; bestSimpleFemaleUsersCountry; bestSimpleFemaleUsers2Country; bestSimpleFemaleUsers3Country |]
@@ -68,15 +67,15 @@ let getRecommendUsers sex city country =
             if sex = Common.male
             then
                 seq {
-                    for dict in cityFemaleOrder do    
+                    for dict in cityFemaleOrder do
                        yield! getDictionaryValue dict cityId
                 }
             else
                 seq {
-                    for dict in cityMaleOrder do    
+                    for dict in cityMaleOrder do
                        yield! getDictionaryValue dict cityId
             }
-        else 
+        else
             Seq.empty
     else if country |> isNotNull
     then
@@ -86,28 +85,28 @@ let getRecommendUsers sex city country =
             if sex = Common.male
             then
                 seq {
-                    for dict in countryFemaleOrder do    
+                    for dict in countryFemaleOrder do
                        yield! getDictionaryValue dict countryId
                 }
             else
                 seq {
-                    for dict in countryMaleOrder do    
+                    for dict in countryMaleOrder do
                        yield! getDictionaryValue dict countryId
                 }
         else
             Seq.empty
     else
         if sex = Common.male
-        then            
+        then
             seq {
-                for dict in countryFemaleOrder do 
-                   for kv in dict do 
+                for dict in countryFemaleOrder do
+                   for kv in dict do
                        yield! kv.Value
             }
         else
             seq {
-                for dict in countryMaleOrder do 
-                   for kv in dict do 
+                for dict in countryMaleOrder do
+                   for kv in dict do
                        yield! kv.Value
             }
 

@@ -4,7 +4,6 @@ open HCup.Dictionaries
 open HCup
 open HCup.Common
 open Microsoft.AspNetCore.Http
-open BitmapIndex
 open System
 open System.Collections.Generic
 open System.Threading

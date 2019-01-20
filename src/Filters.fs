@@ -6,7 +6,6 @@ open HCup.Common
 open HCup.Dictionaries
 open System.Collections.Generic
 open Giraffe
-open BitmapIndex
 
 type Filter = string -> Account -> bool
 
