@@ -36,6 +36,7 @@ open System.Collections.ObjectModel
 open System.Runtime
 open BitsetsNET
 open CRoaring
+open System.Collections
 
 // ---------------------------------
 // Web app
@@ -195,7 +196,11 @@ let buildBitMapIndex() =
             with
             | ex -> ()
         )
-    interestsIndex <- Array.init interestsCount (fun i -> RoaringBitmap.FromValues(tempIndex.[i] |> Seq.map (fun id -> uint32 id) |> Seq.toArray))
+    interestsIndex <- Array.init interestsCount (fun i ->
+        let ba = BitArray(accountsNumber + 1)
+        tempIndex.[i] |> Seq.iter (fun id -> ba.Set(id, true))
+        ba
+        )
     Console.WriteLine("{0} Finished building bitmap index", DateTime.Now)
 
 
