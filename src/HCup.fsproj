@@ -43,6 +43,11 @@
     <PackageReference Include="RoaringBitmap" Version="0.0.9" />
   </ItemGroup>
   <ItemGroup>
+    <Reference Include="CRoaring.Net">
+      <HintPath>libs\CRoaring.Net.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Update="FSharp.Core" Version="4.5.4" />
   </ItemGroup>
 </Project>

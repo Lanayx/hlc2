@@ -3,8 +3,7 @@
 open System.Collections.Generic
 open HCup.Models
 open System
-open Collections.Special
-open BitsetsNET
+open CRoaring
 
 type FnameGroup = byte
 type SnameGroup = int16
@@ -38,7 +37,7 @@ let likesIndex: ResizeArray<int>[] = Array.zeroCreate(1400000)
 let citiesIndex = Dictionary<CityGroup, SortedSet<int>>()
 let countriesIndex = Dictionary<CountryGroup, SortedSet<int>>()
 let fnamesIndex = Dictionary<FnameGroup, SortedSet<int>>()
-let mutable interestsIndex: RoaringBitset[] = null
+let mutable interestsIndex: RoaringBitmap[] = null
 let emailsDictionary = HashSet<string>()
 
 // GROUPING

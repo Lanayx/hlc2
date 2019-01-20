@@ -89,10 +89,10 @@ let getInterestContainsAccounts (str: string) =
         then
             resultBitmap <- interestsIndex.[int interest]
         else
-            resultBitmap.AndWith(interestsIndex.[int interest])
+            resultBitmap.IAnd(interestsIndex.[int interest])
     seq{
         for i in resultBitmap do
-            yield accounts.[i]
+            yield accounts.[int i]
     }
     |> Seq.rev
 
@@ -105,10 +105,10 @@ let getInterestAnyAccounts (str: string) =
         then
             resultBitmap <- interestsIndex.[int interest]
         else
-            resultBitmap.AndWith(interestsIndex.[int interest])
+            resultBitmap.IAnd(interestsIndex.[int interest])
     seq{
         for i in resultBitmap do
-            yield accounts.[i]
+            yield accounts.[int i]
     }
     |> Seq.rev
 

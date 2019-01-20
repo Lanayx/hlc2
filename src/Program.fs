@@ -34,8 +34,8 @@ open System.Text.RegularExpressions
 open System.Diagnostics
 open System.Collections.ObjectModel
 open System.Runtime
-open Collections.Special
 open BitsetsNET
+open CRoaring
 
 // ---------------------------------
 // Web app
@@ -195,7 +195,7 @@ let buildBitMapIndex() =
             with
             | ex -> ()
         )
-    interestsIndex <- Array.init interestsCount (fun i -> RoaringBitset.Create(tempIndex.[i].ToArray()))
+    interestsIndex <- Array.init interestsCount (fun i -> RoaringBitmap.FromValues(tempIndex.[i] |> Seq.map (fun id -> uint32 id) |> Seq.toArray))
     Console.WriteLine("{0} Finished building bitmap index", DateTime.Now)
 
 
