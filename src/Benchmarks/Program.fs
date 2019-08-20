@@ -12,6 +12,6 @@ open Benchmarks
 
 [<EntryPoint>]
 let main argv =
-    BenchmarkRunner.Run<HttpClientBenchmarks>()
+    BenchmarkRunner.Run<ChunksBenchmarks>()
     // BenchmarkRunner.Run<RouteBenchmarks>()
     0

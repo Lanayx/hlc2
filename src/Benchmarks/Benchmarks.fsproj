@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <Compile Include="HttpClient.fs" />
+    <Compile Include="Chunks.fs" />
     <Compile Include="Match.fs" />
     <Compile Include="Intersect.fs" />
     <Compile Include="Dictionary.fs" />
