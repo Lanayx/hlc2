@@ -2,13 +2,15 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp2.1</TargetFramework>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
     <AssemblyName>Benchmarks</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="Structs.fs" />
     <Compile Include="HttpClient.fs" />
     <Compile Include="Chunks.fs" />
+    <Compile Include="WaitAny.fs" />
     <Compile Include="Match.fs" />
     <Compile Include="Intersect.fs" />
     <Compile Include="Dictionary.fs" />
@@ -19,8 +21,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="BenchmarkDotNet" Version="0.11.3" />
-    <PackageReference Include="Giraffe" Version="3.4.0" />
+    <PackageReference Include="BenchmarkDotNet" Version="0.12.0" />
+    <PackageReference Include="Giraffe" Version="4.0.1" />
     <PackageReference Include="RoaringBitmap" Version="0.0.9" />
   </ItemGroup>
 
@@ -30,7 +32,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Update="FSharp.Core" Version="4.5.4" />
+    <PackageReference Update="FSharp.Core" Version="4.7.0" />
   </ItemGroup>
 
 </Project>
