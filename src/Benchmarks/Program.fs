@@ -12,6 +12,6 @@ open Benchmarks
 
 [<EntryPoint>]
 let main argv =
-    BenchmarkRunner.Run<EnvBenchmark>()
+    BenchmarkRunner.Run<RecordVsLambda>()
     // BenchmarkRunner.Run<RouteBenchmarks>()
     0
