@@ -11,6 +11,7 @@
     <Compile Include="Structs.fs" />
     <Compile Include="HttpClient.fs" />
     <Compile Include="Chunks.fs" />
+    <Compile Include="AsyncReply.fs" />
     <Compile Include="WaitAny.fs" />
     <Compile Include="Match.fs" />
     <Compile Include="Interpolate.fs" />

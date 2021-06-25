@@ -12,6 +12,6 @@ open Benchmarks
 
 [<EntryPoint>]
 let main argv =
-    BenchmarkRunner.Run<InterpolateBenchmarks>()
+    BenchmarkRunner.Run<AsyncReplyBenchmarks>()
     // BenchmarkRunner.Run<RouteBenchmarks>()
     0
