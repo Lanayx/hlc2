@@ -74,5 +74,6 @@ type AsyncReplyBenchmarks() =
 
 //|         Method |       Mean |    Error |   StdDev |  Gen 0 | Gen 1 | Gen 2 | Allocated |
 //|--------------- |-----------:|---------:|---------:|-------:|------:|------:|----------:|
-//| TaskCompletion |   850.3 ns | 43.61 ns | 123.0 ns | 0.1698 |     - |     - |     711 B |
-//|     AsyncReply | 4,171.2 ns | 81.85 ns | 127.4 ns | 0.5722 |     - |     - |    2402 B |
+//| TaskCompletion |   877.6 ns | 17.56 ns | 38.90 ns | 0.1955 |     - |     - |     812 B |
+//|     AsyncReply | 3,939.4 ns | 78.09 ns | 69.22 ns | 0.5722 |     - |     - |    2398 B |
+//|        Channel | 1,242.1 ns | 24.54 ns | 43.63 ns | 0.0992 |     - |     - |     412 B |
