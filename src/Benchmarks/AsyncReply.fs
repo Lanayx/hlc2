@@ -22,6 +22,7 @@ type AsyncReplyBenchmarks() =
             async {
                 match! inbox.Receive() with
                 | MsgType1 ch ->
+                    do! Async.SwitchToThreadPool()
                     ch.SetResult(1)
                     return! loop()
             }
@@ -33,19 +34,21 @@ type AsyncReplyBenchmarks() =
             async {
                 match! inbox.Receive() with
                 | MsgType2 ch ->
+                    do! Async.SwitchToThreadPool()
                     ch.Reply(1)
                     return! loop()
             }
         loop ()
         )
 
-    let chan = Channel.CreateUnbounded()
+    let chan = Channel.CreateUnbounded(UnboundedChannelOptions(SingleReader = true, AllowSynchronousContinuations = true))
     do
         Task.Run(fun () ->
             (task {
                 while(true) do
                     match! chan.Reader.ReadAsync() with
                     | MsgType1 ch ->
+                        do! Task.Yield()
                         ch.SetResult(1)
             }) :> Task
         ) |> ignore
@@ -68,12 +71,12 @@ type AsyncReplyBenchmarks() =
     member this.Channel() =
         task {
             let cts = TaskCompletionSource<int>(TaskContinuationOptions.RunContinuationsAsynchronously)
-            do! chan.Writer.WriteAsync(MsgType1 cts)
+            chan.Writer.TryWrite(MsgType1 cts) |> ignore
             return! cts.Task
         }
 
-//|         Method |       Mean |    Error |   StdDev |  Gen 0 | Gen 1 | Gen 2 | Allocated |
-//|--------------- |-----------:|---------:|---------:|-------:|------:|------:|----------:|
-//| TaskCompletion |   877.6 ns | 17.56 ns | 38.90 ns | 0.1955 |     - |     - |     812 B |
-//|     AsyncReply | 3,939.4 ns | 78.09 ns | 69.22 ns | 0.5722 |     - |     - |    2398 B |
-//|        Channel | 1,242.1 ns | 24.54 ns | 43.63 ns | 0.0992 |     - |     - |     412 B |
+//|         Method |      Mean |     Error |    StdDev |    Median |  Gen 0 | Gen 1 | Gen 2 | Allocated |
+//|--------------- |----------:|----------:|----------:|----------:|-------:|------:|------:|----------:|
+//| TaskCompletion |  4.391 us | 0.0853 us | 0.0798 us |  4.404 us | 0.2785 |     - |     - |    1168 B |
+//|     AsyncReply | 14.965 us | 0.5447 us | 1.6062 us | 15.453 us | 0.6714 |     - |     - |    2827 B |
+//|        Channel |  3.682 us | 0.0704 us | 0.0891 us |  3.682 us | 0.1373 |     - |     - |     576 B |
