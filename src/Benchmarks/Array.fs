@@ -2,6 +2,7 @@
 
 open BenchmarkDotNet.Attributes
 open Microsoft.AspNetCore.Http
+open System.Linq
 
 [<MemoryDiagnoser>]
 type ArrayBenchmarks() =
@@ -26,6 +27,16 @@ type ArrayBenchmarks() =
         |> Seq.filter (fun x -> x % 2 = 0)
         |> Seq.take 5
         |> Seq.toArray
+        
+    [<Benchmark>]
+    member this.ReverseLinq() =
+        let arr = this.arr
+        arr
+            .Reverse()
+            .Select(fun x -> x*x)
+            .Where(fun x -> x % 2 = 0)
+            .Take(5)
+            .ToArray()
 
     [<Benchmark>]
     member this.SeqCompExpr() =
@@ -51,9 +62,11 @@ type ArrayBenchmarks() =
         |> Seq.toArray
 
 
-//       Method |       Mean |     Error |    StdDev | Gen 0/1k Op | Gen 1/1k Op | Gen 2/1k Op | Allocated Memory/Op |
-//------------- |-----------:|----------:|----------:|------------:|------------:|------------:|--------------------:|
-// ReverseArray | 5,507.5 ns | 134.72 ns | 132.31 ns |      2.4490 |           - |           - |             10296 B |
-//   ReverseSeq | 1,939.0 ns |  35.71 ns |  31.66 ns |      1.1559 |           - |           - |              4856 B |
-//  SeqCompExpr |   809.8 ns |  16.05 ns |  25.91 ns |      0.2050 |           - |           - |               864 B |
-//    SeqLambda | 1,868.3 ns |  39.09 ns |  67.43 ns |      0.6294 |           - |           - |              2656 B |
+//|       Method |       Mean |    Error |   StdDev |     Median |  Gen 0 | Gen 1 | Gen 2 | Allocated |
+//|------------- |-----------:|---------:|---------:|-----------:|-------:|------:|------:|----------:|
+//| ReverseArray | 4,947.8 ns | 66.74 ns | 55.73 ns | 4,947.4 ns | 2.4490 |     - |     - |   10272 B |
+//|   ReverseSeq | 1,946.1 ns | 38.29 ns | 52.42 ns | 1,941.5 ns | 1.1463 |     - |     - |    4800 B |
+//|  ReverseLinq | 1,225.3 ns | 24.56 ns | 69.66 ns | 1,195.2 ns | 1.0643 |     - |     - |    4456 B |
+//|  SeqCompExpr |   667.0 ns |  5.38 ns |  4.77 ns |   667.3 ns | 0.1926 |     - |     - |     808 B |
+//|    SeqLambda | 1,527.9 ns | 18.92 ns | 16.77 ns | 1,528.7 ns | 0.6199 |     - |     - |    2600 B |
+
