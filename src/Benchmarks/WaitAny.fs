@@ -4,7 +4,6 @@ open BenchmarkDotNet.Attributes
 open Microsoft.AspNetCore.Http
 open System.Threading
 open System.Threading.Tasks
-open FSharp.Control.Tasks.V2.ContextInsensitive
 open System
 
 [<MemoryDiagnoser>]

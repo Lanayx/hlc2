@@ -3,7 +3,6 @@
 open System.Net.Http
 open System
 open BenchmarkDotNet.Attributes
-open FSharp.Control.Tasks.V2.ContextInsensitive
 open System.Threading.Tasks
 
 
@@ -40,7 +39,7 @@ type HttpClientBenchmarks() =
             this.simpleHttpClient.GetAsync("http://192.168.0.101:30224/status/202") :> Task
             this.simpleHttpClient.GetAsync("http://192.168.0.101:30224/status/203") :> Task
             this.simpleHttpClient.GetAsync("http://192.168.0.101:30224/status/204") :> Task
-            this.simpleHttpClient.GetAsync("http://192.168.0.101:30224/status/205") :> Task          
+            this.simpleHttpClient.GetAsync("http://192.168.0.101:30224/status/205") :> Task
         |] |> Task.WaitAll
 
 
@@ -73,9 +72,9 @@ type HttpClientBenchmarks() =
             this.clientWithBaseUrl.GetAsync("/status/202") :> Task
             this.clientWithBaseUrl.GetAsync("/status/203") :> Task
             this.clientWithBaseUrl.GetAsync("/status/204") :> Task
-            this.clientWithBaseUrl.GetAsync("/status/205") :> Task          
+            this.clientWithBaseUrl.GetAsync("/status/205") :> Task
         |] |> Task.WaitAll
 
-   
+
 
 
