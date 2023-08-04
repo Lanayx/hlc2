@@ -11,13 +11,17 @@ type InterpolateBenchmarks() =
     let x3 = 123.0
 
     [<Benchmark>]
-    member this.Sprintf() =       
+    member this.Sprintf() =
         sprintf "%i %s %f" x1 x2 x3
 
     [<Benchmark>]
-    member this.Interpolate() =   
+    member this.Interpolate() =
         $"{x1} {x2} {x3}"
-        
+
     [<Benchmark>]
-    member this.StringFormat() =   
+    member this.StringFormat() =
         String.Format("{0} {1} {2}", x1, x2, x3)
+
+    [<Benchmark>]
+    member this.InterpolateTyped() =
+        $"%d{x1} %s{x2} %f{x3}"
