@@ -12,5 +12,5 @@ open Benchmarks
 
 [<EntryPoint>]
 let main argv =
-    BenchmarkRunner.Run<InterpolateBenchmarks>()
+    BenchmarkRunner.Run<NestedTasksBenchmarks>()
     0
