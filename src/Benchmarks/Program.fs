@@ -12,5 +12,5 @@ open Benchmarks
 
 [<EntryPoint>]
 let main argv =
-    BenchmarkRunner.Run<NestedTasksBenchmarks>()
+    BenchmarkRunner.Run<JsonElementBenchmarks>()
     0

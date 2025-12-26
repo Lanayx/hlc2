@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <Compile Include="Serialize.fs" />
+    <Compile Include="JsonElement.fs" />
     <Compile Include="InterfaceVsLambda.fs" />
     <Compile Include="Structs.fs" />
     <Compile Include="HttpClient.fs" />
